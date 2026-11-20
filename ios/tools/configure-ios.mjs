@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 
 const CONFIG = new URL('../capacitor.config.json', import.meta.url);
-const APP = new URL('../App/App', import.meta.url);
+const APP = new URL('../ios/App/App', import.meta.url);
 
 const cfg = JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
 const splashPage = 'splash.html';

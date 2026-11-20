@@ -127,6 +127,7 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             DEVELOPMENT_TEAM="" \
+            IPHONEOS_DEPLOYMENT_TARGET=16.0 \
             ARCHS=arm64 \
             ONLY_ACTIVE_ARCH=NO \
             -quiet \

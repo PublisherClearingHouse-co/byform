@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const TOOLS = path.dirname(fileURLToPath(import.meta.url));
 const IOS = path.resolve(TOOLS, '..');
-const ROOT = path.join(IOS, 'App', 'App');
+const ROOT = path.join(IOS, 'ios', 'App', 'App');
 const MAIN = path.join(ROOT, 'Base.lproj', 'Main.storyboard');
 const BACKUP = path.join(ROOT, 'Base.lproj', 'Main.storyboard.orig.xml');
 
