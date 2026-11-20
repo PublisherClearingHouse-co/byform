@@ -111,6 +111,9 @@ jobs:
           fi
           npx cap sync ios
           npm run configure:ios
+          rm -f ios/App/App/Base.lproj/Main.storyboard ios/App/App/Base.lproj/LaunchScreen.storyboard
+          python3 -c "import pathlib,plistlib; p=pathlib.Path('ios/App/App/Info.plist'); d=plistlib.loads(p.read_bytes()) if p.exists() else {}; d.pop('UILaunchStoryboardName',None); p.write_bytes(plistlib.dumps(d)) if p.exists() else None"
+          sed -i '' '/Main\.storyboard/d; /LaunchScreen\.storyboard/d' ios/App/App.xcodeproj/project.pbxproj
 
       - name: Build (unsigned)
         run: |
