@@ -1,9 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('ios/', import.meta.url);
-const MAIN = new URL('Main.storyboard', ROOT);
-const BACKUP = new URL('Main.storyboard.orig.xml', ROOT);
+const TOOLS = path.dirname(fileURLToPath(import.meta.url));
+const IOS = path.resolve(TOOLS, '..');
+const ROOT = path.join(IOS, 'App', 'App');
+const MAIN = path.join(ROOT, 'Base.lproj', 'Main.storyboard');
+const BACKUP = path.join(ROOT, 'Base.lproj', 'Main.storyboard.orig.xml');
 
 const STORYBOARD = `<?xml version="1.0" encoding="UTF-8"?>
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0"
@@ -44,4 +47,4 @@ if (!fs.existsSync(BACKUP)) {
   }
 }
 fs.writeFileSync(MAIN, STORYBOARD, 'utf8');
-console.log('[patch-storyboard] wrote ios/Main.storyboard (CAPBridgeViewController at ' + path.basename(ROOT.pathname) + ')');
+console.log('[patch-storyboard] wrote Base.lproj/Main.storyboard (CAPBridgeViewController)');
