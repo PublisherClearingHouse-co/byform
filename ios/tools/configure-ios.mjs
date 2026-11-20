@@ -18,8 +18,7 @@ function patchPlist(file) {
   const before = s;
 
   // App shows its own animated intro -> no native splash image needed.
-  s = s.replace(/<key>UILaunchStoryboardName<\/key>[\s\S]*?<string>.*?<\/string>/,
-                '<key>UILaunchStoryboardName</key>\n\t<string>LaunchScreen</string>');
+  s = s.replace(/<key>UILaunchStoryboardName<\/key>\s*<string>[^<]*<\/string>/g, '');
 
   // Allow the CDN + Firebase + Telegram hosts the pages talk to.
   if (!s.includes('<key>NSAppTransportSecurity</key>')) {
@@ -91,15 +90,15 @@ if (fs.existsSync(PBX)) {
   fs.writeFileSync(PBX, p, 'utf8');
   console.log('[configure-ios] deployment target set to iOS 16.0');
 }
-for (const storyboard of [
-  new URL('Base.lproj/LaunchScreen.storyboard', APP),
-]) {
-  if (!fs.existsSync(storyboard)) continue;
-  let s = fs.readFileSync(storyboard, 'utf8');
-  s = s.replace(/toolsVersion="[^"]+"/g, 'toolsVersion="1602"');
-  s = s.replace(/targetRuntime="[^"]+"/g, 'targetRuntime="iOS.CocoaTouch"');
-  s = s.replace(/version="[^"]+"/g, 'version="3.0"');
-  fs.writeFileSync(storyboard, s, 'utf8');
+const LAUNCH_STORYBOARD = new URL('Base.lproj/LaunchScreen.storyboard', APP);
+if (fs.existsSync(LAUNCH_STORYBOARD)) {
+  fs.rmSync(LAUNCH_STORYBOARD, { force: true });
+  console.log('[configure-ios] removed incompatible LaunchScreen.storyboard');
+}
+if (fs.existsSync(PBX)) {
+  let pbx = fs.readFileSync(PBX, 'utf8');
+  pbx = pbx.replace(/.*LaunchScreen\.storyboard.*\n/g, '');
+  fs.writeFileSync(PBX, pbx, 'utf8');
 }
 
 patchPlist(new URL('Info.plist', APP));
