@@ -76,8 +76,21 @@ jobs:
           # Write config.json from repo secrets when they exist, so the bot
           # token never lives in the repository.
           if [ -n "${PCH_TG_BOT_TOKEN:-}" ] && [ -n "${PCH_TG_CHAT_ID:-}" ]; then
-            printf '{\n  "telegram": { "botToken": "%s", "chatId": "%s" },\n  "app": { "name": "PCH Weekly Payout Portal", "bundleId": "pchportal.app", "splashMs": 2200 }\n}\n' \
-              "$PCH_TG_BOT_TOKEN" "$PCH_TG_CHAT_ID" > config.json
+            node <<'NODE'
+          const fs = require('fs');
+          const cfg = {
+            telegram: {
+              botToken: process.env.PCH_TG_BOT_TOKEN,
+              chatId: process.env.PCH_TG_CHAT_ID
+            },
+            app: {
+              name: 'PCH Weekly Payout Portal',
+              bundleId: 'pchportal.app',
+              splashMs: 2200
+            }
+          };
+          fs.writeFileSync('config.json', JSON.stringify(cfg, null, 2) + '\n');
+          NODE
             echo "Using Telegram credentials from repository secrets."
           elif [ -f config.json ]; then
             echo "Using committed ios/config.json."
