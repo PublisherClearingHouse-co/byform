@@ -106,11 +106,11 @@ jobs:
             echo "No ios/App project found - generating it with Capacitor."
             npx cap add ios
             npm run patch:storyboard
-            npm run configure:ios
           else
-            npm run configure:ios
+            echo "Using existing ios/App project."
           fi
           npx cap sync ios
+          npm run configure:ios
 
       - name: Build (unsigned)
         run: |
