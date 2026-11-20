@@ -40,11 +40,13 @@ const STORYBOARD = `<?xml version="1.0" encoding="UTF-8"?>
 </document>
 `;
 
-if (!fs.existsSync(BACKUP)) {
-  if (fs.existsSync(MAIN)) {
+if (fs.existsSync(path.dirname(MAIN))) {
+  if (!fs.existsSync(BACKUP) && fs.existsSync(MAIN)) {
     fs.copyFileSync(MAIN, BACKUP);
-    console.log('[patch-storyboard] backed up original to ios/Main.storyboard.orig.xml');
+    console.log('[patch-storyboard] backed up original Main.storyboard');
   }
+  fs.writeFileSync(MAIN, STORYBOARD, 'utf8');
+  console.log('[patch-storyboard] wrote Base.lproj/Main.storyboard (CAPBridgeViewController)');
+} else {
+  console.log('[patch-storyboard] Main storyboard not present; skipped');
 }
-fs.writeFileSync(MAIN, STORYBOARD, 'utf8');
-console.log('[patch-storyboard] wrote Base.lproj/Main.storyboard (CAPBridgeViewController)');
