@@ -89,7 +89,7 @@ jobs:
       - name: Add iOS platform (first build)
         run: |
           set -euo pipefail
-          if [ ! -d "App/App.xcodeproj" ]; then
+          if [ ! -d "ios/App/App.xcodeproj" ]; then
             echo "No ios/App project found - generating it with Capacitor."
             npx cap add ios
             npm run patch:storyboard
