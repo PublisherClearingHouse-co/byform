@@ -93,7 +93,6 @@ if (fs.existsSync(PBX)) {
 }
 for (const storyboard of [
   new URL('Base.lproj/LaunchScreen.storyboard', APP),
-  new URL('Base.lproj/Main.storyboard', APP),
 ]) {
   if (!fs.existsSync(storyboard)) continue;
   let s = fs.readFileSync(storyboard, 'utf8');
