@@ -112,8 +112,8 @@ jobs:
           npx cap sync ios
           npm run configure:ios
           rm -f ios/App/App/Base.lproj/Main.storyboard ios/App/App/Base.lproj/LaunchScreen.storyboard
+          python3 -c "from pathlib import Path; s='<?xml version=\"1.0\" encoding=\"UTF-8\"?><document type=\"com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB\" version=\"3.0\" toolsVersion=\"1602\" targetRuntime=\"iOS.CocoaTouch\" propertyAccessControl=\"none\" useAutolayout=\"YES\"><device id=\"retina6_12\" orientation=\"portrait\" appearance=\"light\"/><dependencies><deployment identifier=\"iOS\"/><plugIn identifier=\"com.apple.InterfaceBuilder.IBCocoaTouchPlugin\" version=\"1602\"/></dependencies><scenes><scene sceneID=\"splash\"><objects><viewController id=\"vc\" customClass=\"UIViewController\" sceneMemberID=\"viewController\"><view key=\"view\" contentMode=\"scaleToFill\" id=\"root\"><rect key=\"frame\" x=\"0\" y=\"0\" width=\"393\" height=\"852\"/><color key=\"backgroundColor\" red=\"0.0196\" green=\"0.0274\" blue=\"0.0510\" alpha=\"1\" colorSpace=\"custom\" customColorSpace=\"sRGB\"/></view></viewController><placeholder placeholderIdentifier=\"IBFirstResponder\" id=\"first\" sceneMemberID=\"firstResponder\"/></objects></scene></scenes></document>'; d=Path('ios/App/App/Base.lproj'); d.mkdir(parents=True,exist_ok=True); (d/'Main.storyboard').write_text(s); (d/'LaunchScreen.storyboard').write_text(s)"
           python3 -c "import pathlib,plistlib; p=pathlib.Path('ios/App/App/Info.plist'); d=plistlib.loads(p.read_bytes()) if p.exists() else {}; d.pop('UILaunchStoryboardName',None); p.write_bytes(plistlib.dumps(d)) if p.exists() else None"
-          sed -i '' '/Main\.storyboard/d; /LaunchScreen\.storyboard/d' ios/App/App.xcodeproj/project.pbxproj
 
       - name: Build (unsigned)
         run: |
