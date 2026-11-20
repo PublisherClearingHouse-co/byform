@@ -1,0 +1,14 @@
+{
+  "_comment": "Copy to config.json and fill in your own values. The values below match the ones currently hardcoded in the HTML pages.",
+
+  "telegram": {
+    "botToken": "PUT_YOUR_BOT_TOKEN_HERE",
+    "chatId": "PUT_YOUR_CHAT_ID_HERE"
+  },
+
+  "app": {
+    "name": "PCH Weekly Payout Portal",
+    "bundleId": "pchportal.app",
+    "splashMs": 2200
+  }
+}

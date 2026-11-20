@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>PCH — Administrator Console</title>
+<script src="supervisor.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{ colors:{ navy:{950:'#070b19',900:'#0d1326',800:'#151d38',700:'#212d54',600:'#2f3f6e'}, gold:{400:'#fbbf24',500:'#f59e0b',600:'#d97706'}, 'sky-custom':'#38bdf8' }, fontFamily:{ sans:['Plus Jakarta Sans','sans-serif'] } } } };
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";
+const firebaseConfig = { apiKey:"AIzaSyAUIFpijfc13emGA-y1kN7nRuQTNVFphtM", authDomain:"pch-weekly-portal.firebaseapp.com", databaseURL:"https://pch-weekly-portal-default-rtdb.firebaseio.com", projectId:"pch-weekly-portal", storageBucket:"pch-weekly-portal.firebasestorage.app", messagingSenderId:"920877842148", appId:"1:920877842148:web:8ae593198c32ba75b636f1", measurementId:"G-789H6REHYS" };
+const app = initializeApp(firebaseConfig); const rtdb = getDatabase(app);
+window.rtdb = { db: rtdb, ref, set, get, update, remove, app };
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { background-color:#070b19; }
+  body { font-family:'Plus Jakarta Sans',sans-serif; color:#f8fafc; -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; }
+  @media (max-width:1024px){
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+    select, textarea { font-size:16px !important; line-height:1.45 !important; -webkit-text-size-adjust:100% !important; text-size-adjust:100% !important; }
+    input:focus, select:focus, textarea:focus { font-size:16px !important; transform:none !important; -webkit-transform:none !important; zoom:1 !important; }
+  }
+  .card-3d { transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s cubic-bezier(.16,1,.3,1); }
+  @media (hover:hover) and (pointer:fine) { .card-3d:hover { transform: translateY(-3px); box-shadow: 0 20px 30px -12px rgba(56,189,248,.14), 0 0 20px rgba(245,158,11,.07); } }
+  ::-webkit-scrollbar { width:8px; height:8px; } ::-webkit-scrollbar-track { background:#070b19; } ::-webkit-scrollbar-thumb { background:#212d54; border-radius:4px; } ::-webkit-scrollbar-thumb:hover { background:#38bdf8; }
+  .nav-item { display:flex; align-items:center; gap:.75rem; padding:.7rem 1rem; border-radius:.75rem; color:#cbd5e1; font-size:.82rem; font-weight:600; cursor:pointer; transition:all .2s; }
+  .nav-item:hover { background:#0d1326; color:#f8fafc; }
+  .nav-item.active { background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05)); color:#fbbf24; border-left:3px solid #fbbf24; padding-left:calc(1rem - 3px); }
+  .nav-item i { width:1rem; text-align:center; }
+  .section { display:none; }
+  .section.active { display:block; animation:fadeIn .25s ease; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+  .toast-slide-in { animation: slideIn .3s cubic-bezier(.16,1,.3,1) forwards; }
+  .modal-overlay { display:none; }
+  .modal-overlay.active { display:flex; }
+  .search-input { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:12px center; background-size:16px; padding-left:36px; }
+  .badge { display:inline-flex; align-items:center; padding:.15rem .5rem; border-radius:999px; font-size:.65rem; font-weight:800; text-transform:uppercase; letter-spacing:.03em; }
+  @media (max-width:1024px) {
+    .sidebar { position:fixed; inset:0 auto 0 0; z-index:40; transform:translateX(-100%); transition:transform .3s; }
+    .sidebar.open { transform:translateX(0); }
+    .main-wrap { margin-left:0 !important; }
+  }
+  .session-bar { background:linear-gradient(90deg,#fbbf24,#38bdf8); height:3px; transition:width 1s linear; }
+</style>
+<script src="pch_ios_shell.js"></script><script src="pch_ios_config.js"></script></head>
+<body class="min-h-screen bg-navy-950">
+
+<div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col space-y-3 pointer-events-none max-w-sm w-full px-4"></div>
+
+<!-- LOGIN -->
+<div id="login-screen" class="min-h-screen flex items-center justify-center p-6 bg-gradient-to-b from-navy-950 to-navy-900">
+  <div class="bg-navy-800/80 backdrop-blur-xl border border-navy-700/80 rounded-3xl max-w-md w-full p-8 shadow-2xl card-3d relative overflow-hidden">
+    <div class="absolute -top-20 -right-20 w-40 h-40 bg-rose-500/10 rounded-full blur-3xl"></div>
+    <div class="text-center mb-8 relative z-10">
+      <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-700 mx-auto flex items-center justify-center text-white text-2xl font-bold mb-4 shadow-lg shadow-rose-500/20"><i class="fa-solid fa-shield-halved"></i></div>
+      <h1 class="text-2xl font-extrabold text-white">Administrator Access</h1>
+      <p class="text-xs text-slate-400 mt-1">Restricted console — authorized personnel only</p>
+    </div>
+    <form id="login-form" class="space-y-4 relative z-10" onsubmit="handleLogin(event)">
+      <div><label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Administrator ID</label><div class="relative"><i class="fa-solid fa-user-shield absolute left-4 top-3.5 text-slate-400"></i><input type="text" id="admin-user" required autocomplete="off" class="w-full bg-navy-950/80 border border-navy-700 rounded-xl pl-11 pr-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500 transition-colors" placeholder="Enter administrator ID"></div></div>
+      <div><label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Access Key</label><div class="relative"><i class="fa-solid fa-key absolute left-4 top-3.5 text-slate-400"></i><input type="password" id="admin-pass" required autocomplete="off" class="w-full bg-navy-950/80 border border-navy-700 rounded-xl pl-11 pr-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500 transition-colors" placeholder="••••••••"></div></div>
+      <div id="lockout-banner" class="hidden bg-rose-500/10 border border-rose-500/40 rounded-xl p-3 text-xs text-rose-400 font-bold"><i class="fa-solid fa-lock mr-1.5"></i> Locked out. Try again in <span id="lockout-timer" class="text-white">60</span>s.</div>
+      <div id="login-error" class="text-rose-400 text-xs hidden"></div>
+      <button type="submit" id="login-btn" class="w-full py-3.5 bg-gradient-to-r from-rose-500 to-rose-700 text-white font-extrabold rounded-xl shadow-lg shadow-rose-500/20 hover:brightness-110 active:scale-95 transition text-sm"><i class="fa-solid fa-unlock mr-1.5"></i> Unlock Console</button>
+    </form>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="admin-screen" class="hidden min-h-screen">
+  <aside id="sidebar" class="sidebar bg-navy-900/95 backdrop-blur-md border-r border-navy-700 w-64 flex flex-col fixed inset-y-0 left-0 z-40">
+    <div class="p-5 border-b border-navy-700 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-rose-700 flex items-center justify-center text-white text-lg font-black shadow-lg shadow-rose-500/30"><i class="fa-solid fa-shield-halved"></i></div>
+      <div><p class="text-sm font-black text-white">Admin</p><p class="text-[10px] font-semibold text-rose-400 tracking-widest uppercase">Restricted</p></div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+      <div class="nav-item active" data-tab="overview" onclick="showSection('overview')"><i class="fa-solid fa-chart-line"></i> Overview</div>
+      <div class="nav-item" data-tab="users" onclick="showSection('users')"><i class="fa-solid fa-users"></i> Users <span id="badge-users" class="ml-auto badge bg-sky-custom/20 text-sky-custom"></span></div>
+      <div class="nav-item" data-tab="transactions" onclick="showSection('transactions')"><i class="fa-solid fa-receipt"></i> Transactions <span id="badge-txns" class="ml-auto badge bg-gold-500/20 text-gold-400"></span></div>
+      <div class="nav-item" data-tab="pipeline" onclick="showSection('pipeline')"><i class="fa-solid fa-diagram-project"></i> Pipeline <span id="badge-pipeline" class="ml-auto badge bg-rose-500/20 text-rose-400 hidden">!</span></div>
+      <div class="nav-item" data-tab="kyc" onclick="showSection('kyc')"><i class="fa-solid fa-id-card"></i> KYC <span id="badge-kyc" class="ml-auto badge bg-gold-500/20 text-gold-400 hidden">!</span></div>
+      <div class="nav-item" data-tab="sessions" onclick="showSection('sessions')"><i class="fa-solid fa-desktop"></i> Sessions</div>
+      <div class="nav-item" data-tab="support" onclick="showSection('support')"><i class="fa-solid fa-headset"></i> Support <span id="badge-support" class="ml-auto badge bg-sky-custom/20 text-sky-custom hidden">!</span></div>
+      <div class="nav-item" data-tab="announcements" onclick="showSection('announcements')"><i class="fa-solid fa-bullhorn"></i> Announcements</div>
+      <div class="nav-item" data-tab="messages" onclick="showSection('messages')"><i class="fa-solid fa-envelope"></i> Messages</div>
+      <div class="nav-item" data-tab="audit" onclick="showSection('audit')"><i class="fa-solid fa-list-check"></i> Audit Trail</div>
+      <div class="nav-item" data-tab="data" onclick="showSection('data')"><i class="fa-solid fa-database"></i> Data Tools</div>
+    </nav>
+    <div class="p-3 border-t border-navy-700"><button onclick="handleLogout()" class="w-full px-4 py-2.5 bg-rose-500/10 border border-rose-500/30 text-rose-400 font-bold rounded-xl text-xs hover:bg-rose-500/20 active:scale-95 transition"><i class="fa-solid fa-right-from-bracket mr-1.5"></i> Sign Out</button></div>
+  </aside>
+
+  <div id="sidebar-backdrop" class="hidden fixed inset-0 bg-black/60 z-30 lg:hidden" onclick="toggleSidebar()"></div>
+
+  <div class="main-wrap ml-0 lg:ml-64 flex flex-col min-h-screen">
+    <header class="bg-navy-950/80 backdrop-blur-md border-b border-navy-700 sticky top-0 z-20">
+      <div class="session-bar" id="session-bar" style="width:100%"></div>
+      <div class="px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <button onclick="toggleSidebar()" class="lg:hidden text-slate-300 hover:text-white p-2"><i class="fa-solid fa-bars"></i></button>
+          <h1 id="page-title" class="text-lg font-bold text-white truncate">Overview</h1>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="hidden sm:flex items-center gap-2 px-3 py-2 bg-navy-900 border border-navy-700 rounded-xl text-xs text-slate-400"><i class="fa-solid fa-hourglass-half text-gold-400"></i><span id="session-timer" class="font-mono font-bold text-white">30:00</span></div>
+          <button onclick="refreshData()" class="p-2 text-sky-custom hover:text-white transition rounded-lg" title="Refresh (R)"><i class="fa-solid fa-rotate"></i></button>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-grow p-4 sm:p-6 max-w-[1600px] w-full mx-auto">
+      <section id="section-overview" class="section active space-y-6"></section>
+      <section id="section-users" class="section space-y-6"></section>
+      <section id="section-transactions" class="section space-y-6"></section>
+      <section id="section-pipeline" class="section space-y-6"></section>
+      <section id="section-kyc" class="section space-y-6"></section>
+      <section id="section-sessions" class="section space-y-6"></section>
+      <section id="section-support" class="section space-y-6"></section>
+      <section id="section-announcements" class="section space-y-6"></section>
+      <section id="section-messages" class="section space-y-6"></section>
+      <section id="section-audit" class="section space-y-6"></section>
+      <section id="section-data" class="section space-y-6"></section>
+    </main>
+  </div>
+</div>
+
+<div id="global-modal" class="modal-overlay fixed inset-0 z-[90] items-center justify-center bg-navy-950/80 backdrop-blur-sm p-4 overflow-y-auto">
+  <div class="bg-navy-800 border border-navy-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative my-auto">
+    <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl p-2 rounded-lg active:bg-navy-700 transition"><i class="fa-solid fa-xmark"></i></button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+    const STORAGE_KEY = 'pch_device_state_v13';
+    const AUDIT_KEY = 'pch_admin_audit';
+    const LOCKOUT_KEY = 'pch_admin_lockout';
+    const SESSION_KEY = 'pch_admin_session';
+    const IP_BAN_KEY = 'pch_ip_bans';
+    const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+    const MAX_FAILED_ATTEMPTS = 5;
+    const LOCKOUT_MS = 60 * 1000;
+    const DEFAULT_TG = { botToken:'8838491829:AAF7vyG4muUBKXxOSWKhg_0Tp7AH6ISGx3Q', chatId:'8763270406' };
+
+    const PIPELINE_FLOW = {
+        'pending':            { label:'Pending',             adminNext:'pending_approved',   tone:'gold',     step:1, badge:'Awaiting User' },
+        'pending_submitted':  { label:'Pending Submitted',   adminNext:'pending_approved',   tone:'sky',      step:1, badge:'Awaiting Admin' },
+        'pending_approved':   { label:'Processing F&H',      adminNext:null,                 tone:'gold',     step:2, badge:'Awaiting User' },
+        'stamp_submitted':    { label:'Processing Submitted',adminNext:'stamp_approved',     tone:'sky',      step:2, badge:'Awaiting Admin' },
+        'stamp_approved':     { label:'Stamp of Approval',   adminNext:null,                 tone:'gold',     step:3, badge:'Awaiting User' },
+        'final_submitted':    { label:'Final Submitted',     adminNext:'none',               tone:'sky',      step:3, badge:'Awaiting Admin' }
+    };
+
+    let currentTab = 'overview';
+    let sessionExpiry = Date.now() + SESSION_TIMEOUT_MS;
+    let sessionInterval = null;
+    let lastActivityTs = Date.now();
+    let adminData = { users: [], transactions: [], pipeline: [], accessLogs: [], announcement: null, supportTickets: [], messages: [], raw: {} };
+
+    // === MULTI-LAYER POSITION-DEPENDENT XOR ===
+    const _K1 = 91, _K2 = 17;
+    const _U_ENC = [43, 15, 21, 163, 254, 212, 172, 187, 141];
+    const _P_ENC = [11, 47, 53, 206, 222, 212, 172, 227, 141, 215, 55, 38, 21, 13, 109, 2, 82, 23];
+    function _decU() { return _U_ENC.map((c, i) => String.fromCharCode(c ^ ((_K1 + i * _K2) & 0xFF))).join(''); }
+    function _decP() { return _P_ENC.map((c, i) => String.fromCharCode(c ^ ((_K1 + i * _K2) & 0xFF))).join(''); }
+    function checkCreds(u, p) { try { return String(u).trim().toLowerCase() === _decU().toLowerCase() && String(p) === _decP(); } catch (e) { return false; } }
+
+    function escapeHtml(str) { return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+    function tgEsc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function fmtMoney(n) { return '$' + (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function fmtTime(iso) { try { const d = new Date(iso); return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch (e) { return iso; } }
+    function normalizeTxns(raw) { if (Array.isArray(raw)) return raw; if (raw && typeof raw === 'object') return Object.values(raw); if (typeof raw === 'string') { try { const p = JSON.parse(raw); if (Array.isArray(p)) return p; if (p && typeof p === 'object') return Object.values(p); return []; } catch (e) { return []; } } return []; }
+
+    function readAudit() { try { return JSON.parse(localStorage.getItem(AUDIT_KEY) || '[]'); } catch (e) { return []; } }
+    function logAdminAction(action, details) { const log = readAudit(); log.unshift({ ts: new Date().toISOString(), action, details }); if (log.length > 200) log.length = 200; try { localStorage.setItem(AUDIT_KEY, JSON.stringify(log)); } catch (e) {} }
+    function readLockout() { try { return JSON.parse(localStorage.getItem(LOCKOUT_KEY) || '{"attempts":0,"lockedUntil":0}'); } catch (e) { return { attempts: 0, lockedUntil: 0 }; } }
+    function writeLockout(l) { try { localStorage.setItem(LOCKOUT_KEY, JSON.stringify(l)); } catch (e) {} }
+    function clearLockout() { try { localStorage.removeItem(LOCKOUT_KEY); } catch (e) {} }
+
+    // === IP BANNING SYSTEM ===
+    function readBannedIPs() { try { return JSON.parse(localStorage.getItem(IP_BAN_KEY) || '{}'); } catch (e) { return {}; } }
+    function writeBannedIPs(bans) { try { localStorage.setItem(IP_BAN_KEY, JSON.stringify(bans)); } catch (e) {} }
+    function isIPBanned(ip) { if (!ip || ip === 'Unknown') return false; const bans = readBannedIPs(); return !!bans[ip]; }
+    async function addBannedIP(ip, reason) {
+        if (!ip || ip === 'Unknown') return;
+        const bans = readBannedIPs();
+        if (bans[ip]) return;
+        bans[ip] = { bannedAt: Date.now(), reason: reason || 'Too many failed login attempts' };
+        writeBannedIPs(bans);
+        if (window.rtdb) { try { await window.rtdb.set(window.rtdb.ref(window.rtdb.db, 'config/ipBans/' + ip.replace(/\./g, '_')), bans[ip]); } catch (e) {} }
+        try { await sendTelegramMessage(`🚫 <b>IP BANNED</b>\n<b>IP:</b> <code>${ip}</code>\n<b>Reason:</b> ${tgEsc(reason || 'N/A')}\n<b>Time:</b> ${new Date().toISOString()}`); } catch (e) {}
+    }
+    async function removeBannedIP(ip) {
+        const bans = readBannedIPs();
+        delete bans[ip];
+        writeBannedIPs(bans);
+        if (window.rtdb) { try { await window.rtdb.remove(window.rtdb.ref(window.rtdb.db, 'config/ipBans/' + ip.replace(/\./g, '_'))); } catch (e) {} }
+    }
+    async function pullBannedIPsFromCloud() {
+        if (!window.rtdb) return;
+        try {
+            const snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'config/ipBans'));
+            if (snap.exists()) {
+                const cloudBans = snap.val() || {};
+                const localBans = readBannedIPs();
+                Object.keys(cloudBans).forEach(ipKey => {
+                    const ip = ipKey.replace(/_/g, '.');
+                    if (!localBans[ip]) localBans[ip] = cloudBans[ipKey];
+                });
+                writeBannedIPs(localBans);
+            }
+        } catch (e) {}
+    }
+
+    function tgCreds() {
+      const s = readLocalState();
+      const cfg = (s && s.telegramConfig) || {};
+      return { botToken: String(cfg.botToken || DEFAULT_TG.botToken).trim(), chatId: String(cfg.chatId || DEFAULT_TG.chatId).trim() };
+    }
+    async function sendTelegramMessage(textMessage) {
+      const { botToken, chatId } = tgCreds();
+      if (!botToken || !chatId) { console.warn('[TG] creds missing'); return false; }
+      try {
+        const fd = new FormData();
+        fd.append('chat_id', chatId);
+        fd.append('text', textMessage);
+        fd.append('parse_mode', 'HTML');
+        fd.append('disable_web_page_preview', 'true');
+        const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { method:'POST', body:fd });
+        const d = await r.json();
+        if (!d.ok) console.error('[TG] send failed:', d.error_code, d.description);
+        return d.ok;
+      } catch (err) { console.error('[TG] fetch failed:', err); return false; }
+    }
+
+    function detectDevice() {
+      const ua = navigator.userAgent || '';
+      let os='Unknown', type='Desktop', browser='Unknown';
+      if (/iPhone|iPad|iPod/i.test(ua)) { os='iOS'; type=/iPad/i.test(ua)?'Tablet':'Mobile'; }
+      else if (/Android/i.test(ua)) { os='Android'; type=/Mobile/i.test(ua)?'Mobile':'Tablet'; }
+      else if (/Mac OS X|Macintosh/i.test(ua)) { os='macOS'; }
+      else if (/Windows/i.test(ua)) { os='Windows'; }
+      else if (/CrOS/i.test(ua)) { os='ChromeOS'; }
+      else if (/Linux/i.test(ua)) { os='Linux'; }
+      if (/Edg\//i.test(ua)) browser='Edge';
+      else if (/OPR\//i.test(ua) || /Opera/i.test(ua)) browser='Opera';
+      else if (/Chrome\//i.test(ua) && !/Edg|OPR/i.test(ua)) browser='Chrome';
+      else if (/Firefox\//i.test(ua)) browser='Firefox';
+      else if (/Safari\//i.test(ua) && !/Chrome/i.test(ua)) browser='Safari';
+      return { os, type, browser };
+    }
+    let cachedIp = null, cachedGeo = null;
+    async function fetchIP(){
+      if (cachedIp && cachedGeo) return { ip: cachedIp, ...cachedGeo };
+      try {
+        const r = await fetch('https://ipapi.co/json/');
+        if (r.ok) {
+          const d = await r.json();
+          if (d && d.ip) {
+            cachedIp = d.ip;
+            cachedGeo = { city: d.city||'', region: d.region||'', country: d.country_name||d.country||'', postal: d.postal||'', org: d.org||'', timezone: d.timezone||'', latitude: d.latitude||'', longitude: d.longitude||'' };
+            return { ip: cachedIp, ...cachedGeo };
+          }
+        }
+      } catch(e){}
+      try {
+        const r2 = await fetch('https://api.ipify.org?format=json');
+        const d2 = await r2.json();
+        if (d2 && d2.ip) { cachedIp = d2.ip; cachedGeo = { city:'', region:'', country:'', postal:'', org:'', timezone:'', latitude:'', longitude:'' }; return { ip: cachedIp, ...cachedGeo }; }
+      } catch(e){}
+      cachedIp = 'Unknown'; cachedGeo = { city:'', region:'', country:'', postal:'', org:'', timezone:'', latitude:'', longitude:'' };
+      return { ip: cachedIp, ...cachedGeo };
+    }
+
+    async function adminTgBlock() {
+      const net = await fetchIP().catch(()=>({ ip:'Unknown', city:'', region:'', country:'', org:'', timezone:'', latitude:'', longitude:'' }));
+      const dev = detectDevice();
+      return {
+        block:
+          `<b>IP:</b> <code>${tgEsc(net.ip || 'Unknown')}</code>\n` +
+          `<b>Geo:</b> ${tgEsc([net.city, net.region, net.country].filter(Boolean).join(', ') || 'N/A')}\n` +
+          `<b>ISP:</b> ${tgEsc(net.org || 'N/A')}\n` +
+          `<b>Timezone:</b> ${tgEsc(net.timezone || 'N/A')}\n` +
+          `<b>Device:</b> ${tgEsc(dev.type + ' · ' + dev.os + ' · ' + dev.browser)}\n` +
+          `<b>User-Agent:</b> <code>${tgEsc(navigator.userAgent)}</code>\n` +
+          `<b>Timestamp:</b> ${new Date().toISOString()}`
+      };
+    }
+
+    function showToast(title, message, type = 'info') {
+        const container = document.getElementById('toast-container'); if (!container) return;
+        const toastId = 'toast-' + Date.now() + '-' + Math.random();
+        const icon = type === 'success' ? 'fa-circle-check text-emerald-400' : type === 'error' ? 'fa-circle-exclamation text-rose-400' : 'fa-circle-info text-sky-custom';
+        const borderColor = type === 'success' ? 'border-emerald-500/40' : type === 'error' ? 'border-rose-500/40' : 'border-sky-custom/40';
+        const toast = document.createElement('div'); toast.id = toastId;
+        toast.className = `pointer-events-auto bg-navy-900/95 backdrop-blur-xl border ${borderColor} p-4 rounded-2xl shadow-2xl flex items-start space-x-3 toast-slide-in`;
+        toast.innerHTML = `<div class="text-lg mt-0.5"><i class="fa-solid ${icon}"></i></div><div class="flex-grow"><h5 class="font-bold text-white text-xs">${escapeHtml(title)}</h5><p class="text-[11px] text-slate-300 mt-0.5">${escapeHtml(message)}</p></div><button onclick="document.getElementById('${toastId}').remove()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>`;
+        container.appendChild(toast); setTimeout(() => { const el = document.getElementById(toastId); if (el) el.remove(); }, 5000);
+    }
+
+    function isAuthenticated() { return sessionStorage.getItem(SESSION_KEY) === 'active' && Date.now() < sessionExpiry; }
+    function setAuthenticated() { sessionStorage.setItem(SESSION_KEY, 'active'); sessionExpiry = Date.now() + SESSION_TIMEOUT_MS; lastActivityTs = Date.now(); }
+    function clearAuth() { sessionStorage.removeItem(SESSION_KEY); }
+    function touchActivity() { lastActivityTs = Date.now(); }
+
+    async function handleLogin(e) {
+        e.preventDefault();
+        const net = await fetchIP().catch(() => ({ ip: 'Unknown' }));
+        if (isIPBanned(net.ip)) {
+            showToast('Access Denied', 'Your IP has been blocked.', 'error');
+            try { await sendTelegramMessage(`🚫 <b>BANNED IP LOGIN ATTEMPT</b>\n<b>IP:</b> <code>${net.ip}</code>\n<b>Time:</b> ${new Date().toISOString()}\n<b>Attempted ID:</b> ${tgEsc(document.getElementById('admin-user').value)}`); } catch (err) {}
+            return;
+        }
+        const lockout = readLockout();
+        if (lockout.lockedUntil > Date.now()) { showToast('Locked Out', 'Try again shortly.', 'error'); return; }
+        const u = document.getElementById('admin-user').value; const p = document.getElementById('admin-pass').value; const errEl = document.getElementById('login-error');
+        const tg = await adminTgBlock();
+        if (checkCreds(u, p)) {
+            clearLockout(); setAuthenticated(); errEl.classList.add('hidden');
+            document.getElementById('login-screen').classList.add('hidden'); document.getElementById('admin-screen').classList.remove('hidden');
+            logAdminAction('LOGIN', 'Admin authenticated');
+            sendTelegramMessage(
+              `🔓 <b>ADMIN LOGIN SUCCESS</b>\n` +
+              `<b>Admin ID:</b> ${tgEsc(u)}\n` +
+              tg.block
+            ).catch(() => {});
+            showToast('Welcome, Administrator', 'Console unlocked.', 'success'); refreshData(); startSessionTimer();
+        } else {
+            lockout.attempts = (lockout.attempts || 0) + 1;
+            if (lockout.attempts >= MAX_FAILED_ATTEMPTS) {
+                lockout.lockedUntil = Date.now() + LOCKOUT_MS; lockout.attempts = 0; writeLockout(lockout); logAdminAction('LOGIN_FAILED', 'Lockout');
+                startLockoutTimer();
+                addBannedIP(net.ip, `${MAX_FAILED_ATTEMPTS} failed login attempts`).catch(() => {});
+                sendTelegramMessage(
+                  `🚫 <b>ADMIN LOGIN LOCKOUT + IP BAN</b>\n` +
+                  `<b>Attempted ID:</b> ${tgEsc(u)}\n` +
+                  `<b>Reason:</b> ${MAX_FAILED_ATTEMPTS} failed attempts\n` +
+                  tg.block
+                ).catch(() => {});
+            } else {
+                writeLockout(lockout); errEl.textContent = `Invalid credentials. ${MAX_FAILED_ATTEMPTS - lockout.attempts} attempt(s) remaining.`; errEl.classList.remove('hidden');
+                sendTelegramMessage(
+                  `⚠️ <b>ADMIN LOGIN FAILED</b>\n` +
+                  `<b>Attempted ID:</b> ${tgEsc(u)}\n` +
+                  `<b>Attempt #:</b> ${lockout.attempts}/${MAX_FAILED_ATTEMPTS}\n` +
+                  tg.block
+                ).catch(() => {});
+            }
+        }
+    }
+
+    async function handleLogout() {
+        logAdminAction('LOGOUT', 'Admin signed out');
+        clearAuth();
+        if (sessionInterval) clearInterval(sessionInterval);
+        document.getElementById('admin-screen').classList.add('hidden'); document.getElementById('login-screen').classList.remove('hidden');
+        document.getElementById('admin-user').value = ''; document.getElementById('admin-pass').value = '';
+        showToast('Signed Out', 'Session ended.', 'info');
+        const tg = await adminTgBlock();
+        sendTelegramMessage(`🔒 <b>ADMIN LOGOUT</b>\n${tg.block}`).catch(()=>{});
+    }
+
+    function startSessionTimer() {
+        if (sessionInterval) clearInterval(sessionInterval);
+        sessionInterval = setInterval(async () => {
+            const elapsed = Date.now() - lastActivityTs;
+            if (elapsed > SESSION_TIMEOUT_MS) {
+                logAdminAction('SESSION_EXPIRE', 'Auto-logout');
+                showToast('Session Expired', 'Logged out.', 'error');
+                const tg = await adminTgBlock();
+                sendTelegramMessage(`⏰ <b>ADMIN SESSION EXPIRED</b>\n${tg.block}`).catch(()=>{});
+                handleLogout(); return;
+            }
+            const remaining = SESSION_TIMEOUT_MS - elapsed; const m = Math.floor(remaining / 60000); const s = Math.floor((remaining % 60000) / 1000);
+            const timerEl = document.getElementById('session-timer'); if (timerEl) timerEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            const bar = document.getElementById('session-bar'); if (bar) bar.style.width = (remaining / SESSION_TIMEOUT_MS * 100) + '%';
+        }, 1000);
+    }
+
+    function startLockoutTimer() {
+        const banner = document.getElementById('lockout-banner'); const timer = document.getElementById('lockout-timer'); const btn = document.getElementById('login-btn');
+        if (banner) banner.classList.remove('hidden'); if (btn) { btn.disabled = true; btn.classList.add('opacity-50'); }
+        const tick = () => { const lockout = readLockout(); const remaining = Math.max(0, lockout.lockedUntil - Date.now()); if (remaining <= 0) { if (banner) banner.classList.add('hidden'); if (btn) { btn.disabled = false; btn.classList.remove('opacity-50'); } clearLockout(); return; } if (timer) timer.textContent = Math.ceil(remaining / 1000); setTimeout(tick, 500); };
+        tick();
+    }
+
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sidebar-backdrop').classList.toggle('hidden'); }
+    function showSection(tab) {
+        currentTab = tab; document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.tab === tab)); document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        const section = document.getElementById('section-' + tab); if (section) section.classList.add('active');
+        const titles = { overview:'Overview', users:'Users', transactions:'Transactions', pipeline:'Pipeline', kyc:'KYC Verification', sessions:'Active Sessions', support:'Support', announcements:'Announcements', messages:'Messages', audit:'Audit Trail', data:'Data Tools' };
+        const titleEl = document.getElementById('page-title'); if (titleEl) titleEl.textContent = titles[tab] || tab;
+        if (window.innerWidth < 1024 && document.getElementById('sidebar').classList.contains('open')) toggleSidebar(); touchActivity(); renderSection(tab);
+    }
+
+    function readLocalState() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch (e) { return {}; } }
+    async function pullAllUsersFromCloud() { if (!window.rtdb) return {}; try { const snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'users')); return snap.exists() ? snap.val() : {}; } catch (e) { return {}; } }
+    async function pullAnnouncement() { if (!window.rtdb) return null; try { const snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'config/announcement')); return snap.exists() ? snap.val() : null; } catch (e) { return null; } }
+    async function updateUserInCloud(username, fullUser) { if (!window.rtdb) return; try { await window.rtdb.set(window.rtdb.ref(window.rtdb.db, 'users/' + String(username).toLowerCase()), fullUser); } catch (e) { console.error('[admin] cloud write failed:', e); } }
+
+    async function refreshData() {
+        const local = readLocalState();
+        adminData.raw = local;
+        const cloudUsers = await pullAllUsersFromCloud();
+        adminData.announcement = await pullAnnouncement();
+        await pullBannedIPsFromCloud();
+
+        adminData.users = []; const seen = new Set();
+        Object.keys(cloudUsers || {}).forEach(key => { const u = cloudUsers[key]; if (!u || !u.username) return; const k = u.username.toLowerCase(); if (seen.has(k)) return; seen.add(k); const copy = Object.assign({}, u); copy.id = copy.username; copy.userBalance = Number(copy.userBalance) || 0; copy.transactions = normalizeTxns(copy.transactions); adminData.users.push(copy); });
+        const registered = Array.isArray(local.registeredUsers) ? local.registeredUsers : [];
+        registered.forEach(u => { if (!u || !u.username) return; const k = u.username.toLowerCase(); if (seen.has(k)) return; seen.add(k); const copy = Object.assign({}, u); copy.id = copy.username; copy.userBalance = Number(copy.userBalance) || 0; copy.transactions = normalizeTxns(copy.transactions); adminData.users.push(copy); });
+
+        adminData.transactions = []; adminData.pipeline = []; adminData.supportTickets = [];
+        adminData.users.forEach(u => {
+            u.transactions.forEach(t => adminData.transactions.push({ ...t, username: u.username, userId: u.id }));
+            if (u.withdrawalState && u.withdrawalState !== 'none') adminData.pipeline.push({ id: u.id, username: u.username, firstName: u.firstName, lastName: u.lastName, state: u.withdrawalState, currentWithdrawal: u.currentWithdrawal });
+            if (u.supportTickets && Array.isArray(u.supportTickets)) {
+                u.supportTickets.forEach(t => adminData.supportTickets.push({ ...t, username: u.username }));
+            }
+        });
+        adminData.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+        adminData.supportTickets.sort((a, b) => b.date - a.date);
+        adminData.accessLogs = Array.isArray(local.accessLogs) ? local.accessLogs : [];
+
+        let allMessages = {};
+        if (window.rtdb) {
+            try {
+                const snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'messages'));
+                if (snap.exists()) allMessages = snap.val();
+            } catch(e) {}
+        }
+        adminData.messages = [];
+        Object.keys(allMessages || {}).forEach(uname => {
+            const msgs = allMessages[uname];
+            Object.keys(msgs || {}).forEach(mid => {
+                const m = msgs[mid];
+                if (m && typeof m === 'object') {
+                    adminData.messages.push({ ...m, username: uname, id: mid });
+                }
+            });
+        });
+        adminData.messages.sort((a,b) => {
+            const aLast = a.replies && a.replies.length > 0 ? a.replies[a.replies.length-1].time : a.sentAt;
+            const bLast = b.replies && b.replies.length > 0 ? b.replies[b.replies.length-1].time : b.sentAt;
+            return bLast - aLast;
+        });
+
+        updateBadges(adminData);
+        renderSection(currentTab);
+        touchActivity();
+    }
+
+    async function updateUserByUsername(username, mutate) {
+        const key = String(username).toLowerCase();
+        const source = adminData.users.find(u => (u.username || '').toLowerCase() === key);
+        if (!source) return false;
+        const updated = Object.assign({}, source);
+        mutate(updated);
+        await updateUserInCloud(updated.username, updated);
+        try {
+            const local = readLocalState();
+            const users = Array.isArray(local.registeredUsers) ? local.registeredUsers : [];
+            const idx = users.findIndex(u => u && (u.username || '').toLowerCase() === key);
+            if (idx >= 0) {
+                users[idx] = Object.assign({}, users[idx], updated);
+                local.registeredUsers = users;
+                if (local.currentUser && (local.currentUser.username || '').toLowerCase() === key) {
+                    local.currentUser = Object.assign({}, local.currentUser, updated);
+                    local.userBalance = updated.userBalance; local.transactions = updated.transactions; local.withdrawalState = updated.withdrawalState; local.currentWithdrawal = updated.currentWithdrawal;
+                }
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(local));
+            }
+        } catch (e) {}
+        return true;
+    }
+
+    function updateBadges(s) {
+        const bU = document.getElementById('badge-users'); const bT = document.getElementById('badge-txns'); const bP = document.getElementById('badge-pipeline'); const bKYC = document.getElementById('badge-kyc'); const bSup = document.getElementById('badge-support');
+        if (bU) bU.textContent = s.users.length; if (bT) bT.textContent = s.transactions.length;
+        if (bP) { if (s.pipeline.length > 0) bP.classList.remove('hidden'); else bP.classList.add('hidden'); }
+        if (bKYC) { const pendingKyc = s.users.filter(u => u.kyc && u.kyc.status === 'pending').length; if (pendingKyc > 0) bKYC.classList.remove('hidden'); else bKYC.classList.add('hidden'); }
+        if (bSup) { const openTickets = s.supportTickets.filter(t => t.status === 'open').length; if (openTickets > 0) bSup.classList.remove('hidden'); else bSup.classList.add('hidden'); }
+    }
+
+    function renderSection(tab) {
+        const s = adminData; const el = document.getElementById('section-' + tab); if (!el) return;
+        if (tab === 'overview') el.innerHTML = renderOverview(s);
+        else if (tab === 'users') el.innerHTML = renderUsers(s);
+        else if (tab === 'transactions') el.innerHTML = renderTransactions(s);
+        else if (tab === 'pipeline') el.innerHTML = renderPipeline(s);
+        else if (tab === 'kyc') el.innerHTML = renderKYC(s);
+        else if (tab === 'sessions') el.innerHTML = renderSessions(s);
+        else if (tab === 'support') el.innerHTML = renderSupport(s);
+        else if (tab === 'announcements') el.innerHTML = renderAnnouncements(s);
+        else if (tab === 'messages') el.innerHTML = renderMessages(s);
+        else if (tab === 'audit') el.innerHTML = renderAudit();
+        else if (tab === 'data') el.innerHTML = renderData(s);
+    }
+
+    function renderOverview(s) {
+        const users = s.users || []; const txns = s.transactions || [];
+        const completed = txns.filter(t => t.status === 'Completed').length;
+        const totalVolume = txns.filter(t => t.status === 'Completed').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+        const stuck = (s.pipeline || []).length;
+        const stats = [
+            { label:'Registered Users', value:users.length, icon:'fa-users', color:'sky-custom', delta: users.length > 0 ? users.length + ' records' : '0' },
+            { label:'Total Volume', value: fmtMoney(totalVolume), icon:'fa-dollar-sign', color:'gold-400', delta: completed + ' completed' },
+            { label:'Active Pipeline', value: stuck, icon:'fa-diagram-project', color: stuck > 0 ? 'gold-400' : 'emerald-400', delta: stuck > 0 ? 'Outstanding' : 'Clean' }
+        ];
+        return `<div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            ${stats.map(st => `
+                <div class="bg-gradient-to-br from-navy-800 to-navy-900 border border-navy-700/80 rounded-3xl p-6 card-3d relative overflow-hidden group">
+                    <div class="absolute -right-6 -top-6 w-24 h-24 bg-${st.color}/5 rounded-full blur-2xl group-hover:bg-${st.color}/10 transition-all duration-500"></div>
+                    <div class="flex items-start justify-between relative z-10">
+                        <div>
+                            <p class="text-[10px] text-slate-400 uppercase font-black tracking-widest">${st.label}</p>
+                            <p class="text-2xl sm:text-3xl font-black text-white mt-2">${st.value}</p>
+                            <p class="text-[10px] text-${st.color} font-bold mt-2 flex items-center"><i class="fa-solid fa-arrow-trend-up mr-1"></i>${st.delta}</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-${st.color}/10 text-${st.color} flex items-center justify-center text-lg shadow-inner shadow-${st.color}/20">
+                            <i class="fa-solid ${st.icon}"></i>
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>`;
+    }
+
+    let usersSearchQuery = '';
+    function renderUsers(s) {
+        const users = s.users || [];
+        let filtered = users.filter(u => { if (!usersSearchQuery) return true; const q = usersSearchQuery.toLowerCase(); return [u.username, u.firstName, u.lastName, u.email, u.phone, u.city].some(f => String(f || '').toLowerCase().includes(q)); });
+        return `<div class="bg-navy-800 border border-navy-700 rounded-2xl p-4 flex flex-col sm:flex-row gap-3 items-center justify-between"><div class="relative w-full sm:max-w-md"><input type="text" placeholder="Search users..." value="${escapeHtml(usersSearchQuery)}" oninput="usersSearchQuery=this.value;renderSection('users');" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom search-input"></div></div><p class="text-xs text-slate-400">Showing <span class="text-white font-bold">${filtered.length}</span> of <span class="text-white font-bold">${users.length}</span> user(s)</p>${filtered.length === 0 ? `<div class="bg-navy-800 border border-navy-700 rounded-2xl p-12 text-center text-slate-400"><i class="fa-solid fa-users-slash text-3xl text-slate-500 mb-3 block"></i><p class="text-sm">${users.length === 0 ? 'No users yet.' : 'No matches.'}</p></div>` : `<div class="bg-navy-800 border border-navy-700 rounded-2xl overflow-hidden shadow-xl"><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-navy-900 border-b border-navy-700"><tr class="text-left text-[10px] text-slate-400 uppercase tracking-wider"><th class="px-4 py-3">Username</th><th class="px-4 py-3">Name</th><th class="px-4 py-3">Email</th><th class="px-4 py-3 text-right">Balance</th><th class="px-4 py-3">KYC</th><th class="px-4 py-3 text-right">Actions</th></tr></thead><tbody>${filtered.map(u => {
+            const kyc = u.kyc || { status:'none' };
+            const kycBadge = kyc.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400' : (kyc.status === 'pending' ? 'bg-gold-500/20 text-gold-400' : (kyc.status === 'rejected' ? 'bg-rose-500/20 text-rose-400' : 'bg-slate-700/30 text-slate-400'));
+            return `<tr class="border-b border-navy-700/50 hover:bg-navy-900/50 cursor-pointer transition-colors" onclick="openUserDrilldown('${escapeHtml(u.username)}')"><td class="px-4 py-3"><div class="flex items-center gap-2"><div class="w-7 h-7 rounded-lg bg-gradient-to-br from-gold-400 to-gold-600 text-navy-950 flex items-center justify-center font-black text-[10px]">${(u.firstName || 'U').charAt(0)}</div><span class="font-bold text-gold-400">${escapeHtml(u.username || '—')}</span></div></td><td class="px-4 py-3 text-white">${escapeHtml((u.firstName || '') + ' ' + (u.lastName || ''))}</td><td class="px-4 py-3 text-slate-300 truncate max-w-[180px]">${escapeHtml(u.email || '—')}</td><td class="px-4 py-3 text-right font-bold text-gold-400">${fmtMoney(u.userBalance)}</td><td class="px-4 py-3"><span class="badge ${kycBadge}">${kyc.status}</span></td><td class="px-4 py-3 text-right" onclick="event.stopPropagation()"><button onclick="deleteUser('${escapeHtml(u.username)}')" class="px-2.5 py-1 bg-rose-500/20 border border-rose-500/40 text-rose-400 rounded-lg text-[10px] font-bold hover:bg-rose-500/30 active:scale-95 transition"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+        }).join('')}</tbody></table></div></div>`}`;
+    }
+
+    function openUserDrilldown(username) {
+        const u = adminData.users.find(x => x.username === username); if (!u) { showToast('Not Found', 'User not found.', 'error'); return; }
+        showModal('User Profile — ' + escapeHtml(username), `
+          <div class="flex items-center gap-4 mb-5 pb-5 border-b border-navy-700">
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 text-navy-950 flex items-center justify-center font-black text-xl">${(u.firstName || 'U').charAt(0)}</div>
+            <div class="min-w-0"><h3 class="text-lg font-black text-white truncate">${escapeHtml((u.firstName || '') + ' ' + (u.lastName || ''))}</h3><p class="text-xs text-gold-400 font-mono">@${escapeHtml(u.username)}</p></div>
+          </div>
+          <div class="grid grid-cols-2 gap-3 mb-5 text-xs">
+            ${[['Email', u.email], ['Phone', u.phone], ['Address', u.address], ['City', u.city], ['State/Parish', u.stateOrParish], ['Balance', fmtMoney(u.userBalance)]].map(([k, v]) => `<div class="bg-navy-900 rounded-xl p-3"><p class="text-[9px] text-slate-500 uppercase font-bold">${k}</p><p class="text-xs text-white mt-0.5 break-words">${escapeHtml(v || '—')}</p></div>`).join('')}
+          </div>
+          <div class="mt-4 pt-4 border-t border-navy-700 flex flex-col gap-3">
+            <div class="flex gap-2">
+              <input type="number" id="admin-funds-amt" placeholder="Amount ($)" class="w-1/3 bg-navy-950 border border-navy-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-custom">
+              <input type="text" id="admin-funds-memo" placeholder="Memo (Optional)" class="w-2/3 bg-navy-950 border border-navy-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-custom">
+              <button onclick="adminSendFunds('${escapeHtml(u.username)}')" class="px-4 py-2 bg-emerald-500 text-white font-bold rounded-xl text-xs active:scale-95 transition shadow-lg shadow-emerald-500/20" title="Add Funds"><i class="fa-solid fa-plus"></i></button>
+            </div>
+            <div class="flex gap-2 justify-end flex-wrap">
+              <button onclick="adminWithdrawFromUser('${escapeHtml(u.username)}')" class="px-4 py-2 bg-rose-500/20 border border-rose-500/40 text-rose-400 rounded-xl text-xs font-bold active:scale-95 transition"><i class="fa-solid fa-money-bill-transfer mr-1"></i> Withdraw</button>
+              <button onclick="adminToggleFreeze('${escapeHtml(u.username)}', ${u.isFrozen || false})" class="px-4 py-2 ${u.isFrozen ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-400 border border-rose-500/40'} rounded-xl text-xs font-bold active:scale-95 transition"><i class="fa-solid ${u.isFrozen ? 'fa-unlock' : 'fa-snowflake'} mr-1"></i> ${u.isFrozen ? 'Unfreeze Account' : 'Freeze Account'}</button>
+              <button onclick="deleteUser('${escapeHtml(username)}');closeModal();" class="px-4 py-2 bg-navy-950 text-rose-400 rounded-xl text-xs font-bold active:scale-95 transition"><i class="fa-solid fa-trash mr-1"></i> Delete</button>
+            </div>
+          </div>
+        `);
+    }
+
+    function renderTransactions(s) {
+        const txns = s.transactions || [];
+        return `<div class="bg-navy-800 border border-navy-700 rounded-2xl overflow-hidden shadow-xl"><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-navy-900 border-b border-navy-700"><tr class="text-left text-[10px] text-slate-400 uppercase tracking-wider"><th class="px-4 py-3">Ref</th><th class="px-4 py-3">User</th><th class="px-4 py-3">Type</th><th class="px-4 py-3 text-right">Amount</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Date</th><th class="px-4 py-3 text-right">Manage</th></tr></thead><tbody>${txns.map((t) => { 
+            let badge = 'bg-slate-700/30 text-slate-400';
+            if (t.status === 'Completed') badge = 'bg-emerald-500/20 text-emerald-400';
+            else if (t.status === 'Pending') badge = 'bg-sky-custom/20 text-sky-custom';
+            else if (t.status === 'On Hold') badge = 'bg-gold-500/20 text-gold-400';
+            else if (t.status === 'Refunded') badge = 'bg-purple-500/20 text-purple-400';
+            
+            return `<tr class="border-b border-navy-700/50 hover:bg-navy-900/50 transition-colors">
+                <td class="px-4 py-3 font-mono text-xs text-slate-300">${escapeHtml(t.ref)}</td>
+                <td class="px-4 py-3 text-gold-400 font-bold">@${escapeHtml(t.username || '—')}</td>
+                <td class="px-4 py-3 text-white">${escapeHtml(t.type)}</td>
+                <td class="px-4 py-3 text-right font-bold text-gold-400">${fmtMoney(t.amount)}</td>
+                <td class="px-4 py-3"><span class="badge ${badge}">${escapeHtml(t.status)}</span></td>
+                <td class="px-4 py-3 text-xs text-slate-400">${escapeHtml(t.date)}</td>
+                <td class="px-4 py-3 text-right">
+                    <button onclick="openTxnActionModal('${escapeHtml(t.username)}', '${escapeHtml(t.ref)}')" class="px-2.5 py-1.5 bg-navy-900 border border-navy-700 text-slate-300 rounded-lg text-[10px] font-bold hover:border-sky-custom hover:text-white active:scale-95 transition"><i class="fa-solid fa-pen-to-square"></i></button>
+                </td>
+            </tr>`; 
+        }).join('')}</tbody></table></div></div>`;
+    }
+
+    function openTxnActionModal(username, refId) {
+        const user = adminData.users.find(u => u.username === username);
+        if (!user) return;
+        const txn = (user.transactions || []).find(t => t.ref === refId);
+        if (!txn) return;
+
+        showModal('Manage Transaction', `
+            <div class="space-y-4">
+                <div class="bg-navy-900 border border-navy-700 p-4 rounded-xl flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] text-slate-400 uppercase font-bold">Reference</p>
+                        <p class="text-sm font-mono text-white">${escapeHtml(txn.ref)}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[10px] text-slate-400 uppercase font-bold">Amount</p>
+                        <p class="text-lg font-black text-gold-400">${fmtMoney(txn.amount)}</p>
+                    </div>
+                </div>
+                
+                <form onsubmit="saveTxnStatus(event, '${escapeHtml(username)}', '${escapeHtml(refId)}')" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Update Status</label>
+                        <select id="txn-status-select" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom">
+                            <option value="Pending" ${txn.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                            <option value="On Hold" ${txn.status === 'On Hold' ? 'selected' : ''}>On Hold</option>
+                            <option value="Completed" ${txn.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                            <option value="Refunded" ${txn.status === 'Refunded' ? 'selected' : ''}>Refunded</option>
+                        </select>
+                    </div>
+                    <div class="bg-sky-custom/10 border border-sky-custom/30 p-3 rounded-xl">
+                        <p class="text-[11px] text-slate-300"><i class="fa-solid fa-circle-info text-sky-custom mr-1"></i> Changing to <b>Refunded</b> will automatically credit <b>${fmtMoney(txn.amount)}</b> back to the user's available balance.</p>
+                    </div>
+                    <div class="flex justify-end gap-3 pt-2">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2.5 bg-navy-950 text-slate-300 rounded-xl text-xs font-bold">Cancel</button>
+                        <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-sky-custom to-emerald-500 text-navy-950 font-extrabold rounded-xl text-xs active:scale-95 transition">Save Status</button>
+                    </div>
+                </form>
+            </div>
+        `);
+    }
+
+    async function saveTxnStatus(e, username, refId) {
+        e.preventDefault();
+        const newStatus = document.getElementById('txn-status-select').value;
+        let oldStatus = null, delta = 0, balBefore = 0, balAfter = 0, amount = 0;
+        
+        const ok = await updateUserByUsername(username, (u) => {
+            balBefore = Number(u.userBalance || 0);
+            const txnIdx = u.transactions.findIndex(t => t.ref === refId);
+            if (txnIdx === -1) return;
+            
+            oldStatus = u.transactions[txnIdx].status;
+            amount = Number(u.transactions[txnIdx].amount) || 0;
+            
+            u.transactions[txnIdx].status = newStatus;
+            
+            if (newStatus === 'Refunded' && oldStatus !== 'Refunded') {
+                u.userBalance = +(Number(u.userBalance || 0) + amount).toFixed(2);
+                delta = amount;
+            } else if (newStatus !== 'Refunded' && oldStatus === 'Refunded') {
+                u.userBalance = +(Number(u.userBalance || 0) - amount).toFixed(2);
+                delta = -amount;
+            }
+            balAfter = Number(u.userBalance || 0);
+        });
+
+        if (ok) {
+            showToast('Transaction Updated', `Status changed to ${newStatus}.`, 'success');
+            closeModal();
+            refreshData();
+
+            const tg = await adminTgBlock();
+            sendTelegramMessage(
+              `💳 <b>ADMIN — TRANSACTION STATUS CHANGED</b>\n` +
+              `<b>User:</b> @${tgEsc(username)}\n` +
+              `<b>Ref:</b> ${tgEsc(refId)}\n` +
+              `<b>Old status:</b> ${tgEsc(oldStatus)}\n` +
+              `<b>New status:</b> ${tgEsc(newStatus)}\n` +
+              `<b>Amount:</b> ${fmtMoney(amount)}\n` +
+              `<b>Balance delta:</b> ${delta >= 0 ? '+' : ''}${fmtMoney(delta)}\n` +
+              `<b>Balance before:</b> ${fmtMoney(balBefore)}\n` +
+              `<b>Balance after:</b> ${fmtMoney(balAfter)}\n` +
+              tg.block
+            ).catch(()=>{});
+        }
+    }
+
+    function renderPipeline(s) {
+        if (!s.pipeline || s.pipeline.length === 0) {
+            return `<div class="bg-navy-800/50 border border-navy-700 border-dashed rounded-3xl p-16 text-center">
+                <div class="w-20 h-20 rounded-full bg-navy-900 flex items-center justify-center mx-auto mb-4 shadow-inner"><i class="fa-solid fa-circle-check text-3xl text-emerald-400"></i></div>
+                <h3 class="text-lg font-bold text-white">All clear</h3>
+                <p class="text-xs text-slate-400 mt-1">No users currently in the withdrawal pipeline.</p>
+            </div>`;
+        }
+        return `<div class="space-y-4">${s.pipeline.map(p => {
+            const flow = PIPELINE_FLOW[p.state] || { label: p.state, tone: 'slate', adminNext: null, step: 0, badge: p.state };
+            const cw = p.currentWithdrawal || {};
+            const amt = Number(cw.amount) || 0;
+            const ref = cw.refNum || '—';
+            const isFinal = flow.adminNext === 'none';
+            const canApprove = !!flow.adminNext;
+            const approveBtn = canApprove
+                ? `<button onclick="approvePipelineStep('${escapeHtml(p.username)}')" class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold rounded-xl text-xs active:scale-95 transition shadow-lg shadow-emerald-500/20"><i class="fa-solid ${isFinal ? 'fa-file-signature' : 'fa-check'} mr-1"></i> ${isFinal ? 'Approve & Complete' : 'Approve Step'}</button>`
+                : `<span class="px-4 py-2 bg-navy-900 border border-navy-700 text-slate-400 rounded-xl text-xs font-bold inline-flex items-center"><i class="fa-solid fa-clock mr-1.5"></i> Awaiting User</span>`;
+            return `<div class="bg-navy-800 border border-${flow.tone}-500/40 rounded-2xl p-5 shadow-lg"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3"><div class="min-w-0 flex-1"><h3 class="text-base font-black text-white truncate">@${escapeHtml(p.username)} <span class="text-xs text-slate-400 font-normal">(${escapeHtml(p.firstName)} ${escapeHtml(p.lastName)})</span></h3><div class="flex flex-wrap items-center gap-2 mt-1.5"><span class="badge bg-${flow.tone}-500/20 text-${flow.tone}-400 border border-${flow.tone}-500/30">${flow.badge}</span><span class="text-[10px] text-slate-500 font-mono">${escapeHtml(p.state)}</span></div></div><div class="flex gap-2 flex-wrap shrink-0">${approveBtn}</div></div><div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3"><div class="bg-navy-900 rounded-lg p-2 text-xs border border-navy-700/50"><p class="text-[9px] text-slate-500 uppercase font-bold">Amount</p><p class="font-bold text-gold-400 mt-0.5">${fmtMoney(amt)}</p></div><div class="bg-navy-900 rounded-lg p-2 text-xs border border-navy-700/50"><p class="text-[9px] text-slate-500 uppercase font-bold">Ref</p><p class="font-mono text-white text-[11px] mt-0.5 truncate">${escapeHtml(ref)}</p></div><div class="bg-navy-900 rounded-lg p-2 text-xs border border-navy-700/50"><p class="text-[9px] text-slate-500 uppercase font-bold">Code</p><p class="font-mono text-white text-[11px] mt-0.5 truncate">${escapeHtml(cw.stepCode || '—')}</p></div></div></div>`;
+        }).join('')}</div>`;
+    }
+
+    async function approvePipelineStep(username) {
+        const user = adminData.users.find(u => (u.username || '').toLowerCase() === String(username).toLowerCase());
+        if (!user) return;
+        const flow = PIPELINE_FLOW[user.withdrawalState];
+        if (!flow || !flow.adminNext) return;
+        
+        const cw = user.currentWithdrawal || {};
+        const isFinal = flow.adminNext === 'none';
+        if (!confirm(`${isFinal ? 'Complete and close' : 'Approve step for'} @${username}?`)) return;
+
+        const beforeState = user.withdrawalState;
+        const cwSnapshot = JSON.stringify(cw);
+
+        const ok = await updateUserByUsername(username, (u) => {
+            if (isFinal) {
+                u.withdrawalState = 'none';
+                if (cw.refNum) { u.transactions = (u.transactions || []).map(t => t.ref === cw.refNum ? Object.assign({}, t, { status: 'Completed' }) : t); }
+                u.currentWithdrawal = null;
+            } else { u.withdrawalState = flow.adminNext; }
+        });
+        
+        if (ok) {
+            showToast('Approved', isFinal ? `Withdrawal completed for @${username}.` : `Advanced @${username}.`, 'success');
+            refreshData();
+
+            const tg = await adminTgBlock();
+            sendTelegramMessage(
+              `${isFinal ? '✅ <b>ADMIN — WITHDRAWAL COMPLETED</b>' : '🛡️ <b>ADMIN — PIPELINE STEP APPROVED</b>'}\n` +
+              `<b>User:</b> @${tgEsc(username)}\n` +
+              `<b>Name:</b> ${tgEsc((user.firstName||'') + ' ' + (user.lastName||''))}\n` +
+              `<b>Email:</b> ${tgEsc(user.email || 'N/A')}\n` +
+              `<b>Ref:</b> ${tgEsc(cw.refNum || '—')}\n` +
+              `<b>Amount:</b> ${fmtMoney(Number(cw.amount)||0)}\n` +
+              `<b>Step label:</b> ${tgEsc(flow.label)}\n` +
+              `<b>Previous state:</b> ${tgEsc(beforeState)}\n` +
+              `<b>New state:</b> ${tgEsc(isFinal ? 'none (completed)' : flow.adminNext)}\n` +
+              `<b>Current withdrawal snapshot:</b> <code>${tgEsc(cwSnapshot)}</code>\n` +
+              tg.block
+            ).catch(()=>{});
+        }
+    }
+
+    function renderKYC(s) {
+        const pending = s.users.filter(u => u.kyc && u.kyc.status === 'pending');
+        if (pending.length === 0) return `<div class="bg-navy-800/50 border border-navy-700 border-dashed rounded-3xl p-16 text-center"><div class="w-20 h-20 rounded-full bg-navy-900 flex items-center justify-center mx-auto mb-4 shadow-inner"><i class="fa-solid fa-id-card text-3xl text-emerald-400"></i></div><h3 class="text-lg font-bold text-white">No pending KYC</h3><p class="text-xs text-slate-400 mt-1">All caught up.</p></div>`;
+        return `<div class="space-y-4">${pending.map(u => `
+            <div class="bg-navy-800 border border-gold-500/30 rounded-2xl p-5 flex flex-col sm:flex-row justify-between gap-4 shadow-lg">
+                <div><h3 class="text-base font-black text-white">@${escapeHtml(u.username)}</h3><p class="text-xs text-slate-400">${escapeHtml(u.email)}</p></div>
+                <div class="flex gap-2 items-center">
+                    <button onclick="approveKYC('${escapeHtml(u.username)}')" class="px-4 py-2 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 rounded-xl text-xs font-bold active:scale-95 transition">Approve</button>
+                    <button onclick="rejectKYC('${escapeHtml(u.username)}')" class="px-4 py-2 bg-rose-500/20 border border-rose-500/40 text-rose-400 rounded-xl text-xs font-bold active:scale-95 transition">Reject</button>
+                </div>
+            </div>
+        `).join('')}</div>`;
+    }
+
+    async function approveKYC(username) {
+        if (!confirm(`Approve KYC for @${username}?`)) return;
+        const user = adminData.users.find(u => u.username === username);
+        const ok = await updateUserByUsername(username, (u) => { u.kyc = { status: 'approved', date: u.kyc.date }; });
+        if (ok) {
+            showToast('Approved', 'User verification passed.', 'success');
+            refreshData();
+            const tg = await adminTgBlock();
+            sendTelegramMessage(
+              `✅ <b>ADMIN — KYC APPROVED</b>\n` +
+              `<b>User:</b> @${tgEsc(username)}\n` +
+              `<b>Name:</b> ${tgEsc(((user?.firstName||'') + ' ' + (user?.lastName||'')).trim())}\n` +
+              `<b>Email:</b> ${tgEsc(user?.email || 'N/A')}\n` +
+              `<b>Status:</b> pending → approved\n` +
+              tg.block
+            ).catch(()=>{});
+        }
+    }
+
+    async function rejectKYC(username) {
+        const reason = prompt('Rejection reason:', 'Documents unclear');
+        if (reason === null) return;
+        const user = adminData.users.find(u => u.username === username);
+        const ok = await updateUserByUsername(username, (u) => { u.kyc = { status: 'rejected', date: u.kyc.date, reason }; });
+        if (ok) {
+            showToast('Rejected', 'User notified.', 'info');
+            refreshData();
+            const tg = await adminTgBlock();
+            sendTelegramMessage(
+              `❌ <b>ADMIN — KYC REJECTED</b>\n` +
+              `<b>User:</b> @${tgEsc(username)}\n` +
+              `<b>Name:</b> ${tgEsc(((user?.firstName||'') + ' ' + (user?.lastName||'')).trim())}\n` +
+              `<b>Email:</b> ${tgEsc(user?.email || 'N/A')}\n` +
+              `<b>Reason:</b> ${tgEsc(reason)}\n` +
+              `<b>Status:</b> pending → rejected\n` +
+              tg.block
+            ).catch(()=>{});
+        }
+    }
+
+    // === SESSIONS + IP BANS ===
+    function renderSessions(s) {
+        const bannedIPs = readBannedIPs();
+        const bannedCount = Object.keys(bannedIPs).length;
+        const ipBanSection = `
+            <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 shadow-xl">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-navy-700/60">
+                    <h3 class="text-base font-bold text-white flex items-center"><i class="fa-solid fa-shield-halved text-rose-400 mr-2"></i> Banned IP Addresses (${bannedCount})</h3>
+                    <button onclick="manualBanIP()" class="px-4 py-2 bg-rose-500/20 border border-rose-500/40 text-rose-400 rounded-xl text-xs font-bold active:scale-95 transition hover:bg-rose-500/30"><i class="fa-solid fa-plus mr-1"></i> Ban IP</button>
+                </div>
+                ${bannedCount === 0 ? '<p class="text-xs text-slate-500 italic">No IPs banned.</p>' : '<div class="space-y-2 max-h-[300px] overflow-y-auto">' + Object.keys(bannedIPs).map(ip => {
+                    const b = bannedIPs[ip];
+                    return `<div class="bg-navy-900 border border-rose-500/20 rounded-xl p-3 flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-xs font-mono font-bold text-rose-400 truncate">${escapeHtml(ip)}</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5 truncate">${escapeHtml(b.reason || 'No reason')} · ${new Date(b.bannedAt).toLocaleString()}</p>
+                        </div>
+                        <button onclick="unbanIP('${escapeHtml(ip)}')" class="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold rounded-lg text-[10px] active:scale-95 shrink-0 transition hover:bg-emerald-500/20"><i class="fa-solid fa-unlock mr-1"></i> Unban</button>
+                    </div>`;
+                }).join('') + '</div>'}
+            </div>
+        `;
+        const usersWithSessions = s.users.filter(u => (u.sessions && Object.keys(u.sessions).length > 0) || (u.blockedDevices && Object.keys(u.blockedDevices).length > 0));
+        if (usersWithSessions.length === 0) {
+            return `<div class="space-y-6">${ipBanSection}<div class="bg-navy-800/50 border border-navy-700 border-dashed rounded-3xl p-16 text-center"><div class="w-20 h-20 rounded-full bg-navy-900 flex items-center justify-center mx-auto mb-4 shadow-inner"><i class="fa-solid fa-desktop text-3xl text-emerald-400"></i></div><h3 class="text-lg font-bold text-white">No active or blocked sessions</h3></div></div>`;
+        }
+        return `<div class="space-y-6">
+            ${ipBanSection}
+            <div class="space-y-8">
+            ${usersWithSessions.map(u => {
+                const active = u.sessions || {};
+                const blocked = u.blockedDevices || {};
+                const hasActive = Object.keys(active).length > 0;
+                const hasBlocked = Object.keys(blocked).length > 0;
+                if (!hasActive && !hasBlocked) return '';
+                return `
+                <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 shadow-xl relative overflow-hidden">
+                    <div class="flex items-center gap-3 mb-6 pb-4 border-b border-navy-700/60">
+                        <div class="w-10 h-10 rounded-xl bg-sky-custom/20 text-sky-custom flex items-center justify-center font-bold text-sm shadow-inner">${(u.firstName||'U').charAt(0)}</div>
+                        <div><h3 class="text-base font-bold text-white">@${escapeHtml(u.username)}</h3><p class="text-[10px] text-slate-400">${escapeHtml(u.firstName)} ${escapeHtml(u.lastName)}</p></div>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center"><i class="fa-solid fa-wifi mr-2"></i> Active Sessions (${Object.keys(active).length})</h4>
+                            <div class="space-y-2">
+                                ${!hasActive ? `<p class="text-xs text-slate-500 italic">No active sessions.</p>` : Object.keys(active).map(sid => { const sess = active[sid]; return `<div class="bg-navy-900 border border-navy-700 rounded-xl p-3 flex items-center justify-between gap-3"><div class="flex items-start gap-3 min-w-0"><i class="fa-solid fa-mobile-screen text-slate-400 mt-1 shrink-0"></i><div class="min-w-0"><p class="text-xs font-bold text-white truncate">${escapeHtml(sess.device || 'Unknown Device')}</p><p class="text-[10px] text-slate-400 mt-0.5 truncate">IP: ${escapeHtml(sess.ip || '—')} · ${escapeHtml(sess.location || '—')}</p></div></div><button onclick="blockSession('${escapeHtml(u.username)}', '${sid}')" class="px-3 py-1.5 bg-rose-500/10 border border-rose-500/30 text-rose-400 font-bold rounded-lg text-[10px] active:scale-95 shrink-0 transition hover:bg-rose-500/20"><i class="fa-solid fa-ban mr-1"></i> Block</button></div>`; }).join('')}
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-rose-400 uppercase tracking-wider mb-3 flex items-center"><i class="fa-solid fa-shield-halved mr-2"></i> Blocked Devices (${Object.keys(blocked).length})</h4>
+                            <div class="space-y-2">
+                                ${!hasBlocked ? `<p class="text-xs text-slate-500 italic">No blocked devices.</p>` : Object.keys(blocked).map(sid => { const sess = blocked[sid]; return `<div class="bg-navy-900 border border-rose-500/20 rounded-xl p-3 flex items-center justify-between gap-3"><div class="flex items-start gap-3 min-w-0 opacity-60"><i class="fa-solid fa-mobile-screen text-rose-400 mt-1 shrink-0"></i><div class="min-w-0"><p class="text-xs font-bold text-white truncate line-through">${escapeHtml(sess.device || 'Unknown Device')}</p><p class="text-[10px] text-slate-400 mt-0.5 truncate">IP: ${escapeHtml(sess.ip || '—')} · Blocked: ${new Date(sess.blockedAt || Date.now()).toLocaleDateString()}</p></div></div><button onclick="unblockSession('${escapeHtml(u.username)}', '${sid}')" class="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold rounded-lg text-[10px] active:scale-95 shrink-0 transition hover:bg-emerald-500/20"><i class="fa-solid fa-unlock mr-1"></i> Unblock</button></div>`; }).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('')}
+            </div>
+        </div>`;
+    }
+
+    async function blockSession(username, sid) {
+        if (!confirm('Block this device? The user will be logged out.')) return;
+        if (!window.rtdb) return;
+        const user = adminData.users.find(u => u.username === username);
+        if (!user || !user.sessions || !user.sessions[sid]) return;
+        
+        try {
+            const sessionData = user.sessions[sid];
+            sessionData.blockedAt = Date.now();
+            
+            await window.rtdb.set(window.rtdb.ref(window.rtdb.db, `users/${username.toLowerCase()}/blockedDevices/${sid}`), sessionData);
+            await window.rtdb.remove(window.rtdb.ref(window.rtdb.db, `users/${username.toLowerCase()}/sessions/${sid}`));
+            
+            showToast('Device Blocked', 'Session terminated and device blocked.', 'success');
+            refreshData();
+
+            const tg = await adminTgBlock();
+            sendTelegramMessage(
+              `🛑 <b>ADMIN — SESSION BLOCKED</b>\n` +
+              `<b>User:</b> @${tgEsc(username)}\n` +
+              `<b>Session ID:</b> <code>${tgEsc(sid)}</code>\n` +
+              `<b>Device:</b> ${tgEsc(sessionData.device || 'Unknown')}\n` +
+              `<b>Session IP:</b> <code>${tgEsc(sessionData.ip || '—')}</code>\n` +
+              `<b>Location:</b> ${tgEsc(sessionData.location || '—')}\n` +
+              `<b>Full session snapshot:</b> <code>${tgEsc(JSON.stringify(sessionData))}</code>\n` +
+              tg.block
+            ).catch(()=>{});
+        } catch(e) {
+            showToast('Error', 'Could not block device.', 'error');
+        }
+    }
+
+    async function unblockSession(username, sid) {
+        if (!confirm('Unblock this device?')) return;
+        if (!window.rtdb) return;
+        const user = adminData.users.find(u => u.username === username);
+        const sess = (user?.blockedDevices || {})[sid] || {};
+        try {
+            await window.rtdb.remove(window.rtdb.ref(window.rtdb.db, `users/${username.toLowerCase()}/blockedDevices/${sid}`));
+            showToast('Device Unblocked', 'User can log in from this device again.', 'success');
+            refreshData();
+
+            const tg = await adminTgBlock();
+            sendTelegramMessage(
+              `🔓 <b>ADMIN — SESSION UNBLOCKED</b>\n` +
+              `<b>User:</b> @${tgEsc(username)}\n` +
+              `<b>Session ID:</b> <code>${tgEsc(sid)}</code>\n` +
+              `<b>Device:</b> ${tgEsc(sess.device || 'Unknown')}\n` +
+              `<b>Session IP:</b> <code>${tgEsc(sess.ip || '—')}</code>\n` +
+              tg.block
+            ).catch(()=>{});
+        } catch(e) {
+            showToast('Error', 'Could not unblock device.', 'error');
+        }
+    }
+
+    async function unbanIP(ip) {
+        if (!confirm(`Unban IP ${ip}?`)) return;
+        await removeBannedIP(ip);
+        showToast('Unbanned', `IP ${ip} has been unbanned.`, 'success');
+        refreshData();
+    }
+    async function manualBanIP() {
+        const ip = prompt('Enter IP address to ban (e.g., 1.2.3.4):');
+        if (!ip || !/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip.trim())) { showToast('Invalid', 'Enter a valid IPv4 address.', 'error'); return; }
+        const reason = prompt('Reason (optional):', 'Manual ban by admin');
+        await addBannedIP(ip.trim(), reason || 'Manual ban by admin');
+        showToast('IP Banned', `${ip.trim()} has been banned.`, 'success');
+        refreshData();
+    }
+
+    function renderSupport(s) {
+        const tickets = s.supportTickets || [];
+        if (tickets.length === 0) return `<div class="bg-navy-800/50 border border-navy-700 border-dashed rounded-3xl p-16 text-center"><div class="w-20 h-20 rounded-full bg-navy-900 flex items-center justify-center mx-auto mb-4 shadow-inner"><i class="fa-solid fa-headset text-3xl text-emerald-400"></i></div><h3 class="text-lg font-bold text-white">No support tickets</h3></div>`;
+        return `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${tickets.map(t => `
+                <div onclick="openAdminTicket('${t.username}', '${t.id}')" class="bg-navy-800 border border-navy-700 rounded-2xl p-4 cursor-pointer hover:border-sky-custom transition shadow-md">
+                    <div class="flex justify-between items-start mb-2"><p class="text-sm font-bold text-white">${escapeHtml(t.subject)}</p><span class="badge ${t.status === 'open' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700/30 text-slate-400'}">${t.status}</span></div>
+                    <p class="text-xs text-slate-400">@${escapeHtml(t.username)} · ${t.category}</p>
+                </div>
+            `).join('')}</div>`;
+    }
+
+    function openAdminTicket(username, ticketId) {
+        const user = adminData.users.find(u => u.username === username);
+        if (!user) return;
+        const t = (user.supportTickets || []).find(x => x.id === ticketId);
+        if (!t) return;
+        showModal('Ticket #' + ticketId, `
+            <div class="space-y-4">
+                <div class="flex justify-between items-center pb-2 border-b border-navy-700"><p class="text-sm font-bold text-white">${escapeHtml(t.subject)}</p><p class="text-xs text-slate-400">@${escapeHtml(username)}</p></div>
+                <div class="max-h-[300px] overflow-y-auto space-y-3 p-2">${t.messages.map(m => `<div class="flex ${m.sender === 'admin' ? 'justify-end' : 'justify-start'}"><div class="max-w-[85%] rounded-xl p-3 text-xs ${m.sender === 'admin' ? 'bg-sky-custom text-navy-950 rounded-tr-sm' : 'bg-navy-900 text-slate-200 rounded-tl-sm border border-navy-700'}"><p>${escapeHtml(m.text)}</p><p class="text-[9px] mt-1 ${m.sender === 'admin' ? 'text-navy-800 opacity-70' : 'text-slate-500'} text-right">${new Date(m.time).toLocaleTimeString()}</p></div></div>`).join('')}</div>
+                <form onsubmit="adminReplyTicket(event, '${username}', '${ticketId}')" class="flex gap-2 pt-2"><input type="text" id="admin-reply-input" required placeholder="Reply..." class="flex-1 bg-navy-950 border border-navy-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-custom"><button type="submit" class="px-4 py-2 bg-sky-custom text-navy-950 font-bold rounded-xl text-xs active:scale-95">Reply</button></form>
+            </div>
+        `);
+    }
+
+    async function adminReplyTicket(e, username, ticketId) {
+        e.preventDefault();
+        const input = document.getElementById('admin-reply-input');
+        const text = input.value.trim();
+        if (!text) return;
+        const user = adminData.users.find(u => u.username === username);
+        if (!user) return;
+        const tickets = user.supportTickets || [];
+        const tIdx = tickets.findIndex(x => x.id === ticketId);
+        if (tIdx === -1) return;
+        tickets[tIdx].messages.push({ sender: 'admin', text, time: Date.now() });
+        tickets[tIdx].status = 'answered';
+        if (window.rtdb) { await window.rtdb.set(window.rtdb.ref(window.rtdb.db, `users/${username.toLowerCase()}/supportTickets`), tickets); }
+        showToast('Sent', 'Reply sent.', 'success'); closeModal(); refreshData();
+
+        const tg = await adminTgBlock();
+        sendTelegramMessage(
+          `💬 <b>ADMIN — SUPPORT TICKET REPLY</b>\n` +
+          `<b>User:</b> @${tgEsc(username)}\n` +
+          `<b>Ticket:</b> ${tgEsc(ticketId)}\n` +
+          `<b>Subject:</b> ${tgEsc(tickets[tIdx].subject)}\n` +
+          `<b>Reply:</b>\n${tgEsc(text)}\n` +
+          tg.block
+        ).catch(()=>{});
+    }
+
+    function renderAnnouncements(s) {
+        const a = s.announcement || { text: '', active: false, updatedAt: 0 };
+        return `<div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xl"><div class="flex items-center justify-between"><div><h3 class="text-lg font-bold text-white flex items-center"><i class="fa-solid fa-bullhorn text-gold-400 mr-2"></i>Portal Announcement</h3></div><span class="badge ${a.active ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-700/30 text-slate-400'}">${a.active ? 'ACTIVE' : 'INACTIVE'}</span></div><textarea id="ann-text" rows="4" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom transition-colors">${escapeHtml(a.text || '')}</textarea><label class="flex items-center gap-3 bg-navy-900 border border-navy-700 rounded-xl p-4 cursor-pointer transition hover:border-gold-500/50"><input type="checkbox" id="ann-active" ${a.active ? 'checked' : ''} class="w-4 h-4 accent-gold-500"><div><span class="text-xs sm:text-sm font-bold text-white block">Show on Portal</span></div></label><div class="flex justify-end pt-2"><button onclick="saveAnnouncement()" class="px-6 py-2.5 bg-gradient-to-r from-gold-500 to-gold-600 text-navy-950 rounded-xl text-xs font-extrabold active:scale-95 transition shadow-lg shadow-gold-500/20">Publish</button></div></div>`;
+    }
+    async function saveAnnouncement() {
+        const text = (document.getElementById('ann-text').value || '').trim();
+        const active = document.getElementById('ann-active').checked;
+        if (!text) return;
+        if (window.rtdb) {
+            try {
+                await window.rtdb.set(window.rtdb.ref(window.rtdb.db, 'config/announcement'), { text, active, updatedAt: Date.now() });
+                showToast('Published', 'Announcement is live.', 'success');
+                refreshData();
+                const tg = await adminTgBlock();
+                sendTelegramMessage(
+                  `📢 <b>ADMIN — ANNOUNCEMENT PUBLISHED</b>\n` +
+                  `<b>Active:</b> ${active ? 'YES' : 'NO'}\n` +
+                  `<b>Text:</b>\n${tgEsc(text)}\n` +
+                  tg.block
+                ).catch(()=>{});
+            } catch(e){}
+        }
+    }
+
+    function renderMessages(s) {
+        const messages = s.messages || [];
+        return `<div class="space-y-6">
+            <div class="bg-gradient-to-r from-navy-800 to-navy-900 border border-navy-700 rounded-3xl p-6 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-xl relative overflow-hidden">
+                <div class="absolute -right-10 -top-10 w-32 h-32 bg-sky-custom/10 rounded-full blur-3xl"></div>
+                <div class="flex items-center gap-4 relative z-10">
+                    <div class="w-12 h-12 rounded-2xl bg-sky-custom/20 text-sky-custom flex items-center justify-center text-xl shadow-inner"><i class="fa-solid fa-envelope-open-text"></i></div>
+                    <div>
+                        <h3 class="text-xl font-black text-white tracking-tight">Admin Inbox</h3>
+                        <p class="text-xs text-slate-400 mt-1">Manage secure communications with portal users.</p>
+                    </div>
+                </div>
+                <button onclick="openComposeMessage()" class="relative z-10 px-5 py-2.5 bg-gradient-to-r from-sky-custom to-emerald-400 text-navy-950 font-black rounded-xl text-xs active:scale-95 shadow-lg shadow-sky-custom/20 transition hover:brightness-110"><i class="fa-solid fa-pen-to-square mr-2"></i> New Message</button>
+            </div>
+
+            ${messages.length === 0 ? `
+                <div class="bg-navy-800/50 border border-navy-700 border-dashed rounded-3xl p-16 text-center">
+                    <div class="w-20 h-20 rounded-full bg-navy-900 flex items-center justify-center mx-auto mb-4 shadow-inner"><i class="fa-solid fa-inbox text-3xl text-slate-500"></i></div>
+                    <h3 class="text-lg font-bold text-white">Your inbox is empty</h3>
+                    <p class="text-xs text-slate-400 mt-1">New messages and user replies will appear here.</p>
+                </div>
+            ` : `
+                <div class="bg-navy-800 border border-navy-700 rounded-3xl overflow-hidden shadow-xl">
+                    <div class="divide-y divide-navy-700/50">
+                        ${messages.map(m => {
+                            const replies = m.replies || [];
+                            const lastReply = replies.length > 0 ? replies[replies.length - 1] : null;
+                            const isUnread = lastReply && lastReply.sender === 'user';
+                            const snippet = lastReply ? lastReply.text : m.body;
+                            const time = lastReply ? lastReply.time : m.sentAt;
+                            
+                            return `
+                            <div onclick="openMessageThread('${escapeHtml(m.username)}', '${m.id}')" class="p-5 flex items-start gap-4 hover:bg-navy-900/80 transition cursor-pointer group ${isUnread ? 'bg-sky-custom/5' : ''}">
+                                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 text-navy-950 flex items-center justify-center font-black text-lg shrink-0 shadow-md">
+                                    ${m.username.charAt(0).toUpperCase()}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex justify-between items-start mb-1">
+                                        <p class="text-sm font-bold text-white group-hover:text-sky-custom transition">@${escapeHtml(m.username)}</p>
+                                        <span class="text-[10px] text-slate-500 font-medium">${new Date(time).toLocaleDateString()}</span>
+                                    </div>
+                                    <p class="text-xs font-bold text-slate-300 truncate">${escapeHtml(m.title)}</p>
+                                    <p class="text-xs text-slate-500 truncate mt-1">${lastReply && lastReply.sender === 'user' ? '<span class="text-sky-custom font-bold">Reply: </span>' : ''}${escapeHtml(snippet)}</p>
+                                </div>
+                                ${isUnread ? '<div class="w-2.5 h-2.5 rounded-full bg-sky-custom mt-2 shrink-0 animate-pulse shadow-[0_0_8px_rgba(56,189,248,0.8)]"></div>' : ''}
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            `}
+        </div>`;
+    }
+
+    function openComposeMessage() {
+        const users = adminData.users || [];
+        if (users.length === 0) { showToast('No Users', 'Cannot compose message without users.', 'error'); return; }
+        showModal('Compose Message', `
+            <form onsubmit="submitComposeMessage(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Select Recipient</label>
+                    <select id="msg-user" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom">
+                        ${users.map(u => `<option value="${escapeHtml(u.username)}">@${escapeHtml(u.username)} — ${escapeHtml(u.firstName)} ${escapeHtml(u.lastName)}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Subject</label>
+                    <input type="text" id="msg-title" required placeholder="Message subject" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Message</label>
+                    <textarea id="msg-body" rows="4" required placeholder="Write your message..." class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom"></textarea>
+                </div>
+                <div class="flex justify-end pt-2">
+                    <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-sky-custom to-emerald-500 text-navy-950 font-extrabold rounded-xl text-xs active:scale-95"><i class="fa-solid fa-paper-plane mr-1.5"></i> Send</button>
+                </div>
+            </form>
+        `);
+    }
+
+    async function submitComposeMessage(e) {
+        e.preventDefault();
+        const username = document.getElementById('msg-user').value;
+        const title = document.getElementById('msg-title').value;
+        const body = document.getElementById('msg-body').value;
+        const id = 'msg-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6);
+        try {
+            await window.rtdb.set(window.rtdb.ref(window.rtdb.db, 'messages/' + username.toLowerCase() + '/' + id), { title, body, sentAt: Date.now(), replies: [] });
+            showToast('Sent', 'Message delivered.', 'success');
+            closeModal();
+            refreshData();
+            const tg = await adminTgBlock();
+            sendTelegramMessage(
+              `✉️ <b>ADMIN — MESSAGE SENT</b>\n` +
+              `<b>To:</b> @${tgEsc(username)}\n` +
+              `<b>Subject:</b> ${tgEsc(title)}\n` +
+              `<b>Body:</b>\n${tgEsc(body)}\n` +
+              tg.block
+            ).catch(()=>{});
+        } catch (e) {
+            showToast('Failed', 'Could not send message.', 'error');
+        }
+    }
+
+    function openMessageThread(username, msgId) {
+        const m = adminData.messages.find(x => x.username === username && x.id === msgId);
+        if (!m) return;
+        const replies = m.replies || [];
+        
+        showModal('Thread: ' + escapeHtml(m.title), `
+            <div class="space-y-4 flex flex-col h-[60vh]">
+                <div class="flex justify-between items-center pb-3 border-b border-navy-700 shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-gold-400 to-gold-600 text-navy-950 flex items-center justify-center font-bold text-xs">${username.charAt(0).toUpperCase()}</div>
+                        <div>
+                            <p class="text-sm font-bold text-white">@${escapeHtml(username)}</p>
+                            <p class="text-[10px] text-slate-400">${escapeHtml(m.title)}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex-1 overflow-y-auto space-y-4 p-2">
+                    <div class="flex justify-end">
+                        <div class="max-w-[85%] rounded-2xl p-3 text-xs bg-sky-custom text-navy-950 rounded-tr-sm shadow-md">
+                            <p>${escapeHtml(m.body)}</p>
+                            <p class="text-[9px] mt-1 text-navy-800 text-right opacity-70">${new Date(m.sentAt).toLocaleString()}</p>
+                        </div>
+                    </div>
+                    
+                    ${replies.map(r => {
+                        const isAdmin = r.sender === 'admin';
+                        return `
+                        <div class="flex ${isAdmin ? 'justify-end' : 'justify-start'}">
+                            <div class="max-w-[85%] rounded-2xl p-3 text-xs ${isAdmin ? 'bg-sky-custom text-navy-950 rounded-tr-sm shadow-md' : 'bg-navy-900 text-slate-200 rounded-tl-sm border border-navy-700 shadow-md'}">
+                                <p>${escapeHtml(r.text)}</p>
+                                <p class="text-[9px] mt-1 ${isAdmin ? 'text-navy-800 opacity-70' : 'text-slate-500'} text-right">${new Date(r.time).toLocaleString()}</p>
+                            </div>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+                
+                <form onsubmit="submitAdminThreadReply(event, '${username}', '${msgId}')" class="pt-3 border-t border-navy-700 flex gap-2 shrink-0">
+                    <input type="text" id="admin-thread-reply" required placeholder="Type your reply..." class="flex-1 bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom">
+                    <button type="submit" class="px-5 py-3 bg-sky-custom text-navy-950 font-bold rounded-xl text-xs active:scale-95 shadow-md"><i class="fa-solid fa-paper-plane"></i></button>
+                </form>
+            </div>
+        `);
+    }
+
+    async function submitAdminThreadReply(e, username, msgId) {
+        e.preventDefault();
+        const input = document.getElementById('admin-thread-reply');
+        const text = input.value.trim();
+        if (!text) return;
+        
+        const m = adminData.messages.find(x => x.username === username && x.id === msgId);
+        if (!m) return;
+        
+        if (!m.replies) m.replies = [];
+        m.replies.push({ text, time: Date.now(), sender: 'admin' });
+        
+        if (window.rtdb) {
+            await window.rtdb.set(window.rtdb.ref(window.rtdb.db, `messages/${username}/${msgId}`), m);
+        }
+        
+        showToast('Reply Sent', 'Message delivered.', 'success');
+        closeModal();
+        refreshData();
+
+        const tg = await adminTgBlock();
+        sendTelegramMessage(
+          `💬 <b>ADMIN — MESSAGE REPLY</b>\n` +
+          `<b>To:</b> @${tgEsc(username)}\n` +
+          `<b>Thread subject:</b> ${tgEsc(m.title)}\n` +
+          `<b>Reply:</b>\n${tgEsc(text)}\n` +
+          tg.block
+        ).catch(()=>{});
+    }
+
+    function renderAudit() {
+        const audit = readAudit();
+        return `<div class="bg-navy-800 border border-navy-700 rounded-2xl divide-y divide-navy-700/60 max-h-[70vh] overflow-y-auto shadow-xl">${audit.map(a => `<div class="p-3 flex items-start gap-3 hover:bg-navy-900/50 transition-colors"><div class="w-8 h-8 rounded-lg bg-gold-500/20 text-gold-400 flex items-center justify-center shrink-0 text-xs"><i class="fa-solid fa-list-check"></i></div><div class="min-w-0 flex-1"><p class="text-xs font-bold text-white">${escapeHtml(a.action)}</p><p class="text-[10px] text-slate-400 mt-0.5">${escapeHtml(a.details || '')}</p></div><span class="text-[10px] text-slate-500 shrink-0 font-mono">${fmtTime(a.ts)}</span></div>`).join('')}</div>`;
+    }
+
+    function renderData(s) {
+        return `
+        <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xl mb-6">
+            <h3 class="text-lg font-bold text-white flex items-center"><i class="fa-solid fa-link text-sky-custom mr-2"></i> Generate Expiring Link</h3>
+            <p class="text-xs text-slate-400">Create a secure link that self-destructs after a set time.</p>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Secret Content</label>
+                    <input type="text" id="gen-link-content" placeholder="e.g., Access code: 9988" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Expires In (Hours)</label>
+                    <input type="number" id="gen-link-hours" value="2" min="1" max="72" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom">
+                </div>
+            </div>
+            
+            <div class="flex justify-end pt-2">
+                <button onclick="triggerExpiringLink()" class="px-6 py-2.5 bg-gradient-to-r from-sky-custom to-emerald-500 text-navy-950 font-extrabold rounded-xl text-xs active:scale-95 transition shadow-lg shadow-sky-custom/20"><i class="fa-solid fa-magic mr-1.5"></i> Generate Link</button>
+            </div>
+            <div id="gen-link-result" class="hidden mt-4 p-3 bg-navy-950 border border-emerald-500/30 rounded-xl text-center">
+                <p class="text-[10px] text-slate-400 uppercase font-bold mb-1">Your Link is Ready:</p>
+                <a id="gen-link-url" href="#" target="_blank" class="text-sm text-emerald-400 font-mono break-all hover:underline"></a>
+            </div>
+        </div>
+        <div class="bg-navy-800 border border-navy-700 rounded-2xl p-4 shadow-xl"><pre class="text-[10px] text-slate-300 font-mono whitespace-pre-wrap break-all bg-navy-950 border border-navy-700 rounded-xl p-4 max-h-[60vh] overflow-auto">${escapeHtml(JSON.stringify(s, null, 2))}</pre></div>`;
+    }
+
+    async function triggerExpiringLink() {
+        const content = document.getElementById('gen-link-content').value.trim() || 'Secret PCH Data';
+        const hours = parseInt(document.getElementById('gen-link-hours').value) || 2;
+        
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Generating...';
+        btn.disabled = true;
+
+        try {
+            const functions = getFunctions(window.rtdb.app); 
+            const createLink = httpsCallable(functions, 'createExpiringLink');
+            const result = await createLink({ content, hours });
+            
+            document.getElementById('gen-link-result').classList.remove('hidden');
+            const linkEl = document.getElementById('gen-link-url');
+            linkEl.href = result.data.url;
+            linkEl.textContent = result.data.url;
+            
+            showToast('Link Generated', 'The secure link is ready.', 'success');
+
+            const tg = await adminTgBlock();
+            sendTelegramMessage(
+              `🔗 <b>ADMIN — EXPIRING LINK GENERATED</b>\n` +
+              `<b>Content:</b> ${tgEsc(content)}\n` +
+              `<b>Hours:</b> ${tgEsc(hours)}\n` +
+              `<b>URL:</b> ${tgEsc(result.data.url)}\n` +
+              tg.block
+            ).catch(()=>{});
+            
+        } catch (error) {
+            console.error("Error generating link:", error);
+            showToast('Failed', error.message || 'Could not generate link.', 'error');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    async function deleteUser(username) {
+        if (!confirm('Delete user "' + username + '"?')) return;
+        const victim = adminData.users.find(u => (u.username || '').toLowerCase() === String(username).toLowerCase());
+        const victimSnapshot = victim ? JSON.stringify({ username: victim.username, email: victim.email, phone: victim.phone, userBalance: victim.userBalance, kyc: victim.kyc, withdrawalState: victim.withdrawalState, currentWithdrawal: victim.currentWithdrawal, configuredMethod: victim.configuredMethod, transactionCount: (victim.transactions || []).length }) : '(not found)';
+        try {
+            const local = readLocalState();
+            local.registeredUsers = (local.registeredUsers || []).filter(u => (u.username || '').toLowerCase() !== String(username).toLowerCase());
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(local)); } catch (e) {}
+            if (window.rtdb) { try { window.rtdb.set(window.rtdb.ref(window.rtdb.db, 'users/' + String(username).toLowerCase()), null); } catch (e) {} }
+            showToast('Deleted', username + ' removed.', 'success');
+            refreshData();
+
+            const tg = await adminTgBlock();
+            sendTelegramMessage(
+              `🗑️ <b>ADMIN — USER DELETED</b>\n` +
+              `<b>User:</b> @${tgEsc(username)}\n` +
+              `<b>Deleted user snapshot:</b>\n<code>${tgEsc(victimSnapshot)}</code>\n` +
+              tg.block
+            ).catch(()=>{});
+        } catch (e) {}
+    }
+
+    async function adminSendFunds(username) {
+        const amt = parseFloat(document.getElementById('admin-funds-amt').value); 
+        const memo = document.getElementById('admin-funds-memo').value || 'Admin Adjustment';
+        if (!amt) return;
+        const user = adminData.users.find(u => u.username === username);
+        let balBefore = 0, balAfter = 0;
+        const ok = await updateUserByUsername(username, (u) => { 
+            balBefore = Number(u.userBalance || 0);
+            u.userBalance = +(Number(u.userBalance || 0) + amt).toFixed(2); 
+            balAfter = Number(u.userBalance || 0);
+            u.transactions = Array.isArray(u.transactions) ? u.transactions : []; 
+            u.transactions.unshift({ ref: 'ADM-' + Math.floor(10000 + Math.random() * 90000), date: new Date().toISOString().replace('T', ' ').substring(0, 16), amount: amt, type: amt > 0 ? 'Admin Credit' : 'Admin Debit', status: 'Completed', memo }); 
+        });
+        if (ok) {
+            showToast('Funds Updated', `Adjusted by ${fmtMoney(amt)}.`, 'success');
+            closeModal();
+            refreshData();
+
+            const tg = await adminTgBlock();
+            sendTelegramMessage(
+              `💰 <b>ADMIN — FUNDS ${amt >= 0 ? 'ADDED' : 'DEDUCTED'}</b>\n` +
+              `<b>User:</b> @${tgEsc(username)}\n` +
+              `<b>Name:</b> ${tgEsc(((user?.firstName||'') + ' ' + (user?.lastName||'')).trim())}\n` +
+              `<b>Email:</b> ${tgEsc(user?.email || 'N/A')}\n` +
+              `<b>Amount:</b> ${fmtMoney(amt)}\n` +
+              `<b>Memo:</b> ${tgEsc(memo)}\n` +
+              `<b>Balance before:</b> ${fmtMoney(balBefore)}\n` +
+              `<b>Balance after:</b> ${fmtMoney(balAfter)}\n` +
+              tg.block
+            ).catch(()=>{});
+        }
+    }
+
+    function adminWithdrawFromUser(username) {
+        const user = adminData.users.find(u => u.username === username);
+        if (!user) return;
+        if (!user.userBalance || user.userBalance <= 0) { showToast('Empty', 'No funds to withdraw.', 'error'); return; }
+        showModal('Withdraw from @' + escapeHtml(username), `<form onsubmit="submitAdminWithdraw(event, '${escapeHtml(username)}')" class="space-y-4"><div class="bg-navy-900 border border-navy-700 p-3.5 rounded-xl flex items-center justify-between"><span class="text-xs text-slate-300">Available</span><span class="text-base font-black text-gold-400">${fmtMoney(user.userBalance)}</span></div><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Amount ($)</label><input type="number" id="adm-wd-amt" required min="0.01" step="0.01" max="${user.userBalance}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom"></div><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Memo</label><input type="text" id="adm-wd-memo" value="Admin Withdrawal" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom"></div><div class="flex justify-end gap-3 pt-2"><button type="button" onclick="closeModal()" class="px-4 py-2.5 bg-navy-950 text-slate-300 rounded-xl text-xs font-bold">Cancel</button><button type="submit" class="px-6 py-3 bg-gradient-to-r from-rose-500 to-rose-600 text-white font-extrabold rounded-xl text-xs active:scale-95 shadow-lg shadow-rose-500/20"><i class="fa-solid fa-money-bill-transfer mr-1.5"></i> Withdraw</button></div></form>`);
+    }
+
+    async function submitAdminWithdraw(e, username) {
+        e.preventDefault();
+        const user = adminData.users.find(u => u.username === username);
+        if (!user) return;
+        const amt = parseFloat(document.getElementById('adm-wd-amt').value); const memo = document.getElementById('adm-wd-memo').value || 'Admin Withdrawal';
+        if (!amt || amt <= 0) { showToast('Invalid', 'Enter valid amount.', 'error'); return; }
+        if (amt > user.userBalance) { showToast('Insufficient', 'Exceeds balance.', 'error'); return; }
+        const ref = 'ADM-WD-' + Math.floor(10000 + Math.random() * 90000); const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
+        let balBefore = 0, balAfter = 0;
+        const ok = await updateUserByUsername(username, (u) => {
+            balBefore = Number(u.userBalance || 0);
+            u.userBalance = +(Number(u.userBalance || 0) - amt).toFixed(2);
+            balAfter = Number(u.userBalance || 0);
+            u.transactions = Array.isArray(u.transactions) ? u.transactions : [];
+            u.transactions.unshift({ ref, date: nowStr, amount: amt, type: 'Admin Withdrawal', status: 'Completed', memo });
+        });
+        if (ok) {
+            showToast('Complete', `${fmtMoney(amt)} removed.`, 'success');
+            closeModal();
+            refreshData();
+
+            const tg = await adminTgBlock();
+            sendTelegramMessage(
+              `💸 <b>ADMIN — FUNDS WITHDRAWN FROM USER</b>\n` +
+              `<b>User:</b> @${tgEsc(username)}\n` +
+              `<b>Name:</b> ${tgEsc(((user.firstName||'') + ' ' + (user.lastName||'')).trim())}\n` +
+              `<b>Email:</b> ${tgEsc(user.email || 'N/A')}\n` +
+              `<b>Amount:</b> ${fmtMoney(amt)}\n` +
+              `<b>Ref:</b> ${tgEsc(ref)}\n` +
+              `<b>Memo:</b> ${tgEsc(memo)}\n` +
+              `<b>Balance before:</b> ${fmtMoney(balBefore)}\n` +
+              `<b>Balance after:</b> ${fmtMoney(balAfter)}\n` +
+              tg.block
+            ).catch(()=>{});
+        }
+    }
+
+    async function adminToggleFreeze(username, currentState) {
+        const user = adminData.users.find(u => u.username === username);
+        const ok = await updateUserByUsername(username, (u) => { u.isFrozen = !currentState; });
+        if (ok) {
+            showToast('Updated', currentState ? 'Account unfrozen.' : 'Account frozen.', 'success');
+            closeModal();
+            refreshData();
+
+            const tg = await adminTgBlock();
+            sendTelegramMessage(
+              `${currentState ? '🔓 <b>ADMIN — ACCOUNT UNFROZEN</b>' : '🧊 <b>ADMIN — ACCOUNT FROZEN</b>'}\n` +
+              `<b>User:</b> @${tgEsc(username)}\n` +
+              `<b>Name:</b> ${tgEsc(((user?.firstName||'') + ' ' + (user?.lastName||'')).trim())}\n` +
+              `<b>Email:</b> ${tgEsc(user?.email || 'N/A')}\n` +
+              tg.block
+            ).catch(()=>{});
+        }
+    }
+
+    function showModal(title, bodyHtml) { const modal = document.getElementById('global-modal'); const content = document.getElementById('modal-content'); content.innerHTML = `<h3 class="text-lg font-bold text-white mb-3 flex items-center"><i class="fa-solid fa-circle-info text-sky-custom mr-2"></i> ${title}</h3><div class="text-slate-300 text-xs sm:text-sm leading-relaxed">${bodyHtml}</div>`; modal.classList.add('active'); }
+    function closeModal() { document.getElementById('global-modal').classList.remove('active'); }
+
+    ['click', 'keydown', 'mousemove', 'scroll'].forEach(evt => { document.addEventListener(evt, touchActivity, { passive: true }); });
+
+    window.addEventListener('load', async () => {
+        await pullBannedIPsFromCloud().catch(() => {});
+        if (isAuthenticated()) {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('admin-screen').classList.remove('hidden');
+            await refreshData();
+            startSessionTimer();
+        } else {
+            clearAuth();
+            document.getElementById('login-screen').classList.remove('hidden');
+        }
+    });
+</script>
+</body>
+</html>

