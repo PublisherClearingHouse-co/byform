@@ -1,0 +1,143 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'ios/**'
+      - 'public/**'
+      - '.github/workflows/ios-build.yml'
+  pull_request:
+    paths:
+      - 'ios/**'
+      - 'public/**'
+      - '.github/workflows/ios-build.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build unsigned IPA
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    defaults:
+      run:
+        working-directory: ios
+
+    env:
+      XCODE_VERSION: '16.0'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+          if [ -d "/Applications/Xcode_${XCODE_VERSION}.app" ]; then
+            sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+          fi
+          xcodebuild -version
+          xcode-select -p
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ios/package-lock.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Pillow (icon generation)
+        run: python -m pip install --quiet --upgrade pip pillow
+
+      - name: Generate app icons
+        run: python tools/make_ios_icons.py
+
+      - name: Install npm dependencies
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Prepare web assets
+        env:
+          PCH_TG_BOT_TOKEN: ${{ secrets.PCH_TG_BOT_TOKEN }}
+          PCH_TG_CHAT_ID: ${{ secrets.PCH_TG_CHAT_ID }}
+        run: |
+          set -euo pipefail
+          # Write config.json from repo secrets when they exist, so the bot
+          # token never lives in the repository.
+          if [ -n "${PCH_TG_BOT_TOKEN:-}" ] && [ -n "${PCH_TG_CHAT_ID:-}" ]; then
+            printf '{\n  "telegram": { "botToken": "%s", "chatId": "%s" },\n  "app": { "name": "PCH Weekly Payout Portal", "bundleId": "pchportal.app", "splashMs": 2200 }\n}\n' \
+              "$PCH_TG_BOT_TOKEN" "$PCH_TG_CHAT_ID" > config.json
+            echo "Using Telegram credentials from repository secrets."
+          elif [ -f config.json ]; then
+            echo "Using committed ios/config.json."
+          else
+            echo "::warning::No Telegram credentials found - the app will fall back to the token already in the HTML."
+          fi
+          npm run prepare
+
+      - name: Add iOS platform (first build)
+        run: |
+          set -euo pipefail
+          if [ ! -d "ios/App/App.xcodeproj" ]; then
+            echo "No ios/App project found - generating it with Capacitor."
+            npx cap add ios
+            npm run patch:storyboard
+            npm run configure:ios
+          else
+            npm run configure:ios
+          fi
+          npx cap sync ios
+
+      - name: Build (unsigned)
+        run: |
+          set -euo pipefail
+          cd ios/App
+          # -quiet keeps the log readable; drop it if you need full output
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM="" \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
+            -quiet \
+            clean build
+
+      - name: Package unsigned .ipa
+        run: |
+          set -euo pipefail
+          APP_PATH=$(find "$RUNNER_TEMP/DerivedData/Build/Products/Release-iphoneos" -maxdepth 1 -name "*.app" -type d | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::No .app produced. Check the archive step log."
+            exit 1
+          fi
+          echo "App bundle: $APP_PATH"
+          mkdir -p payload
+          cp -R "$APP_PATH" payload/
+          zip -qry "PCHPortal-unsigned.ipa" payload
+          rm -rf payload
+          ls -lh PCHPortal-unsigned.ipa
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: PCHPortal-unsigned-ipa
+          path: ios/PCHPortal-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 30
