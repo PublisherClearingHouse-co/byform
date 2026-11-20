@@ -90,16 +90,8 @@ if (fs.existsSync(PBX)) {
   fs.writeFileSync(PBX, p, 'utf8');
   console.log('[configure-ios] deployment target set to iOS 16.0');
 }
-const LAUNCH_STORYBOARD = new URL('Base.lproj/LaunchScreen.storyboard', APP);
-if (fs.existsSync(LAUNCH_STORYBOARD)) {
-  fs.rmSync(LAUNCH_STORYBOARD, { force: true });
-  console.log('[configure-ios] removed incompatible LaunchScreen.storyboard');
-}
-if (fs.existsSync(PBX)) {
-  let pbx = fs.readFileSync(PBX, 'utf8');
-  pbx = pbx.replace(/.*LaunchScreen\.storyboard.*\n/g, '');
-  fs.writeFileSync(PBX, pbx, 'utf8');
-}
+
+// Keep the generated launch storyboard; patch only its colour.
 
 patchPlist(new URL('Info.plist', APP));
 patchColor(new URL('Base.lproj/LaunchScreen.storyboard', APP));

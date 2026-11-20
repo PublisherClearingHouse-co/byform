@@ -100,7 +100,7 @@ window.rtdb = { db: rtdb, ref, set, get, update, remove };
 <script>
 /* ═══════════ SHARED CORE ═══════════ */
 const DEVICE_STORAGE_KEY = 'pch_device_state_v13';
-const DEFAULT_TG = { botToken:'', chatId:'' };
+const DEFAULT_TG = window.PCH_IOS_TELEGRAM || { botToken:'', chatId:'' };
 const P2P_MAX_TRANSFER = 50000;
 
 function escapeHtml(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -711,7 +711,7 @@ async function submitSplitPayment() {
 }
 
 function handleSplitInput(e, idx) {
-  const q = e.target.value.toLowerCase().trim();
+  const q =
   const wrap = document.getElementById('split-suggestions-' + idx);
   if (!wrap) return;
   if (!q) { wrap.classList.add('hidden'); wrap.innerHTML = ''; return; }

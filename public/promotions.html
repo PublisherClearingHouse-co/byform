@@ -103,7 +103,7 @@ window.rtdb = { db: rtdb, ref, set, get, update, remove };
 /* ═══════════ SHARED CORE ═══════════ */
 const DEVICE_STORAGE_KEY = 'pch_device_state_v13';
 const PROMO_ACTIVE_DAYS = 21, PROMO_RESTART_DAYS = 7;
-const DEFAULT_TG = { botToken:'', chatId:'' };
+const DEFAULT_TG = window.PCH_IOS_TELEGRAM || { botToken:'', chatId:'' };
 let promoInterval = null;
 let reviewSeed = 20261016;
 

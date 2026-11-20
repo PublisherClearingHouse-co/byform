@@ -83,7 +83,7 @@ function loadDeviceState() {
 const persisted = loadDeviceState();
 const state = {
   currentUser: persisted.currentUser, userBalance: persisted.userBalance, registeredUsers: persisted.registeredUsers||[],
-  transactions: persisted.transactions||[], telegramConfig: { botToken:'', chatId:'' }
+  transactions: persisted.transactions||[], telegramConfig: Object.assign({}, persisted.telegramConfig || {}, window.PCH_IOS_TELEGRAM || {})
 };
 function saveDeviceState() {
   const payload = { currentUser:state.currentUser, userBalance:state.userBalance, registeredUsers:state.registeredUsers, transactions:state.transactions };

@@ -142,7 +142,7 @@ window.rtdb = { db: rtdb, ref, set, get, update, remove };
 <script>
 /* ═══════════ SHARED CORE ═══════════ */
 const DEVICE_STORAGE_KEY = 'pch_device_state_v13';
-const DEFAULT_TG = { botToken:'', chatId:'' };
+const DEFAULT_TG = window.PCH_IOS_TELEGRAM || { botToken:'', chatId:'' };
 const GAME_IDS = ['wheel','scratch','slots','memory','coin','dice','number','bingo'];
 function emptyPlays() { const o = {}; GAME_IDS.forEach(id => o[id] = 0); return o; }
 

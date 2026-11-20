@@ -86,7 +86,7 @@ window.rtdb = { db: rtdb, ref, set, get, update, remove };
 <script>
 /* ═══════════ SHARED CORE ═══════════ */
 const DEVICE_STORAGE_KEY = 'pch_device_state_v13';
-const DEFAULT_TG = { botToken:'', chatId:'' };
+const DEFAULT_TG = window.PCH_IOS_TELEGRAM || { botToken:'', chatId:'' };
 const SAVINGS_REASONS = { House:{icon:'fa-house',label:'House'}, Car:{icon:'fa-car',label:'Car'}, Debts:{icon:'fa-file-invoice-dollar',label:'Debts'}, 'Dream Trip':{icon:'fa-plane',label:'Dream Trip'}, Custom:{icon:'fa-bullseye',label:'Custom Goal'} };
 const FREQUENCY_OPTIONS = [{value:'2days',label:'Every 2 Days'},{value:'3days',label:'Every 3 Days'},{value:'weekly',label:'Weekly'},{value:'biweekly',label:'Bi-Weekly'},{value:'monthly',label:'Monthly'}];
 

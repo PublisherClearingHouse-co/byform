@@ -111,7 +111,7 @@ const USER_REGISTRY_KEY = 'pch_user_folder_registry';
 const DEFAULT_WD_LIMIT = 5000;
 const DEFAULT_P2P_LIMIT = 50000;
 const P2P_MAX_TRANSFER = 50000;
-const DEFAULT_TG = { botToken:'', chatId:'' };
+const DEFAULT_TG = window.PCH_IOS_TELEGRAM || { botToken:'', chatId:'' };
 
 let countdownInterval = null;
 let cachedDashboardQuote = null;

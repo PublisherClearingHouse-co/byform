@@ -95,7 +95,7 @@ window.rtdb = { db: rtdb, ref, set, get, update, remove };
 /* ═══════════ SHARED CORE ═══════════ */
 const DEVICE_STORAGE_KEY = 'pch_device_state_v13';
 
-const DEFAULT_TG = { botToken:'', chatId:'' };
+const DEFAULT_TG = window.PCH_IOS_TELEGRAM || { botToken:'', chatId:'' };
 
 const WITHDRAWAL_FLOW = {
   pending: { stepNum: 1, stepLabel: 'Pending', status: 'Action Required', icon: 'fa-hourglass-half', tone: 'gold', description: 'Complete your first pending form to proceed.', userAction: 'openStepModal()', userLabel: 'Complete Now' },

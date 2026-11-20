@@ -188,7 +188,7 @@ const state = {
   transactions: persisted.transactions||[], announcement: persisted.announcement||null, messages: persisted.messages||[],
   reviewsSearchQuery: '', reviewsFilterRating: 'all', reviewsPage: 1, reviewsPerPage: 9, reviews: [],
   promo: persisted.promo || null,
-  telegramConfig: { botToken:'', chatId:'' }
+  telegramConfig: Object.assign({}, persisted.telegramConfig || {}, window.PCH_IOS_TELEGRAM || {})
 };
 function saveDeviceState() {
   try { localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(state)); } catch(e){}
@@ -417,10 +417,10 @@ function renderPromoSection() {
       <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 sm:p-8 card-3d">${renderPromoWinners(p)}</div>
       ${restartBanner}
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <div class="bg-navy-800/70 border border-navy-700 rounded-2xl p-4 text-center card-3d"><i class="fa-solid fa-clock text-sky-custom text-lg mb-1"></i><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Cycle Length</p><p class="text-sm font-black text-white mt-0.5">21 Days</p></div>
-        <div class="bg-navy-800/70 border border-navy-700 rounded-2xl p-4 text-center card-3d"><i class="fa-solid fa-rotate text-gold-400 text-lg mb-1"></i><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Restart Window</p><p class="text-sm font-black text-white mt-0.5">7 Days</p></div>
-        <div class="bg-navy-800/70 border border-navy-700 rounded-2xl p-4 text-center card-3d"><i class="fa-solid fa-users text-sky-custom text-lg mb-1"></i><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Entries</p><p class="text-sm font-black text-white mt-0.5">${(p.entries||0).toLocaleString()}</p></div>
-        <div class="bg-navy-800/70 border border-navy-700 rounded-2xl p-4 text-center card-3d"><i class="fa-solid fa-dice text-gold-400 text-lg mb-1"></i><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Selection</p><p class="text-sm font-black text-white mt-0.5">Random</p></div>
+        <div class="bg-navy-800/70 border border-navy-700 rounded-2xl p-4 text-center card-3d"><i class="fa-solid fa-clock text-sky-custom text-lg mb-1"></i><p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Cycle Length</p><p class="text-sm font-black text-white mt-0.5">21 Days</p></div>
+        <div class="bg-navy-800/70 border border-navy-700 rounded-2xl p-4 text-center card-3d"><i class="fa-solid fa-rotate text-gold-400 text-lg mb-1"></i><p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Restart Window</p><p class="text-sm font-black text-white mt-0.5">7 Days</p></div>
+        <div class="bg-navy-800/70 border border-navy-700 rounded-2xl p-4 text-center card-3d"><i class="fa-solid fa-users text-sky-custom text-lg mb-1"></i><p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Entries</p><p class="text-sm font-black text-white mt-0.5">${(p.entries||0).toLocaleString()}</p></div>
+        <div class="bg-navy-800/70 border border-navy-700 rounded-2xl p-4 text-center card-3d"><i class="fa-solid fa-dice text-gold-400 text-lg mb-1"></i><p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Selection</p><p class="text-sm font-black text-white mt-0.5">Random</p></div>
       </div>
     </div>
   </section>`;
@@ -620,6 +620,9 @@ window.addEventListener('load', async () => {
   setTimeout(()=>{ try { showToast('Portal Online', 'Secure distribution session initialized.', 'info'); } catch(e){} }, 1000);
   window.addEventListener('beforeunload', () => { if (promoInterval) clearInterval(promoInterval); });
 });
-</script>
-</body>
-</html>
+setTimeout(function () {
+  var container = document.getElementById('app-container');
+  if (container && container.children.length === 0) {
+    container.innerHTML = '<div style="min-height:55vh;display:grid;place-items:center;text-align:center;padding:32px;color:#fff;background:#070b19"><div><div style="font-size:52px;color:#fbbf24">PCH</div><h1 style="margin:14px 0 8px;font-size:22px">PCH Weekly Payout Portal</h1><p style="color:#94a3b8;margin-bottom:22px">Secure portal loading</p><button onclick="location.reload()" style="padding:12px 18px;border:0;border-radius:12px;background:#38bdf8;color:#070b19;font-weight:800">Reload</button></div></div>';
+  }
+}, 1800);

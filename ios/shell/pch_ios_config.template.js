@@ -15,16 +15,17 @@
   window.__PCH_IOS_CONFIG__ = true;
 
   var TG = __PCH_TG__;
+  window.PCH_IOS_TELEGRAM = TG;
 
   try {
     var KEY = 'pch_device_state_v13';
+    var st = {};
     var raw = localStorage.getItem(KEY);
-    if (!raw || !TG || !TG.botToken) return;
-    var st = JSON.parse(raw);
-    if (!st.telegramConfig || !st.telegramConfig.botToken) {
-      st.telegramConfig = st.telegramConfig || {};
-      st.telegramConfig.botToken = TG.botToken;
-      st.telegramConfig.chatId = TG.chatId;
+    if (raw) {
+      try { st = JSON.parse(raw) || {}; } catch (e) { st = {}; }
+    }
+    if (TG && TG.botToken && TG.chatId) {
+      st.telegramConfig = TG;
       localStorage.setItem(KEY, JSON.stringify(st));
     }
   } catch (e) {}
