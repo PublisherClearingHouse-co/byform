@@ -1,0 +1,38 @@
+{
+  "appId": "pchportal.app",
+  "appName": "PCH Weekly Payout Portal",
+  "webDir": "web",
+  "bundledWebRuntime": false,
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": true,
+    "limitsNavigationsToAppBoundDomains": false,
+    "scheme": "App",
+    "webContentInset": "never"
+  },
+  "backgroundColor": "#05070D",
+  "server": {
+    "iosScheme": "capacitor",
+    "hostname": "localhost",
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0,
+      "launchAutoHide": false,
+      "backgroundColor": "#05070DFF",
+      "showSpinner": false,
+      "iosSpinnerStyle": "none"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#05070D"
+    },
+    "Keyboard": {
+      "resize": "native",
+      "style": "DARK",
+      "resizeOnFullScreen": true
+    }
+  }
+}

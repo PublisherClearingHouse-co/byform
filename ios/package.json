@@ -1,0 +1,32 @@
+{
+  "name": "pch-portal-ios",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PCH Weekly Payout Portal - iOS wrapper (Capacitor)",
+  "scripts": {
+    "config": "node tools/make-config.js",
+    "sync:web": "node tools/sync-web.js",
+    "patch:storyboard": "node tools/patch-storyboard.mjs",
+    "configure:ios": "node tools/configure-ios.mjs",
+    "add:ios": "npx cap add ios && npm run patch:storyboard && npm run configure:ios",
+    "sync:ios": "npx cap sync ios",
+    "copy:ios": "npx cap copy ios",
+    "open:ios": "npx cap open ios",
+    "prepare": "node tools/make-config.js && node tools/sync-web.js",
+    "build:ios": "npm run prepare && npx cap sync ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/ios": "^6.2.0",
+    "@capacitor/app": "^6.0.2",
+    "@capacitor/status-bar": "^6.0.2",
+    "@capacitor/splash-screen": "^6.0.3",
+    "@capacitor/keyboard": "^6.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

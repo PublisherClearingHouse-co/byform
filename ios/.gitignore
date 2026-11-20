@@ -1,0 +1,29 @@
+# generated web bundle
+web/
+
+# secrets: keep your real token out of the repo
+# (shell/pch_ios_config.template.js is the committed source)
+config.json
+shell/pch_ios_config.js
+
+# native project output
+ios/App/node_modules/
+ios/App/Pods/
+ios/App/App/public/
+ios/App/App/capacitor.config.json
+ios/App/build/
+ios/App/DerivedData/
+*.ipa
+*.xcarchive
+
+# backups
+Main.storyboard.orig.xml
+
+# node
+node_modules/
+npm-debug.log*
+
+# macOS
+.DS_Store
+
+# storyboard backup

