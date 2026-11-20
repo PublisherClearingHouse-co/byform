@@ -119,9 +119,7 @@ jobs:
       - name: Build (unsigned)
         run: |
           set -euo pipefail
-          if ! xcrun --sdk iphoneos --show-sdk-platform-path >/dev/null 2>&1; then
-            sudo xcodebuild -downloadPlatform iOS
-          fi
+          sudo xcodebuild -downloadPlatform iOS || true
           cd ios/App
           # -quiet keeps the log readable; drop it if you need full output
           xcodebuild \
