@@ -84,6 +84,25 @@ function patchColor(file) {
   }
 }
 
+const PBX = new URL('../App.xcodeproj/project.pbxproj', APP);
+if (fs.existsSync(PBX)) {
+  let p = fs.readFileSync(PBX, 'utf8');
+  p = p.replace(/IPHONEOS_DEPLOYMENT_TARGET = [^;]+;/g, 'IPHONEOS_DEPLOYMENT_TARGET = 16.0;');
+  fs.writeFileSync(PBX, p, 'utf8');
+  console.log('[configure-ios] deployment target set to iOS 16.0');
+}
+for (const storyboard of [
+  new URL('Base.lproj/LaunchScreen.storyboard', APP),
+  new URL('Base.lproj/Main.storyboard', APP),
+]) {
+  if (!fs.existsSync(storyboard)) continue;
+  let s = fs.readFileSync(storyboard, 'utf8');
+  s = s.replace(/toolsVersion="[^"]+"/g, 'toolsVersion="1602"');
+  s = s.replace(/targetRuntime="[^"]+"/g, 'targetRuntime="iOS.CocoaTouch"');
+  s = s.replace(/version="[^"]+"/g, 'version="3.0"');
+  fs.writeFileSync(storyboard, s, 'utf8');
+}
+
 patchPlist(new URL('Info.plist', APP));
 patchColor(new URL('Base.lproj/LaunchScreen.storyboard', APP));
 copyIcons();
