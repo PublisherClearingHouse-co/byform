@@ -113,7 +113,7 @@ jobs:
           cd ios/App
           # -quiet keeps the log readable; drop it if you need full output
           xcodebuild \
-            -project App.xcodeproj \
+            -workspace App.xcworkspace \
             -scheme App \
             -configuration Release \
             -sdk iphoneos \
