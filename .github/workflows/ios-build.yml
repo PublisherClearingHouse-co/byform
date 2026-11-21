@@ -92,6 +92,8 @@ jobs:
             echo "::warning::No Telegram credentials found - the app will fall back to the token already in the HTML."
           fi
           npm run prepare
+          node --check shell/pch_ios_config.js
+          test -f web/index.html
 
       - name: Add iOS platform (first build)
         run: |

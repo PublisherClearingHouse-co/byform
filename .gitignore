@@ -76,3 +76,6 @@ DerivedData/
 
 # dataconnect generated files
 .dataconnect
+
+# Debug/downloaded IPA artifacts
+.debug_ipa/
