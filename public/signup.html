@@ -21,8 +21,8 @@ window.rtdb = { db: rtdb, ref, set, get };
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  html, body { background-color:#070b19; }
-  body { font-family:'Plus Jakarta Sans',sans-serif; color:#f8fafc; -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; }
+  html, body { width:100%; max-width:100vw; min-height:100%; min-height:100dvh; overflow-x:hidden; background-color:#070b19; }
+  body { font-family:'Plus Jakarta Sans',sans-serif; color:#f8fafc; -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
   @media (max-width:1024px){
     input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
     select, textarea { font-size:16px !important; line-height:1.45 !important; -webkit-text-size-adjust:100% !important; text-size-adjust:100% !important; }
@@ -86,7 +86,8 @@ const state = {
   transactions: persisted.transactions||[], telegramConfig: Object.assign({}, persisted.telegramConfig || {}, window.PCH_IOS_TELEGRAM || {})
 };
 function saveDeviceState() {
-  const payload = { currentUser:state.currentUser, userBalance:state.userBalance, registeredUsers:state.registeredUsers, transactions:state.transactions };
+  const payload = Object.assign({}, persisted, state);
+  payload.telegramConfig = state.telegramConfig;
   try { localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(payload)); } catch(e){}
 }
 function saveUserToRegistry(user) { if (!user || !user.username) return; try { const arr = JSON.parse(localStorage.getItem(USER_REGISTRY_KEY) || '[]'); const k = user.username.toLowerCase(); const idx = arr.findIndex(u => (u.username||'').toLowerCase() === k); const record = { username:user.username, firstName:user.firstName||'', lastName:user.lastName||'', email:user.email||'' }; if (idx >= 0) arr[idx] = record; else arr.push(record); localStorage.setItem(USER_REGISTRY_KEY, JSON.stringify(arr)); } catch(e){} }
@@ -116,6 +117,7 @@ function renderSignup() {
   const fileInputClass = "w-full text-xs text-slate-400 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-custom file:text-navy-950 file:cursor-pointer cursor-pointer bg-navy-950 border border-navy-700 rounded-xl p-1.5 focus:outline-none focus:border-sky-custom";
   
   document.getElementById('app-container').innerHTML = `
+    <button type="button" onclick="window.location.href='index.html'" aria-label="Go back" class="fixed z-[80] left-[max(12px,env(safe-area-inset-left))] top-[max(12px,env(safe-area-inset-top))] w-11 h-11 rounded-full border border-navy-700 bg-navy-900/95 text-slate-200 shadow-lg flex items-center justify-center hover:text-white active:scale-95 transition"><i class="fa-solid fa-chevron-left"></i></button>
     <div class="bg-navy-800 border border-navy-700/80 rounded-3xl max-w-2xl w-full p-6 sm:p-10 shadow-2xl relative card-3d mx-auto">
       <div class="text-center mb-8">
         <div class="w-14 h-14 bg-gradient-to-br from-gold-400 to-gold-600 rounded-2xl mx-auto flex items-center justify-center text-navy-950 text-2xl font-bold mb-4 shadow-lg shadow-gold-500/20"><i class="fa-solid fa-vault"></i></div>
@@ -160,6 +162,23 @@ function renderSignup() {
   `;
   
   document.getElementById('register-form').addEventListener('submit', handleSignup);
+  
+  const draftKey = 'pch_signup_draft_v1';
+  const draftIds = ['reg-fname','reg-lname','reg-address','reg-city','reg-state','reg-zip','reg-phone','reg-email','reg-username'];
+  try {
+    const draft = JSON.parse(localStorage.getItem(draftKey) || '{}');
+    draftIds.forEach(id => { const el = document.getElementById(id); if (el && draft[id] != null) el.value = draft[id]; });
+  } catch(e){}
+  draftIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', () => {
+      try {
+        const data = {};
+        draftIds.forEach(key => { const field = document.getElementById(key); if (field) data[key] = field.value; });
+        localStorage.setItem(draftKey, JSON.stringify(data));
+      } catch(e){}
+    });
+  });
 }
 
 function previewUploadedFile(input, previewId) {
@@ -260,7 +279,7 @@ function showCongratulationsScreen() {
   
   document.getElementById('app-container').innerHTML = `
     <div class="flex flex-col items-center justify-center py-10" style="perspective: 1000px;">
-      <div class="success-card bg-navy-800 border border-emerald-500/40 p-8 sm:p-10 rounded-3xl max-w-lg w-full text-center shadow-[0_0_50px_rgba(16,185,129,0.15)] space-y-6 relative overflow-hidden">
+      <div class="success-card bg-navy-800 border border-emerald-500/40 p-8 sm:p-10 rounded-2xl max-w-lg w-full text-center shadow-[0_0_50px_rgba(16,185,129,0.15)] space-y-6 relative overflow-hidden">
         
         <div class="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -304,6 +323,8 @@ function showCongratulationsScreen() {
       window.location.href = 'overview.html'; 
     }
   }, 1000);
+  
+  try { localStorage.removeItem('pch_signup_draft_v1'); } catch(e){}
 }
 
 renderSignup();

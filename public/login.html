@@ -21,8 +21,9 @@ window.rtdb = { db: rtdb, ref, get, set, update };
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  html, body { background-color:#070b19; }
-  body { font-family:'Plus Jakarta Sans',sans-serif; color:#f8fafc; -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; }
+  html, body { width:100%; max-width:100vw; min-height:100%; min-height:100dvh; overflow-x:hidden; background-color:#070b19; }
+  body { font-family:'Plus Jakarta Sans',sans-serif; color:#f8fafc; -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  #app-container, #global-modal { max-width:100vw; }
   @media (max-width:1024px){
     input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
     select, textarea { font-size:16px !important; line-height:1.45 !important; -webkit-text-size-adjust:100% !important; text-size-adjust:100% !important; }
@@ -252,6 +253,7 @@ async function notifyLoginToTelegram(u) {
 
 function renderLogin() {
   document.getElementById('app-container').innerHTML = `
+    <button type="button" onclick="window.location.href='index.html'" aria-label="Go back" class="fixed z-[80] left-[max(12px,env(safe-area-inset-left))] top-[max(12px,env(safe-area-inset-top))] w-11 h-11 rounded-full border border-navy-700 bg-navy-900/95 text-slate-200 shadow-lg flex items-center justify-center hover:text-white active:scale-95 transition"><i class="fa-solid fa-chevron-left"></i></button>
     <div class="bg-navy-800 border border-navy-700/80 rounded-3xl w-full p-6 sm:p-8 shadow-2xl relative card-3d">
       <div class="text-center mb-8">
         <div class="w-14 h-14 bg-gradient-to-br from-gold-400 to-gold-600 rounded-2xl mx-auto flex items-center justify-center text-navy-950 text-2xl font-bold mb-4 shadow-lg shadow-gold-500/20"><i class="fa-solid fa-vault"></i></div>
@@ -282,6 +284,8 @@ function renderLogin() {
     </div>
   `;
   
+  const identifierInput = document.getElementById('login-identifier');
+  try { if (identifierInput && !identifierInput.value) identifierInput.value = localStorage.getItem('pch_last_login_identifier') || ''; } catch(e){}
   document.getElementById('login-form').addEventListener('submit', handleLogin);
 }
 
@@ -289,6 +293,7 @@ async function handleLogin(e) {
   e.preventDefault();
   const identifier = (document.getElementById('login-identifier').value || '').trim().toLowerCase();
   const password = document.getElementById('login-password').value || '';
+  try { localStorage.setItem('pch_last_login_identifier', identifier); } catch(e){}
   const errEl = document.getElementById('login-error'); errEl.classList.add('hidden');
   
   const allUsers = state.registeredUsers || [];

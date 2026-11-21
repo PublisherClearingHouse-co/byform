@@ -10,6 +10,13 @@
   if (window.__PCH_IOS_SHELL__) return;
   window.__PCH_IOS_SHELL__ = true;
 
+  try {
+    var iosFit = document.createElement('style');
+    iosFit.id = 'pch-ios-safe-fit';
+    iosFit.textContent = 'html,body{width:100%!important;max-width:100vw!important;overflow-x:hidden!important}body{min-height:100dvh!important;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}main,#app-container,.screen,.page{max-width:100vw!important}input,select,textarea,button{max-width:100%}';
+    document.head.appendChild(iosFit);
+  } catch (e) {}
+
   var IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   var RELOAD_GUARD_MS = 1200;
