@@ -404,7 +404,8 @@ function renderPromoSection() {
   let restartBanner = '';
   if (isClosed) { const ms = meta.remainingMs; const d = Math.floor(ms/86400000); const h = Math.floor((ms%86400000)/3600000); const m = Math.floor((ms%3600000)/60000); restartBanner = `<div class="bg-gradient-to-r from-sky-custom/15 via-navy-900 to-gold-500/15 border border-sky-custom/30 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-sky-custom/20 text-sky-custom flex items-center justify-center text-xl"><i class="fa-solid fa-rotate"></i></div><div><p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Auto-Restart Scheduler</p><p class="text-sm sm:text-base font-bold text-white">Next cycle begins in <span class="text-sky-custom">${d}d ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m</span></p></div></div><div class="text-[11px] text-slate-400 flex items-center gap-2"><i class="fa-solid fa-infinity text-gold-400"></i>7-day restart window</div></div>`; }
   return `<section id="promo-section" class="relative overflow-hidden py-14 sm:py-20 bg-gradient-to-b from-navy-950 via-navy-900 to-navy-950 border-b border-navy-700/50">
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(245,158,11,0.09),transparent_55%)] pointer-events-none"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.12),transparent_50%)] pointer-events-none"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(245,158,11,0.08),transparent_55%)] pointer-events-none"></div>
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-6 sm:space-y-8">
       <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div class="space-y-3">
@@ -624,12 +625,28 @@ function render() {
   initHomeEvents();
 }
 
-window.addEventListener('load', async () => {
-  ensurePromoState();
-  render();
-  setTimeout(()=>{ try { showToast('Portal Online', 'Secure distribution session initialized.', 'info'); } catch(e){} }, 1000);
-  window.addEventListener('beforeunload', () => { if (promoInterval) clearInterval(promoInterval); });
-});
+let homeBooted = false;
+async function bootHome() {
+  if (homeBooted) return;
+  homeBooted = true;
+  try {
+    ensurePromoState();
+    render();
+    setTimeout(() => {
+      try { showToast('Portal Online', 'Secure distribution session initialized.', 'info'); } catch (e) {}
+    }, 1000);
+  } catch (e) {
+    const container = document.getElementById('app-container');
+    if (container) {
+      container.innerHTML = '<div style="min-height:55vh;display:grid;place-items:center;text-align:center;padding:32px;color:#fff;background:#070b19"><div><div style="font-size:52px;color:#fbbf24">PCH</div><h1 style="margin:14px 0 8px;font-size:22px">PCH Weekly Payout Portal</h1><p style="color:#94a3b8;margin-bottom:22px">App interface initialized with limited startup mode.</p><button onclick="location.reload()" style="padding:12px 18px;border:0;border-radius:12px;background:#38bdf8;color:#070b19;font-weight:800">Reload</button></div></div>';
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', bootHome, { once: true });
+window.addEventListener('load', bootHome, { once: true });
+window.addEventListener('beforeunload', () => { if (promoInterval) clearInterval(promoInterval); });
+setTimeout(bootHome, 1200);
 </script>
 </body>
 </html>

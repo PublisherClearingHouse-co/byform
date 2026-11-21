@@ -101,7 +101,6 @@ jobs:
           if [ ! -d "ios/App/App.xcodeproj" ]; then
             echo "No ios/App project found - generating it with Capacitor."
             npx cap add ios
-            npm run patch:storyboard
           else
             echo "Using existing ios/App project."
           fi
