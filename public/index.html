@@ -29,7 +29,7 @@ window.rtdb = { db: rtdb, ref, set, get, update };
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  html, body { background-color:#070b19; }
+  html, body { width:100%; max-width:100vw; min-height:100dvh; overflow-x:hidden; }
   body { font-family:'Plus Jakarta Sans',sans-serif; color:#f8fafc; -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; overflow-x:clip; position:relative; }
   @media (max-width:1024px){
     input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
@@ -138,6 +138,11 @@ window.rtdb = { db: rtdb, ref, set, get, update };
 
   @media (max-width:1023px) { #toast-container { bottom: calc(5.5rem + env(safe-area-inset-bottom,0px)) !important; } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
+  @media (max-width:430px) {
+    .site-header .brand-tile { width:38px; height:38px; }
+    .site-header [onclick="window.location.href='index.html'"] > div:nth-child(2) > span:nth-child(2) { display:none; }
+    #nav-actions a { padding-left:.55rem !important; padding-right:.55rem !important; font-size:11px !important; }
+  }
 </style>
 </head>
 <body class="bg-navy-950 text-slate-100 min-h-screen flex flex-col">

@@ -13,8 +13,19 @@
   try {
     var iosFit = document.createElement('style');
     iosFit.id = 'pch-ios-safe-fit';
-    iosFit.textContent = 'html,body{width:100%!important;max-width:100vw!important;overflow-x:hidden!important}body{min-height:100dvh!important;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}main,#app-container,.screen,.page{max-width:100vw!important}input,select,textarea,button{max-width:100%}';
+    iosFit.textContent = 'html,body{width:100%!important;max-width:100vw!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch}body{min-height:100dvh!important;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}main,#app-container,.screen,.page{max-width:100vw!important}input,select,textarea,button{max-width:100%;touch-action:manipulation}header{max-width:100vw!important}header>div{min-width:0!important}#nav-actions{max-width:58vw!important;justify-content:flex-end!important;z-index:100!important;pointer-events:auto!important}#nav-actions button,#nav-actions a{pointer-events:auto!important;position:relative!important}header h1.absolute{left:48%!important;max-width:36vw!important;font-size:10px!important;overflow:hidden;text-overflow:ellipsis;pointer-events:none!important}button[onclick*="toggleNavDrawer"],button[onclick*="toggleSidebar"]{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;z-index:100!important}.card-3d{transform:none!important}.nav-drawer,.sidebar{height:100dvh!important;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}@supports (-webkit-touch-callout:none){.glass,.card-3d,.review-card,.prize-card,.bg-mesh,.bg-mesh:before,.bg-mesh:after,.blur-3xl{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;will-change:auto!important}.bg-mesh:before,.bg-mesh:after{animation:none!important;filter:none!important}}@media (max-width:430px){#nav-actions button,#nav-actions a{min-width:44px!important;min-height:44px!important;padding-left:.45rem!important;padding-right:.45rem!important}}';
     document.head.appendChild(iosFit);
+  } catch (e) {}
+
+  try {
+    function updatePchViewport() {
+      var vv = window.visualViewport;
+      document.documentElement.style.setProperty('--pch-vw', (vv ? vv.width : window.innerWidth) + 'px');
+      document.documentElement.style.setProperty('--pch-vh', (vv ? vv.height : window.innerHeight) + 'px');
+    }
+    updatePchViewport();
+    window.addEventListener('resize', updatePchViewport, { passive: true });
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', updatePchViewport, { passive: true });
   } catch (e) {}
 
   var IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
