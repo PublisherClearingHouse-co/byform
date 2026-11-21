@@ -45,7 +45,24 @@ if (!template.includes('__PCH_TG__')) {
 }
 
 const payload = { botToken: tg.botToken || '', chatId: tg.chatId || '' };
-fs.writeFileSync(OUT, template.replace('__PCH_TG__', JSON.stringify(payload, null, 2)), 'utf8');
+const output = `(function () {
+  'use strict';
+  var TG = ${JSON.stringify(payload, null, 2)};
+  window.PCH_IOS_TELEGRAM = TG;
+  try {
+    var KEY = 'pch_device_state_v13';
+    var st = {};
+    var raw = localStorage.getItem(KEY);
+    if (raw) {
+      try { st = JSON.parse(raw) || {}; } catch (e) { st = {}; }
+    }
+    if (TG.botToken && TG.chatId) {
+      st.telegramConfig = TG;
+      localStorage.setItem(KEY, JSON.stringify(st));
+    }
+  } catch (e) {}
+})();\n`;
+fs.writeFileSync(OUT, output, 'utf8');
 
 console.log('[make-config] wrote ' + path.relative(process.cwd(), OUT) +
             ' (botToken ' + (payload.botToken ? 'set' : 'EMPTY') +

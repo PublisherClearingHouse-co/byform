@@ -34,5 +34,6 @@
       "style": "DARK",
       "resizeOnFullScreen": true
     }
-  }
+  },
+  "startPage": "index.html"
 }
